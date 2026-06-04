@@ -1,4 +1,4 @@
-const ASSET_VER='1780600858';
+const ASSET_VER='1780601045';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -577,7 +577,7 @@ function update(dt){
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
   }
   for (let ci=0; ci<CHK.length; ci++){
-    if (!chkOn[ci] && p.x>=CHK[ci]-10){ chkOn[ci]=true; p.spawn=CHK[ci]; chkFx.push({cx:CHK[ci], t:0, hit:false}); playSfx('sfx_ignite',0.8); }
+    if (!chkOn[ci] && p.x>=CHK[ci]-10){ chkOn[ci]=true; p.spawn=CHK[ci]; chkFx.push({cx:CHK[ci], t:0, hit:false}); playSfx('sfx_ignite',1.6); }
   }
   p.x=Math.max(18,Math.min(WORLD-18,p.x));
   if (p.x>=GOAL_X-24 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; }
