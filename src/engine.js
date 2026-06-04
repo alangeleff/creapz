@@ -1,4 +1,4 @@
-const ASSET_VER='1780599309';
+const ASSET_VER='1780599551';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -341,7 +341,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -510,7 +510,7 @@ function update(dt){
   const running=(dir!==0&&runHeld[dc])||keys['ShiftLeft']||keys['ShiftRight'];
   const speed=running?RUN:WALK;
   if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0;
-  if ((keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; }
+  if ((keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; playSfx('sfx_jump'); }
   if (keys['KeyZ']&&p.attackT<=0&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
     if (chosen!=='dingbat') playSfx('sfx_slash');
@@ -534,7 +534,7 @@ function update(dt){
     const fireAt = chosen==='dingbat' ? 0 : 3;   // dingbat shrieks instantly (placeholder anim is slow); retune when his cast sheet lands
     if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
-      if (chosen==='dingbat') bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'});
+      if (chosen==='dingbat'){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
       else { bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'}); playSfx('sfx_bolt'); }
     }
   }
@@ -587,7 +587,7 @@ function update(dt){
   for (const s of souls){
     if (s.got){ if(s.pop<1) s.pop+=dt/0.28; continue; }
     const r=30, sb={x:s.x-r,y:s.y-r,w:2*r,h:2*r};
-    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount++; addScore(SOUL_PTS,'soul'); }
+    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
   }
   // --- combat ---
   let pwb = (p.attackT>0) ? worldWeaponBox(SPR.chars[chosen].attack, curFrame(), p.x, p.y, p.facing) : null;
