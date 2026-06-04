@@ -1,4 +1,4 @@
-const ASSET_VER='1780594615';
+const ASSET_VER='1780596000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -471,7 +471,13 @@ function update(dt){
   if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0;
   if ((keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; }
   if (keys['KeyZ']&&p.attackT<=0&&SPR.chars[chosen].attack.weapon) p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
-  if (p.attackT>0) p.attackT-=dt;
+  if (p.attackT>0){
+    p.attackT-=dt;
+    if (chosen==='dingbat'){
+      const afr=Math.floor((SPR.chars.dingbat.attack.frames/pfps('attack')-p.attackT)*pfps('attack'));
+      if (afr>=2 && afr<=7) p.x+=p.facing*(p.onGround?2.7:1.8);
+    }
+  }
   if (p.castCd>0) p.castCd-=dt;
   if (p.muzzleT>0) p.muzzleT-=dt;
   if (keys['KeyX']&&p.castT<=0&&p.castCd<=0&&p.attackT<=0){
