@@ -1,4 +1,4 @@
-const ASSET_VER='1780605861';
+const ASSET_VER='1780606749';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -500,7 +500,7 @@ const PW=52, PH=88;
 
 loadStage(0); mode='load'; titleT=99;
 if (!window.SPRITES_INLINE){
-  total++; TIMG=new Image(); TIMG.onload=()=>loaded++; TIMG.onerror=()=>loaded++; TIMG.src='./assets/title.jpg?v='+ASSET_VER;
+  total++; TIMG=new Image(); TIMG.onload=()=>loaded++; TIMG.onerror=()=>loaded++; TIMG.src='./assets/title.png?v='+ASSET_VER;
   audioInit();
   if (AC){
     ['title','act1','act2'].forEach(k=>{ total++; getMusicBuf(k).then(()=>loaded++); });
@@ -612,7 +612,7 @@ function update(dt){
     p.castT-=dt;
     const cf0=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast'));
     const cfi=Math.min(SPR.chars[chosen].cast.frames-1, Math.floor((cf0 - p.castT)*pfps('cast')));
-    const fireAt = chosen==='dingbat' ? 0 : 3;   // dingbat shrieks instantly (placeholder anim is slow); retune when his cast sheet lands
+    const fireAt = chosen==='dingbat' ? 2 : 3;   // dingbat: bolt leaves on the open-mouth frame (11f @40fps)
     if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
       if (chosen==='dingbat'){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
@@ -1413,8 +1413,8 @@ function drawTitle(){
   ctx.fillStyle='#5a4499'; ctx.fillRect(0,GROUND,W,8);
   ctx.globalAlpha=titleFade;
   if (TIMG && TIMG.complete && TIMG.naturalWidth){
-    const th=252, tw=TIMG.naturalWidth*th/TIMG.naturalHeight;
-    ctx.drawImage(TIMG, W/2-tw/2, 14, tw, th);
+    const th=296, tw=TIMG.naturalWidth*th/TIMG.naturalHeight;
+    ctx.drawImage(TIMG, W/2-tw/2, 2, tw, th);
   }
   ctx.textAlign='center';
   ctx.font="54px Frijole, Creepster, sans-serif";
@@ -1502,18 +1502,15 @@ function drawLoading(){
   // the runners: cReaper leading, Dingbat chasing, right above the bar
   const bw2=340, bx2=W/2-bw2/2, by2=300;
   try{
-    const rx=bx2+30+pct*(bw2-90);
     const a1=SPR.chars && SPR.chars.default && SPR.chars.default.run;
     const a2=SPR.chars && SPR.chars.dingbat && SPR.chars.dingbat.run;
     if (a1 && a1.img.complete && a1.img.naturalWidth){
       const fi=Math.floor(gt*16)%a1.frames;
-      drawCharSprite('default','run',fi, rx, by2-8, 1, 0.62);
+      drawCharSprite('default','run',fi, W/2+46, by2+2, 1, 0.62);
     }
     if (a2 && a2.img.complete && a2.img.naturalWidth){
-      const sa=SPR.chars.dingbat; const fi2=Math.floor(gt*42)%a2.frames;
-      const old=chosen; chosen='dingbat';
-      drawCharSprite('dingbat','run',fi2, rx-78, by2-8, 1, 0.62);
-      chosen=old;
+      const fi2=Math.floor(gt*42)%a2.frames;
+      drawCharSprite('dingbat','run',fi2, W/2-46, by2+2, 1, 0.85);
     }
   }catch(e){}
   ctx.fillStyle='rgba(255,255,255,.14)'; roundRect(bx2,by2,bw2,14,7); ctx.fill();
