@@ -1,4 +1,4 @@
-const ASSET_VER='1780593445';
+const ASSET_VER='1780594615';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -32,6 +32,9 @@ function loadStage(i){
   TREES = Array.from({length:Math.ceil(WORLD/180)},(_,k)=>({x:80+k*180+((k*53)%50), big:(k%4===0)}));
   GRAVES_BG = Array.from({length:Math.ceil(WORLD/150)},(_,k)=>[80+k*150+((k*53)%40),0.7+((k*29)%4)*0.1,(k%4===0)]);
   reset(); titleT = 0;
+  actScore=0; actSoulPts=0; actKillPts=0; killCount=0; gotHit=false; actTime=0;
+  totalEnemies=zombies.length+bats.length;
+  tally=null; fading=0; fadeIn=0.5;
 }
 const ORDER = SPRITES.order;
 const LABELS = { default:'Violet', green:'Emerald', blue:'Azure', red:'Crimson' };
@@ -77,6 +80,13 @@ cv.addEventListener('pointerdown', e=>{
     return;
   }
   if (mode!=='play') return;
+  if (p.won){
+    if (!tally) return;
+    if (!tally.done){ tally.skip=true; return; }
+    if (stageIdx+1<window.STAGES.length){ if (fading<=0) fading=0.0001; return; }
+    for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ r.action(); return; } }
+    return;
+  }
   if (menuOpen()){
     for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ r.action(); return; } }
     return;
@@ -124,12 +134,48 @@ const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15 };
 const KRNG = { zombie:74, zgen:74, gob:76, bd:-1 };  // gob spear reach ~78; bd never melee-attacks (contact only)
 const ZSPEED = 1.7;
 const PMAXHP = 4, ZMAXHP = 2;
+const SOUL_PTS = 100;
+const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800 };
+function timeBrackets(idx){
+  const s=idx*30;   // each act shifts brackets by 30s
+  return [[90+s,3000],[120+s,2000],[180+s,1000]];
+}
 const SOUL_FPS = 20;
 const BAT_FPS = 15, BITE_FPS = 29, BAT_PATROL = 1.25, BAT_CHASE = 2.1, BAT_AGGRO = 280;
 
 let mode='select', chosen=ORDER[0];
 let p, souls, soulCount, gt=0, camX=0, zombies, plats, chkOn, bats, bolts, impacts;
 let paused=false, menuRects=[];
+let banked=0, actScore=0, actSoulPts=0, actKillPts=0, killCount=0, totalEnemies=0, gotHit=false, actTime=0;
+let tally=null, fading=0, fadeIn=0;
+function addScore(base, kind){
+  const m=Math.max(0.25, p.hp/PMAXHP);
+  const pts=Math.round(base*m);
+  actScore+=pts;
+  if (kind==='soul') actSoulPts+=pts; else actKillPts+=pts;
+}
+function computeTally(){
+  const rows=[
+    {label:'SOULS  '+soulCount+' / '+souls.length, pts:actSoulPts},
+    {label:'REAPED  '+Math.min(killCount,totalEnemies)+' / '+totalEnemies, pts:actKillPts},
+  ];
+  let bonus=0, topTime=false;
+  const br=timeBrackets(stageIdx);
+  let tb=0;
+  for (let i=0;i<br.length;i++){ if (actTime<=br[i][0]){ tb=br[i][1]; topTime=(i===0); break; } }
+  if (!gotHit){ rows.push({label:'PERFECT RUN', pts:5000, bonus:true}); bonus+=5000; }
+  if (soulCount>=souls.length){ rows.push({label:'ALL SOULS', pts:2000, bonus:true}); bonus+=2000; }
+  const reapAll=killCount>=totalEnemies;
+  if (reapAll){ rows.push({label:'FULL REAP', pts:2000, bonus:true}); bonus+=2000; }
+  const mm=Math.floor(actTime/60), ss=Math.floor(actTime%60);
+  rows.push({label:'TIME  '+mm+':'+(ss<10?'0':'')+ss, pts:tb, bonus:true});
+  bonus+=tb;
+  if (topTime && reapAll && soulCount>=souls.length){
+    rows.push({label:'KILLER BONUS', pts:10000, killer:true}); bonus+=10000;
+  }
+  const total=actScore+bonus;
+  tally={rows, total, t:0, skip:false, done:false, hold:0};
+}
 let chkFx=[];
 const PB={x:14,y:92,w:40,h:32};
 function menuPanel(title, items, sub, titleColor){
@@ -150,6 +196,70 @@ function menuPanel(title, items, sub, titleColor){
     menuRects.push({x:mx+26,y:by,w:mw-52,h:ih,action:it.action});
   });
   if (sub){ ctx.fillStyle='rgba(200,190,255,.6)'; ctx.font='13px sans-serif'; ctx.fillText(sub, W/2, my+mh-16); }
+  ctx.textAlign='left';
+}
+function drawTally(){
+  if (!tally) return;
+  const hasNext=stageIdx+1<window.STAGES.length;
+  ctx.fillStyle='rgba(8,5,18,.78)'; ctx.fillRect(0,0,W,H);
+  const mw=560, mx=W/2-mw/2;
+  ctx.textAlign='center';
+  ctx.font="44px Creepster, sans-serif"; ctx.fillStyle='#c8fb50';
+  ctx.fillText('ACT '+ST.act+' CLEAR', W/2, 78);
+  ctx.font='13px sans-serif'; ctx.fillStyle='rgba(200,190,255,.65)';
+  ctx.fillText(ST.name, W/2, 100);
+  const n=tally.rows.length;
+  let total=0;
+  for (let i=0;i<n;i++){
+    const r=tally.rows[i];
+    const age=tally.done?1:Math.max(0,Math.min(1,(tally.t-i*0.42)/0.4));
+    if (age<=0) break;
+    const y=136+i*32;
+    const shown=Math.round(r.pts*age);
+    total+= tally.done? r.pts : shown;
+    ctx.globalAlpha=Math.min(1,age*2);
+    ctx.textAlign='left';
+    ctx.font=r.killer?'bold 20px sans-serif':'600 17px sans-serif';
+    ctx.fillStyle=r.killer?'#ffd84d':(r.bonus?'#7fe0ff':'#e8e6f5');
+    ctx.fillText(r.label, mx+30, y);
+    ctx.textAlign='right';
+    ctx.fillText(shown.toLocaleString('en-US'), mx+mw-30, y);
+    ctx.globalAlpha=1;
+  }
+  const ty=136+n*32+18;
+  ctx.strokeStyle='rgba(150,140,255,.5)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(mx+24,ty-26); ctx.lineTo(mx+mw-24,ty-26); ctx.stroke();
+  ctx.textAlign='left'; ctx.font='bold 24px sans-serif'; ctx.fillStyle='#c8fb50';
+  ctx.fillText('TOTAL', mx+30, ty+4);
+  ctx.textAlign='right';
+  ctx.fillText(total.toLocaleString('en-US'), mx+mw-30, ty+4);
+  if (banked>0){
+    ctx.font='13px sans-serif'; ctx.fillStyle='rgba(200,190,255,.65)';
+    ctx.fillText('RUN  '+(banked+total).toLocaleString('en-US'), mx+mw-30, ty+26);
+  }
+  ctx.textAlign='center'; ctx.font='14px sans-serif'; ctx.fillStyle='rgba(232,230,245,.8)';
+  menuRects=[];
+  if (tally.done){
+    if (hasNext){
+      const pu=0.55+0.45*Math.sin(gt*4);
+      ctx.fillStyle='rgba(200,251,80,'+pu.toFixed(2)+')';
+      ctx.fillText('Act '+window.STAGES[stageIdx+1].act+' rises...  ·  tap to continue', W/2, ty+56);
+    } else {
+      const bw2=170, bh2=40, by2=ty+44;
+      [['Replay Act',()=>{ loadStage(stageIdx); }],['Characters',()=>{ mode='select'; }]].forEach((it,k)=>{
+        const bx2=W/2-bw2-12+k*(bw2+24);
+        ctx.fillStyle='rgba(155,140,255,.16)'; roundRect(bx2,by2,bw2,bh2,10); ctx.fill();
+        ctx.strokeStyle='rgba(155,140,255,.45)'; ctx.lineWidth=1; ctx.stroke();
+        ctx.fillStyle='#e8e6f5'; ctx.font='600 16px sans-serif';
+        ctx.fillText(it[0], bx2+bw2/2, by2+26);
+        menuRects.push({x:bx2,y:by2,w:bw2,h:bh2,action:it[1]});
+      });
+      ctx.font='12px sans-serif'; ctx.fillStyle='rgba(200,190,255,.55)';
+      ctx.fillText('More acts coming soon', W/2, by2+64);
+    }
+  } else {
+    ctx.fillText('tap to skip', W/2, ty+56);
+  }
   ctx.textAlign='left';
 }
 function drawTitleCard(){
@@ -192,7 +302,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ chosen=ck; mode='play'; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -298,7 +408,23 @@ function loop(now){
 
 function update(dt){
   if (titleT<3) titleT+=dt;
-  if (paused || p.won) return;
+  if (fadeIn>0) fadeIn-=dt;
+  if (paused) return;
+  if (p.won){
+    if (!tally) computeTally();
+    tally.t+=dt;
+    const dur=tally.rows.length*0.42+0.7;
+    if (tally.skip || tally.t>=dur) tally.done=true;
+    if (tally.done){
+      tally.hold+=dt;
+      const hasNext=stageIdx+1<window.STAGES.length;
+      if (hasNext && (tally.hold>3.0 || fading>0)){
+        fading+=dt;
+        if (fading>=0.65){ banked+=tally.total; loadStage(stageIdx+1); }
+      }
+    }
+    return;
+  }
   if (p.inv>0) p.inv-=dt;
   if (p.flash>0) p.flash-=dt;
   if (p.hurtT>0) p.hurtT-=dt;
@@ -309,6 +435,7 @@ function update(dt){
     p.clock+=dt;
     return;
   }
+  actTime+=dt;
   if (p.winning){
     p.winT+=dt; p.inv=1;
     if (p.state!=='idle'){ p.state='idle'; p.clock=0; }
@@ -389,6 +516,7 @@ function update(dt){
     }
   }
   if (p.y>H+220){
+    gotHit=true;
     p.hp-=1; p.x=p.spawn; p.y=GROUND; p.vy=0; p.vx=0; p.onGround=true; p.standPlat=null;
     p.inv=1.2; p.flash=0.35; p.hurtT=0;
     if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; }
@@ -408,7 +536,7 @@ function update(dt){
   for (const s of souls){
     if (s.got){ if(s.pop<1) s.pop+=dt/0.28; continue; }
     const r=30, sb={x:s.x-r,y:s.y-r,w:2*r,h:2*r};
-    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount++; }
+    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount++; addScore(SOUL_PTS,'soul'); }
   }
   // --- combat ---
   let pwb = (p.attackT>0) ? worldWeaponBox(SPR.chars[chosen].attack, curFrame(), p.x, p.y, p.facing) : null;
@@ -423,7 +551,7 @@ function update(dt){
     if (pwb && z.hitCd<=0 && overlap(pwb, zBodyBox(z))){
       z.hp-=1; z.hitCd=0.45; z.shown=3;
       z.x=clamp(z.x + (z.x<p.x?-12:12), z.min, z.max);
-      if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); continue; }
+      if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); continue; }
     }
     // zombie behavior + its sword strikes player
     if (z.atkT>0){
@@ -472,7 +600,7 @@ function update(dt){
     let bb=batBox(b);
     if (b.state==='bite' && b.bt>8/BITE_FPS && b.bt<23/BITE_FPS){ bb={x:bb.x+(b.facing<0?-30:0), y:bb.y-4, w:bb.w+30, h:bb.h+8}; }
     if (p.inv<=0 && !p.dead && overlap(pBodyBox(), bb)) hurtPlayer(b.x);
-    if (pwb && overlap(pwb, batBox(b))){ b.dead=true; b.dieT=0; batBits(b,14); }
+    if (pwb && overlap(pwb, batBox(b))){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); }
   }
   for (const bo of bolts){
     if (bo.dead) continue;
@@ -486,7 +614,7 @@ function update(dt){
       if (bo.x>zb.x-6&&bo.x<zb.x+zb.w+6&&bo.y>zb.y&&bo.y<zb.y+zb.h){
         z.hp-=1; z.shown=3;
         z.x=clamp(z.x+(bo.vx>0?9:-9), z.min, z.max);
-        if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); }
+        if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); }
         hit=true; break;
       }
     }
@@ -494,7 +622,7 @@ function update(dt){
       if (b.dead) continue;
       const bb2=batBox(b);
       if (bo.x>bb2.x-6&&bo.x<bb2.x+bb2.w+6&&bo.y>bb2.y&&bo.y<bb2.y+bb2.h){
-        b.dead=true; b.dieT=0; batBits(b,14); hit=true; break;
+        b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); hit=true; break;
       }
     }
     if (hit){
@@ -518,6 +646,7 @@ function update(dt){
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
 }
 function hurtPlayer(srcX,dmg){
+  gotHit=true;
   p.hp-=(dmg||1); p.inv=1.0; p.flash=0.35;
   p.hurtT=Math.min(0.45, SPR.chars[chosen].hurt.frames/pfps('hurt'));
   const away=(p.x<srcX)?-1:1; p.vx=away*2; p.x+=away*8;
@@ -1115,6 +1244,12 @@ function draw(){
   ctx.fillStyle='#eaf6ff'; ctx.font='bold 16px sans-serif'; ctx.textAlign='left'; ctx.fillText('x '+soulCount+' / '+souls.length, 48, 74);
   if (!menuOpen() && !p.winning) drawPauseBtn();
   drawProgress();
+  ctx.textAlign='right'; ctx.font='bold 15px sans-serif';
+  ctx.fillStyle='rgba(20,16,36,.55)'; roundRect(W-184,36,154,24,7); ctx.fill();
+  ctx.fillStyle='#eaf6ff';
+  ctx.fillText((banked+actScore).toLocaleString('en-US'), W-40, 53);
+  ctx.textAlign='left'; ctx.font='10px sans-serif'; ctx.fillStyle='rgba(200,190,255,.7)';
+  ctx.fillText('SCORE', W-176, 52);
   if (p.dead && p.deadT>2.3){
     menuPanel('YOU DIED', [
       {label: p.spawn>90?'Rise at Checkpoint':'Try Again', action:()=>{ paused=false; onReset(); }},
@@ -1122,14 +1257,7 @@ function draw(){
       {label:'Characters', action:()=>{ paused=false; mode='select'; }},
     ], null, '#e23b3b');
   } else if (p.won){
-    const items=[];
-    if (stageIdx+1 < window.STAGES.length){
-      items.push({label:'Continue — Act '+window.STAGES[stageIdx+1].act, action:()=>{ paused=false; loadStage(stageIdx+1); }});
-    }
-    items.push({label:'Replay Act', action:()=>{ paused=false; loadStage(stageIdx); }});
-    items.push({label:'Characters', action:()=>{ paused=false; mode='select'; }});
-    menuPanel('Act '+ST.act+' Complete!', items,
-      'Souls: '+soulCount+' / '+souls.length+(stageIdx+1>=window.STAGES.length?'   ·   More acts coming soon':''), '#c8fb50');
+    drawTally();
   } else if (paused){
     menuPanel('Paused', [
       {label:'Characters', action:()=>{ paused=false; mode='select'; }},
@@ -1138,6 +1266,8 @@ function draw(){
     ]);
   }
   drawTitleCard();
+  if (fading>0){ ctx.fillStyle='rgba(5,3,12,'+Math.min(1,fading/0.6).toFixed(2)+')'; ctx.fillRect(0,0,W,H); }
+  if (fadeIn>0){ ctx.fillStyle='rgba(5,3,12,'+Math.min(1,fadeIn/0.5).toFixed(2)+')'; ctx.fillRect(0,0,W,H); }
 }
 function drawLoading(){
   ctx.setTransform(RS,0,0,RS,0,0);
