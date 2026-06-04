@@ -1,4 +1,4 @@
-const ASSET_VER='1780541924';
+const ASSET_VER='1780542800';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -10,21 +10,28 @@ async function loadSprites(){
 }
 async function main(){
 const SPRITES = await loadSprites();
-const ST = window.STAGE1;
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const tcv = document.createElement('canvas'), tctx = tcv.getContext('2d');
 const W = 960, H = 440;
 const RS = Math.min(2, Math.max(1, Math.round(window.devicePixelRatio || 1)));
 cv.width = W*RS; cv.height = H*RS;
-const GROUND = 360, WORLD = ST.world, GOAL_X = ST.goal;
+const GROUND = 360;
 const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
-const SEG = ST.seg;
 const OBJ = SPRITES.obst;
-const OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h}));
-const SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:GROUND-o.h}));
-const PLAT_DEF = ST.plats;
-const CHK = ST.chk;
-const SOUL_POS = ST.souls;
+let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS;
+let STARS=[], TREES=[], GRAVES_BG=[];
+let titleT = 99;
+function loadStage(i){
+  stageIdx = i; ST = window.STAGES[i];
+  WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
+  OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h}));
+  SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:GROUND-o.h}));
+  PLAT_DEF = ST.plats; CHK = ST.chk; SOUL_POS = ST.souls;
+  STARS = Array.from({length:Math.ceil(WORLD/120)},()=>[Math.random()*WORLD,Math.random()*GROUND*0.8,Math.random()*1.6+0.6]);
+  TREES = Array.from({length:Math.ceil(WORLD/180)},(_,k)=>({x:80+k*180+((k*53)%50), big:(k%4===0)}));
+  GRAVES_BG = Array.from({length:Math.ceil(WORLD/150)},(_,k)=>[80+k*150+((k*53)%40),0.7+((k*29)%4)*0.1,(k%4===0)]);
+  reset(); titleT = 0;
+}
 const ORDER = SPRITES.order;
 const LABELS = { default:'Violet', green:'Emerald', blue:'Azure', red:'Crimson' };
 
@@ -136,13 +143,47 @@ function menuPanel(title, items, sub, titleColor){
   if (sub){ ctx.fillStyle='rgba(200,190,255,.6)'; ctx.font='13px sans-serif'; ctx.fillText(sub, W/2, my+mh-16); }
   ctx.textAlign='left';
 }
+function drawTitleCard(){
+  if (titleT>2.7) return;
+  const t=titleT;
+  let inK=Math.min(1,t/0.5); inK=1-Math.pow(1-inK,3);
+  let outK=t>2.1?Math.min(1,(t-2.1)/0.5):0; outK=outK*outK*(3-2*outK);
+  const offL=-W*1.1*(1-inK)+W*1.15*outK;       // main panel: left -> in -> exits right
+  const offR= W*1.1*(1-inK)-W*1.15*outK;       // act badge: right -> in -> exits left
+  // main skewed panel
+  ctx.save(); ctx.translate(offL,0);
+  ctx.fillStyle='rgba(14,9,30,0.93)';
+  ctx.beginPath(); ctx.moveTo(-90,118); ctx.lineTo(W*0.80,118); ctx.lineTo(W*0.72,252); ctx.lineTo(-90,252); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#c8fb50';
+  ctx.beginPath(); ctx.moveTo(W*0.80,118); ctx.lineTo(W*0.835,118); ctx.lineTo(W*0.755,252); ctx.lineTo(W*0.72,252); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(155,140,255,0.85)';
+  ctx.beginPath(); ctx.moveTo(W*0.835,118); ctx.lineTo(W*0.85,118); ctx.lineTo(W*0.77,252); ctx.lineTo(W*0.755,252); ctx.closePath(); ctx.fill();
+  ctx.textAlign='left';
+  ctx.font='italic 900 56px sans-serif';
+  ctx.fillStyle='#1a1133'; ctx.fillText(ST.name, 64, 200);
+  ctx.fillStyle='#eae6ff'; ctx.fillText(ST.name, 60, 196);
+  ctx.restore();
+  // act badge strip
+  ctx.save(); ctx.translate(offR,0);
+  ctx.fillStyle='rgba(14,9,30,0.93)';
+  ctx.beginPath(); ctx.moveTo(W*0.30,268); ctx.lineTo(W+90,268); ctx.lineTo(W+90,330); ctx.lineTo(W*0.265,330); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#7fe0ff';
+  ctx.beginPath(); ctx.moveTo(W*0.30,268); ctx.lineTo(W*0.318,268); ctx.lineTo(W*0.283,330); ctx.lineTo(W*0.265,330); ctx.closePath(); ctx.fill();
+  ctx.font='italic 900 34px sans-serif';
+  ctx.fillStyle='#c8fb50'; ctx.fillText('ACT  '+ST.act, W*0.40, 312);
+  // soul orb spinning beside the act numeral
+  const sa=SPR.soul;
+  if (sa){ const fi=Math.floor(gt*SOUL_FPS)%sa.frames; const dw=sa.w*0.55, dh=sa.h*0.55;
+    ctx.drawImage(sa.img, fi*sa.sw,0,sa.sw,sa.sh, W*0.34-dw/2, 299-dh/2, dw, dh); }
+  ctx.restore();
+}
 function drawPauseBtn(){
   ctx.fillStyle='rgba(20,16,36,.55)'; roundRect(PB.x,PB.y,PB.w,PB.h,8); ctx.fill();
   ctx.strokeStyle='rgba(150,140,255,.4)'; ctx.lineWidth=1; ctx.stroke();
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ chosen=ck; mode='play'; reset(); }
+function startGame(ck){ chosen=ck; mode='play'; loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -230,6 +271,7 @@ function zBody(z){ const a=SPR.zombie[z.state]; const bw=a.w*0.40, bh=a.foots[0]
 function zAtkBox(z){ const reach=78,bh=104; const x=z.facing>0?z.x-6:z.x-reach+6; return {x,y:z.y-bh,w:reach,h:bh}; }
 const PW=52, PH=88;
 
+loadStage(0); mode='select'; titleT=99;
 let last=performance.now();
 function loop(now){
   const dt=Math.min(0.05,(now-last)/1000); last=now; gt+=dt;
@@ -241,6 +283,7 @@ function loop(now){
 }
 
 function update(dt){
+  if (titleT<3) titleT+=dt;
   if (paused || p.won) return;
   if (p.inv>0) p.inv-=dt;
   if (p.flash>0) p.flash-=dt;
@@ -460,9 +503,7 @@ function curFrame(){
 }
 
 // ---- scenery ----
-const STARS=Array.from({length:90},()=>[Math.random()*WORLD,Math.random()*GROUND*0.8,Math.random()*1.6+0.6]);
-const TREES=Array.from({length:60},(_,i)=>({x:80+i*180+((i*53)%50), big:(i%4===0)}));
-const GRAVES_BG=Array.from({length:72},(_,i)=>[80+i*150+((i*53)%40),0.7+((i*29)%4)*0.1,(i%4===0)]);
+
 function pxf(wx,f){ return wx-camX*f; }
 function tileDirt(x0,x1,topY,darken,f){
   const dt=SPR.dirt; if(!dt) return; const th=H-topY; const tw=dt.w*th/dt.h;
@@ -961,21 +1002,26 @@ function draw(){
   if (p.dead && p.deadT>2.3){
     menuPanel('YOU DIED', [
       {label: p.spawn>90?'Rise at Checkpoint':'Try Again', action:()=>{ paused=false; onReset(); }},
-      {label:'Restart Stage', action:()=>{ paused=false; reset(); }},
+      {label:'Restart Act', action:()=>{ paused=false; loadStage(stageIdx); }},
       {label:'Characters', action:()=>{ paused=false; mode='select'; }},
     ], null, '#e23b3b');
   } else if (p.won){
-    menuPanel('Stage Complete!', [
-      {label:'Replay Stage', action:()=>{ paused=false; reset(); }},
-      {label:'Characters', action:()=>{ paused=false; mode='select'; }},
-    ], 'Souls: '+soulCount+' / '+souls.length+'   ·   Stage 2 — coming soon', '#c8fb50');
+    const items=[];
+    if (stageIdx+1 < window.STAGES.length){
+      items.push({label:'Continue — Act '+window.STAGES[stageIdx+1].act, action:()=>{ paused=false; loadStage(stageIdx+1); }});
+    }
+    items.push({label:'Replay Act', action:()=>{ paused=false; loadStage(stageIdx); }});
+    items.push({label:'Characters', action:()=>{ paused=false; mode='select'; }});
+    menuPanel('Act '+ST.act+' Complete!', items,
+      'Souls: '+soulCount+' / '+souls.length+(stageIdx+1>=window.STAGES.length?'   ·   More acts coming soon':''), '#c8fb50');
   } else if (paused){
     menuPanel('Paused', [
       {label:'Characters', action:()=>{ paused=false; mode='select'; }},
-      {label:'Restart Stage', action:()=>{ paused=false; reset(); }},
+      {label:'Restart Act', action:()=>{ paused=false; loadStage(stageIdx); }},
       {label:'Close', action:()=>{ paused=false; }},
     ]);
   }
+  drawTitleCard();
 }
 function drawLoading(){
   ctx.setTransform(RS,0,0,RS,0,0);
