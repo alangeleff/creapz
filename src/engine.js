@@ -1,4 +1,4 @@
-const ASSET_VER='1780601045';
+const ASSET_VER='1780601340';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -344,7 +344,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -474,7 +474,8 @@ function update(dt){
   if (p.hurtT>0) p.hurtT-=dt;
   p.hpShown += (p.hp-p.hpShown)*Math.min(1,dt*8);
   if (p.dead){
-    p.deadT+=dt;
+    const pd0=p.deadT; p.deadT+=dt;
+    if (pd0<0.45 && p.deadT>=0.45) playSfx('sfx_dportal');
     if (p.state!=='kneel'){ p.state='kneel'; p.clock=0; }
     p.clock+=dt;
     return;
@@ -580,7 +581,7 @@ function update(dt){
     if (!chkOn[ci] && p.x>=CHK[ci]-10){ chkOn[ci]=true; p.spawn=CHK[ci]; chkFx.push({cx:CHK[ci], t:0, hit:false}); playSfx('sfx_ignite',1.6); }
   }
   p.x=Math.max(18,Math.min(WORLD-18,p.x));
-  if (p.x>=GOAL_X-24 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; }
+  if (p.x>=GOAL_X-24 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; playSfx('sfx_wportal'); }
   let st;
   if (p.hurtT>0) st='hurt';
   else if (p.attackT>0) st='attack'; else if (p.castT>0) st='cast'; else if(!p.onGround) st='jump';
