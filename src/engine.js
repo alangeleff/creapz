@@ -1,4 +1,4 @@
-const ASSET_VER='1780600111';
+const ASSET_VER='1780600527';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -344,7 +344,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -516,7 +516,7 @@ function update(dt){
   if ((keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; playSfx('sfx_jump',0.55); }
   if (keys['KeyZ']&&p.attackT<=0&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
-    if (chosen!=='dingbat') playSfx('sfx_slash');
+    playSfx(chosen==='dingbat'?'sfx_wing':'sfx_slash');
   }
   if (p.attackT>0){
     p.attackT-=dt;
@@ -605,7 +605,7 @@ function update(dt){
     if (pwb && z.hitCd<=0 && overlap(pwb, zBodyBox(z))){
       z.hp-=1; z.hitCd=0.45; z.shown=3; playSfx('sfx_meleehit');
       z.x=clamp(z.x + (z.x<p.x?-12:12), z.min, z.max);
-      if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.4); continue; }
+      if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); continue; }
     }
     // zombie behavior + its sword strikes player
     if (z.atkT>0){
@@ -654,7 +654,7 @@ function update(dt){
     let bb=batBox(b);
     if (b.state==='bite' && b.bt>8/BITE_FPS && b.bt<23/BITE_FPS){ bb={x:bb.x+(b.facing<0?-30:0), y:bb.y-4, w:bb.w+30, h:bb.h+8}; }
     if (p.inv<=0 && !p.dead && overlap(pBodyBox(), bb)) hurtPlayer(b.x);
-    if (pwb && overlap(pwb, batBox(b))){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_meleehit'); playSfx('sfx_die',0.4); }
+    if (pwb && overlap(pwb, batBox(b))){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_meleehit'); playSfx('sfx_die',0.7); }
   }
   for (const bo of bolts){
     if (bo.dead) continue;
@@ -668,7 +668,7 @@ function update(dt){
       if (bo.x>zb.x-6&&bo.x<zb.x+zb.w+6&&bo.y>zb.y&&bo.y<zb.y+zb.h){
         z.hp-=1; z.shown=3; playSfx('sfx_projhit');
         z.x=clamp(z.x+(bo.vx>0?9:-9), z.min, z.max);
-        if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.4); }
+        if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); }
         hit=true; break;
       }
     }
@@ -676,7 +676,7 @@ function update(dt){
       if (b.dead) continue;
       const bb2=batBox(b);
       if (bo.x>bb2.x-6&&bo.x<bb2.x+bb2.w+6&&bo.y>bb2.y&&bo.y<bb2.y+bb2.h){
-        b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_projhit'); playSfx('sfx_die',0.4); hit=true; break;
+        b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_projhit'); playSfx('sfx_die',0.7); hit=true; break;
       }
     }
     if (hit){
