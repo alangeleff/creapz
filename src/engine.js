@@ -1,4 +1,4 @@
-const ASSET_VER='1780534098';
+const ASSET_VER='1780535364';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -45,8 +45,9 @@ function release(code){
 addEventListener('keydown', e => {
   if (['ArrowLeft','ArrowRight','ArrowUp','Space',' '].includes(e.key)||e.code==='Space') e.preventDefault();
   if (mode==='select'){ const n='12345'.indexOf(e.key); if(n>=0&&n<ORDER.length) startGame(ORDER[n]); return; }
-  if (e.code==='KeyR'){ onReset(); return; }
-  if (e.code==='KeyC'){ mode='select'; return; }
+  if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won) paused=!paused; return; }
+  if (e.code==='KeyR'){ paused=false; onReset(); return; }
+  if (e.code==='KeyC'){ paused=false; mode='select'; return; }
   press(e.code);
 });
 addEventListener('keyup', e => release(e.code));
@@ -58,14 +59,20 @@ function bindBtn(id,code){
   el.addEventListener('pointercancel',e=>{e.preventDefault();release(code);});
 }
 bindBtn('bL','ArrowLeft'); bindBtn('bR','ArrowRight'); bindBtn('bJ','Space'); bindBtn('bA','KeyZ'); bindBtn('bC','KeyX');
-document.getElementById('rst').addEventListener('click', ()=>onReset());
-document.getElementById('chr').addEventListener('click', ()=>{ mode='select'; });
 // canvas taps (character select)
 function canvasPt(e){ const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H }; }
 cv.addEventListener('pointerdown', e=>{
-  if (mode!=='select') return;
   const pt=canvasPt(e);
-  for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ startGame(c.key); break; } }
+  if (mode==='select'){
+    for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ startGame(c.key); break; } }
+    return;
+  }
+  if (mode!=='play') return;
+  if (menuOpen()){
+    for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ r.action(); return; } }
+    return;
+  }
+  if (pt.x>PB.x-6&&pt.x<PB.x+PB.w+6&&pt.y>PB.y-6&&pt.y<PB.y+PB.h+6 && !p.winning){ paused=true; }
 });
 
 // ---- load sprites ----
@@ -107,6 +114,34 @@ const BAT_FPS = 15, BITE_FPS = 29, BAT_PATROL = 1.25, BAT_CHASE = 2.1, BAT_AGGRO
 
 let mode='select', chosen=ORDER[0];
 let p, souls, soulCount, gt=0, camX=0, zombies, plats, chkOn, bats, bolts, impacts;
+let paused=false, menuRects=[];
+const PB={x:14,y:92,w:40,h:32};
+function menuPanel(title, items, sub, titleColor){
+  ctx.fillStyle='rgba(8,5,18,.72)'; ctx.fillRect(0,0,W,H);
+  const mw=310, ih=46, gap=13, mh=86+items.length*(ih+gap)+(sub?26:0);
+  const mx=W/2-mw/2, my=H/2-mh/2;
+  ctx.fillStyle='rgba(22,16,44,.97)'; roundRect(mx,my,mw,mh,14); ctx.fill();
+  ctx.strokeStyle='rgba(150,140,255,.5)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle=titleColor||'#eae6ff'; ctx.font='bold 26px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(title, W/2, my+44);
+  menuRects=[];
+  items.forEach((it,i)=>{
+    const by=my+66+i*(ih+gap);
+    ctx.fillStyle='rgba(155,140,255,.16)'; roundRect(mx+26,by,mw-52,ih,10); ctx.fill();
+    ctx.strokeStyle='rgba(155,140,255,.45)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='#e8e6f5'; ctx.font='600 18px sans-serif';
+    ctx.fillText(it.label, W/2, by+30);
+    menuRects.push({x:mx+26,y:by,w:mw-52,h:ih,action:it.action});
+  });
+  if (sub){ ctx.fillStyle='rgba(200,190,255,.6)'; ctx.font='13px sans-serif'; ctx.fillText(sub, W/2, my+mh-16); }
+  ctx.textAlign='left';
+}
+function drawPauseBtn(){
+  ctx.fillStyle='rgba(20,16,36,.55)'; roundRect(PB.x,PB.y,PB.w,PB.h,8); ctx.fill();
+  ctx.strokeStyle='rgba(150,140,255,.4)'; ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
+}
+function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
 function startGame(ck){ chosen=ck; mode='play'; reset(); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
@@ -198,8 +233,6 @@ const PW=52, PH=88;
 let last=performance.now();
 function loop(now){
   const dt=Math.min(0.05,(now-last)/1000); last=now; gt+=dt;
-  document.getElementById('rst').style.display = mode==='play'?'block':'none';
-  document.getElementById('chr').style.display = mode==='play'?'block':'none';
   document.querySelector('.touch').style.display = mode==='play'?'flex':'none';
   if (loaded<total) drawLoading();
   else if (mode==='select') drawSelect();
@@ -208,6 +241,7 @@ function loop(now){
 }
 
 function update(dt){
+  if (paused || p.won) return;
   if (p.inv>0) p.inv-=dt;
   if (p.flash>0) p.flash-=dt;
   if (p.hurtT>0) p.hurtT-=dt;
@@ -805,6 +839,7 @@ function drawGoal(){
   ctx.restore(); ctx.globalAlpha=1;
 }
 function drawPlayerLayer(){
+  if (p.won) return;
   const sx=p.x-camX;
   if (p.winning){
     const t=p.winT, gi=Math.min(1,t/1.6);
@@ -922,16 +957,25 @@ function draw(){
   ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(32,68,9,0,7); ctx.fill();
   ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(32,68,5,0,7); ctx.fill();
   ctx.fillStyle='#eaf6ff'; ctx.font='bold 16px sans-serif'; ctx.textAlign='left'; ctx.fillText('x '+soulCount+' / '+souls.length, 48, 74);
+  if (!menuOpen() && !p.winning) drawPauseBtn();
   drawProgress();
   if (p.dead && p.deadT>2.3){
-    ctx.fillStyle='rgba(25,0,0,.62)'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#e23b3b'; ctx.font='bold 48px sans-serif'; ctx.textAlign='center'; ctx.fillText('YOU DIED', W/2, H/2-4);
-    ctx.fillStyle='#e8e6f5'; ctx.font='16px sans-serif'; ctx.fillText((p.spawn>90?'R / Reset — rise at the marked grave':'R / Reset — try again')+'  ·  C — change reaper', W/2, H/2+30); ctx.textAlign='left';
+    menuPanel('YOU DIED', [
+      {label: p.spawn>90?'Rise at Checkpoint':'Try Again', action:()=>{ paused=false; onReset(); }},
+      {label:'Restart Stage', action:()=>{ paused=false; reset(); }},
+      {label:'Characters', action:()=>{ paused=false; mode='select'; }},
+    ], null, '#e23b3b');
   } else if (p.won){
-    ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#c8fb50'; ctx.font='bold 40px sans-serif'; ctx.textAlign='center'; ctx.fillText('You reached the end!',W/2,H/2-16);
-    ctx.fillStyle='#7fe0ff'; ctx.font='22px sans-serif'; ctx.fillText('Souls: '+soulCount+' / '+souls.length, W/2, H/2+18);
-    ctx.fillStyle='#e8e6f5'; ctx.font='16px sans-serif'; ctx.fillText('R to replay  ·  C to change reaper', W/2, H/2+48); ctx.textAlign='left';
+    menuPanel('Stage Complete!', [
+      {label:'Replay Stage', action:()=>{ paused=false; reset(); }},
+      {label:'Characters', action:()=>{ paused=false; mode='select'; }},
+    ], 'Souls: '+soulCount+' / '+souls.length+'   ·   Stage 2 — coming soon', '#c8fb50');
+  } else if (paused){
+    menuPanel('Paused', [
+      {label:'Characters', action:()=>{ paused=false; mode='select'; }},
+      {label:'Restart Stage', action:()=>{ paused=false; reset(); }},
+      {label:'Close', action:()=>{ paused=false; }},
+    ]);
   }
 }
 function drawLoading(){
