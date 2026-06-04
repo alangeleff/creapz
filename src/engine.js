@@ -1,4 +1,4 @@
-const ASSET_VER='1780602518';
+const ASSET_VER='1780602725';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -56,7 +56,7 @@ function release(code){
 }
 addEventListener('keydown', e => {
   if (['ArrowLeft','ArrowRight','ArrowUp','Space',' '].includes(e.key)||e.code==='Space') e.preventDefault();
-  if (mode==='select'){ if(e.key==='1') startGame(creaperSkin); else if(e.key==='2') startGame('dingbat'); return; }
+  if (mode==='select'){ if(e.key==='1'){ playSfx('sfx_msel'); startGame(creaperSkin); } else if(e.key==='2'){ playSfx('sfx_msel'); startGame('dingbat'); } return; }
   if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; playSfx('sfx_mtog'); } return; }
   if (e.code==='KeyR'){ paused=false; onReset(); return; }
   if (e.code==='KeyC'){ paused=false; mode='select'; return; }
@@ -205,19 +205,22 @@ function setRunLoop(state){
   ensureSfxGain();
   if (!runSrc){
     runSrc=AC.createBufferSource(); runSrc.buffer=sfxBuf['sfx_run']; runSrc.loop=true;
-    const g=AC.createGain(); g.gain.value=1.9; runSrc.connect(g); g.connect(sfxGain);
+    const g=AC.createGain(); g.gain.value=2.6; runSrc.connect(g); g.connect(sfxGain);
     runSrc.start();
   }
   runSrc.playbackRate.value = state==='run' ? 1.0 : 0.62;
 }
-function playSfx(key, vol, delay){
-  if (!AC) return;
-  ensureSfxGain();
-  if (!sfxBuf[key]){ loadSfx(key); return; }
+function sfxFire(key, vol, delay){
   const s=AC.createBufferSource(); s.buffer=sfxBuf[key];
   if (vol!==undefined && vol!==1){ const g=AC.createGain(); g.gain.value=vol; s.connect(g); g.connect(sfxGain); }
   else s.connect(sfxGain);
   s.start(delay ? AC.currentTime+delay : 0);
+}
+function playSfx(key, vol, delay){
+  if (!AC) return;
+  ensureSfxGain();
+  if (!sfxBuf[key]){ loadSfx(key).then(()=>{ if (AC && sfxBuf[key]) sfxFire(key, vol, 0); }); return; }
+  sfxFire(key, vol, delay);
 }
 let banked=0, actScore=0, actSoulPts=0, actKillPts=0, killCount=0, totalEnemies=0, gotHit=false, actTime=0;
 let tally=null, fading=0, fadeIn=0;
