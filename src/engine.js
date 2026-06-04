@@ -1,8 +1,9 @@
+const ASSET_VER='1780533088';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
-  const S = await (await fetch('./assets/sprites.json')).json();
+  const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
   (function fix(o){ for (const k in o){
-    if ((k==='src'||k==='flame') && typeof o[k]==='string' && !o[k].startsWith('data:')) o[k]='./assets/'+o[k];
+    if ((k==='src'||k==='flame') && typeof o[k]==='string' && !o[k].startsWith('data:')) o[k]='./assets/'+o[k]+'?v='+ASSET_VER;
     else if (o[k] && typeof o[k]==='object') fix(o[k]);
   } })(S);
   return S;
