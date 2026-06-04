@@ -1,4 +1,4 @@
-const ASSET_VER='1780610734';
+const ASSET_VER='1780614267';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -801,7 +801,7 @@ function update(dt){
 function hurtPlayer(srcX,dmg){
   gotHit=true; playSfx('sfx_hurt');
   p.hp-=(dmg||1); p.inv=1.0; p.flash=0.35;
-  p.hurtT=Math.min(0.45, SPR.chars[chosen].hurt.frames/pfps('hurt'));
+  p.hurtT=0.45;  // single retro hurt still + flicker, fixed hit-stun
   const away=(p.x<srcX)?-1:1; p.vx=away*2; p.x+=away*8;
   if(p.onGround){ p.vy=-7; p.onGround=false; }
   if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; playSfx('sfx_pdie'); }
