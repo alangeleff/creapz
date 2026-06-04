@@ -1,4 +1,4 @@
-const ASSET_VER='1780600527';
+const ASSET_VER='1780600858';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -344,7 +344,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -570,14 +570,14 @@ function update(dt){
     }
   }
   if (p.y>H+220){
-    gotHit=true;
+    gotHit=true; playSfx('sfx_hurt');
     p.hp-=1; p.x=p.spawn; p.y=GROUND; p.vy=0; p.vx=0; p.onGround=true; p.standPlat=null;
     p.inv=1.2; p.flash=0.35; p.hurtT=0;
     if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; }
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
   }
   for (let ci=0; ci<CHK.length; ci++){
-    if (!chkOn[ci] && p.x>=CHK[ci]-10){ chkOn[ci]=true; p.spawn=CHK[ci]; chkFx.push({cx:CHK[ci], t:0, hit:false}); }
+    if (!chkOn[ci] && p.x>=CHK[ci]-10){ chkOn[ci]=true; p.spawn=CHK[ci]; chkFx.push({cx:CHK[ci], t:0, hit:false}); playSfx('sfx_ignite',0.8); }
   }
   p.x=Math.max(18,Math.min(WORLD-18,p.x));
   if (p.x>=GOAL_X-24 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; }
@@ -692,7 +692,7 @@ function update(dt){
   impacts=impacts.filter(im=>im.t<0.32);
   for (const fx of chkFx){
     fx.t+=dt;
-    if (!fx.hit && fx.t>0.62){ fx.hit=true; p.hp=Math.min(PMAXHP, p.hp+1); }
+    if (!fx.hit && fx.t>0.62){ fx.hit=true; p.hp=Math.min(PMAXHP, p.hp+1); playSfx('sfx_healthup'); }
   }
   chkFx=chkFx.filter(fx=>fx.t<1.1);
   bolts=bolts.filter(bo=>!bo.dead||bo.t<1.2);
@@ -700,7 +700,7 @@ function update(dt){
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
 }
 function hurtPlayer(srcX,dmg){
-  gotHit=true;
+  gotHit=true; playSfx('sfx_hurt');
   p.hp-=(dmg||1); p.inv=1.0; p.flash=0.35;
   p.hurtT=Math.min(0.45, SPR.chars[chosen].hurt.frames/pfps('hurt'));
   const away=(p.x<srcX)?-1:1; p.vx=away*2; p.x+=away*8;
