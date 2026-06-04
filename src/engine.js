@@ -1,4 +1,4 @@
-const ASSET_VER='1780533088';
+const ASSET_VER='1780533316';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -622,7 +622,7 @@ function drawSkullIcon(cx,cy,r){
   ctx.fillStyle='#1a1530'; ctx.beginPath(); ctx.arc(cx-r*0.42,cy-1,r*0.3,0,7); ctx.arc(cx+r*0.42,cy-1,r*0.3,0,7); ctx.fill();
 }
 function drawPlayerHP(){
-  const x=14,y=14,w=196,h=26, bx=x+34, bw=w-36;
+  const x=14,y=14,w=196,h=26, bx=x+44, bw=w-46;
   ctx.fillStyle='rgba(16,12,30,.72)'; roundRect(x-2,y-2,w+6,h+6,9); ctx.fill();
   ctx.strokeStyle='rgba(150,140,255,.4)'; ctx.lineWidth=1; ctx.stroke();
   const hi=SPR.hpicon[chosen];
