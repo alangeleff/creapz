@@ -1,4 +1,4 @@
-const ASSET_VER='1780597140';
+const ASSET_VER='1780599071';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -171,6 +171,20 @@ async function playMusic(key){
   src.connect(musicGain); src.start(); musicSrc=src;
 }
 function stopMusic(){ musicReq++; if (musicSrc){ try{ musicSrc.stop(); }catch(e){} musicSrc=null; musicKey=null; } }
+let sfxBuf={}, sfxGain=null;
+async function loadSfx(key){
+  if (!AC || sfxBuf[key] || window.SPRITES_INLINE) return;
+  try{
+    const r=await fetch('./assets/audio/'+key+'.m4a?v='+ASSET_VER);
+    sfxBuf[key]=await AC.decodeAudioData(await r.arrayBuffer());
+  }catch(e){}
+}
+function playSfx(key){
+  if (!AC) return;
+  if (!sfxGain){ sfxGain=AC.createGain(); sfxGain.gain.value=0.9; sfxGain.connect(AC.destination); }
+  if (!sfxBuf[key]){ loadSfx(key); return; }
+  const s=AC.createBufferSource(); s.buffer=sfxBuf[key]; s.connect(sfxGain); s.start();
+}
 let banked=0, actScore=0, actSoulPts=0, actKillPts=0, killCount=0, totalEnemies=0, gotHit=false, actTime=0;
 let tally=null, fading=0, fadeIn=0;
 function addScore(base, kind){
@@ -327,7 +341,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -497,7 +511,10 @@ function update(dt){
   const speed=running?RUN:WALK;
   if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0;
   if ((keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; }
-  if (keys['KeyZ']&&p.attackT<=0&&SPR.chars[chosen].attack.weapon) p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
+  if (keys['KeyZ']&&p.attackT<=0&&SPR.chars[chosen].attack.weapon){
+    p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
+    if (chosen!=='dingbat') playSfx('sfx_slash');
+  }
   if (p.attackT>0){
     p.attackT-=dt;
     if (chosen==='dingbat'){
@@ -518,7 +535,7 @@ function update(dt){
     if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
       if (chosen==='dingbat') bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'});
-      else bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'});
+      else { bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'}); playSfx('sfx_bolt'); }
     }
   }
   let nx=p.x+p.vx;
