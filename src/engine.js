@@ -1,4 +1,4 @@
-const ASSET_VER='1780541688';
+const ASSET_VER='1780541924';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -659,7 +659,6 @@ function drawSelect(){
     ctx.fillStyle='#eae6ff'; ctx.font='bold 18px sans-serif'; ctx.fillText(LABELS[ck]||ck, cardX+cw/2, cardY+cardH-18);
   }
   ctx.textAlign='left';
-  vignette();
 }
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function lerpC(a,b,t){ return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')'; }
@@ -900,6 +899,7 @@ function draw(){
   ctx.setTransform(RS,0,0,RS,0,0);
   skyBG();
   drawFence();
+  vignette();
   drawSpikes();
   drawGround();
   drawChecks();
@@ -950,7 +950,6 @@ function draw(){
     ctx.beginPath(); ctx.arc(ix,im.y,r*0.72,0,7); ctx.stroke();
   }
   for (const z of zombies) drawZHP(z);
-  vignette();
   // HUD
   drawPlayerHP();
   ctx.fillStyle='rgba(20,16,36,.5)'; roundRect(14,54,128,28,7); ctx.fill();
