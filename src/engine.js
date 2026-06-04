@@ -1,4 +1,4 @@
-const ASSET_VER='1780542800';
+const ASSET_VER='1780544016';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -9,6 +9,7 @@ async function loadSprites(){
   return S;
 }
 async function main(){
+if (document.fonts && document.fonts.load){ try{ await Promise.race([document.fonts.load('40px Creepster'), new Promise(r=>setTimeout(r,800))]); }catch(e){} }
 const SPRITES = await loadSprites();
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const tcv = document.createElement('canvas'), tctx = tcv.getContext('2d');
@@ -159,9 +160,9 @@ function drawTitleCard(){
   ctx.fillStyle='rgba(155,140,255,0.85)';
   ctx.beginPath(); ctx.moveTo(W*0.835,118); ctx.lineTo(W*0.85,118); ctx.lineTo(W*0.77,252); ctx.lineTo(W*0.755,252); ctx.closePath(); ctx.fill();
   ctx.textAlign='left';
-  ctx.font='italic 900 56px sans-serif';
-  ctx.fillStyle='#1a1133'; ctx.fillText(ST.name, 64, 200);
-  ctx.fillStyle='#eae6ff'; ctx.fillText(ST.name, 60, 196);
+  ctx.font="58px Creepster, sans-serif";
+  ctx.fillStyle='#1a1133'; ctx.fillText(ST.name, 64, 202);
+  ctx.fillStyle='#eae6ff'; ctx.fillText(ST.name, 60, 198);
   ctx.restore();
   // act badge strip
   ctx.save(); ctx.translate(offR,0);
@@ -169,7 +170,7 @@ function drawTitleCard(){
   ctx.beginPath(); ctx.moveTo(W*0.30,268); ctx.lineTo(W+90,268); ctx.lineTo(W+90,330); ctx.lineTo(W*0.265,330); ctx.closePath(); ctx.fill();
   ctx.fillStyle='#7fe0ff';
   ctx.beginPath(); ctx.moveTo(W*0.30,268); ctx.lineTo(W*0.318,268); ctx.lineTo(W*0.283,330); ctx.lineTo(W*0.265,330); ctx.closePath(); ctx.fill();
-  ctx.font='italic 900 34px sans-serif';
+  ctx.font="40px Creepster, sans-serif";
   ctx.fillStyle='#c8fb50'; ctx.fillText('ACT  '+ST.act, W*0.40, 312);
   // soul orb spinning beside the act numeral
   const sa=SPR.soul;
