@@ -1,4 +1,4 @@
-const ASSET_VER='1780596000';
+const ASSET_VER='1780596382';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -487,7 +487,8 @@ function update(dt){
     p.castT-=dt;
     const cf0=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast'));
     const cfi=Math.min(SPR.chars[chosen].cast.frames-1, Math.floor((cf0 - p.castT)*pfps('cast')));
-    if (!p.castFired && cfi>=3){
+    const fireAt = chosen==='dingbat' ? 0 : 3;   // dingbat shrieks instantly (placeholder anim is slow); retune when his cast sheet lands
+    if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
       if (chosen==='dingbat') bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'});
       else bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'});
