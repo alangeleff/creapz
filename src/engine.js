@@ -1,4 +1,4 @@
-const ASSET_VER='1780596666';
+const ASSET_VER='1780597140';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -32,6 +32,7 @@ function loadStage(i){
   TREES = Array.from({length:Math.ceil(WORLD/180)},(_,k)=>({x:80+k*180+((k*53)%50), big:(k%4===0)}));
   GRAVES_BG = Array.from({length:Math.ceil(WORLD/150)},(_,k)=>[80+k*150+((k*53)%40),0.7+((k*29)%4)*0.1,(k%4===0)]);
   reset(); titleT = 0;
+  if (mode==='play') playMusic(ST.music);
   actScore=0; actSoulPts=0; actKillPts=0; killCount=0; gotHit=false; actTime=0;
   totalEnemies=zombies.length+bats.length;
   tally=null; fading=0; fadeIn=0.5;
@@ -146,6 +147,30 @@ const BAT_FPS = 15, BITE_FPS = 29, BAT_PATROL = 1.25, BAT_CHASE = 2.1, BAT_AGGRO
 let mode='select', chosen=ORDER[0];
 let p, souls, soulCount, gt=0, camX=0, zombies, plats, chkOn, bats, bolts, impacts;
 let paused=false, menuRects=[];
+let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicKey=null, musicReq=0;
+function audioInit(){
+  if (AC) return;
+  try{
+    AC=new (window.AudioContext||window.webkitAudioContext)();
+    musicGain=AC.createGain(); musicGain.gain.value=0.55; musicGain.connect(AC.destination);
+  }catch(e){ AC=null; }
+}
+async function playMusic(key){
+  if (!AC || !key || window.SPRITES_INLINE) return;
+  const req=++musicReq;
+  if (musicSrc){ try{ musicSrc.stop(); }catch(e){} musicSrc=null; }
+  musicKey=key;
+  if (!musicBuf[key]){
+    try{
+      const r=await fetch('./assets/audio/'+key+'.m4a?v='+ASSET_VER);
+      musicBuf[key]=await AC.decodeAudioData(await r.arrayBuffer());
+    }catch(e){ return; }
+  }
+  if (req!==musicReq) return;
+  const src=AC.createBufferSource(); src.buffer=musicBuf[key]; src.loop=true;
+  src.connect(musicGain); src.start(); musicSrc=src;
+}
+function stopMusic(){ musicReq++; if (musicSrc){ try{ musicSrc.stop(); }catch(e){} musicSrc=null; musicKey=null; } }
 let banked=0, actScore=0, actSoulPts=0, actKillPts=0, killCount=0, totalEnemies=0, gotHit=false, actTime=0;
 let tally=null, fading=0, fadeIn=0;
 function addScore(base, kind){
@@ -302,7 +327,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -400,6 +425,8 @@ let last=performance.now();
 function loop(now){
   const dt=Math.min(0.05,(now-last)/1000); last=now; gt+=dt;
   document.querySelector('.touch').style.display = mode==='play'?'flex':'none';
+  if (musicGain) musicGain.gain.value = (mode==='play' && !paused) ? 0.55 : 0.22;
+  if (mode==='select' && musicSrc) stopMusic();
   if (loaded<total) drawLoading();
   else if (mode==='select') drawSelect();
   else { update(dt); draw(); }
