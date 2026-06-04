@@ -1,4 +1,4 @@
-const ASSET_VER='1780545984';
+const ASSET_VER='1780578883';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -52,7 +52,7 @@ function release(code){
 }
 addEventListener('keydown', e => {
   if (['ArrowLeft','ArrowRight','ArrowUp','Space',' '].includes(e.key)||e.code==='Space') e.preventDefault();
-  if (mode==='select'){ const n='12345'.indexOf(e.key); if(n>=0&&n<ORDER.length) startGame(ORDER[n]); return; }
+  if (mode==='select'){ if(e.key==='1') startGame(creaperSkin); else if(e.key==='2') startGame('dingbat'); return; }
   if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won) paused=!paused; return; }
   if (e.code==='KeyR'){ paused=false; onReset(); return; }
   if (e.code==='KeyC'){ paused=false; mode='select'; return; }
@@ -72,7 +72,8 @@ function canvasPt(e){ const r=cv.getBoundingClientRect(); return { x:(e.clientX-
 cv.addEventListener('pointerdown', e=>{
   const pt=canvasPt(e);
   if (mode==='select'){
-    for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ startGame(c.key); break; } }
+    for (const d of dotRects){ if (pt.x>d.x&&pt.x<d.x+d.w&&pt.y>d.y&&pt.y<d.y+d.h){ creaperSkin=d.skin; return; } }
+    for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ startGame(c.key==='creaper'?creaperSkin:'dingbat'); break; } }
     return;
   }
   if (mode!=='play') return;
@@ -110,8 +111,13 @@ SPR.hpicon={}; for (const k in SPRITES.hpicon){ const d=SPRITES.hpicon[k]; const
   const vimg=new Image(); total++; vimg.onload=()=>loaded++; vimg.src=d.vortex;
   SPR.goal={img,fimg,vimg,w:d.w,h:d.h,fpts:d.fpts,vc:d.vc,vr:d.vr,vsz:d.vsz}; }
 { const d=SPRITES.grass; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.grass={img,w:d.w,h:d.h}; }
-for (const ck of ORDER){ SPR.chars[ck]={}; for (const an in SPRITES.chars[ck]) SPR.chars[ck][an]=L(SPRITES.chars[ck][an]); }
+for (const ck in SPRITES.chars){ SPR.chars[ck]={};
+  for (const an in SPRITES.chars[ck]){
+    if (an==='fps'){ SPR.chars[ck].fps=SPRITES.chars[ck].fps; continue; }
+    SPR.chars[ck][an]=L(SPRITES.chars[ck][an]);
+  } }
 const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, cast:32 };
+function pfps(st2){ const f=SPR.chars[chosen]&&SPR.chars[chosen].fps; return (f&&f[st2])||FPS[st2]; }
 const FZ = { idle:24, walk:12, attack:16 };
 const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12} };
 const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15 };
@@ -337,16 +343,17 @@ function update(dt){
   const speed=running?RUN:WALK;
   if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0;
   if ((keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; }
-  if (keys['KeyZ']&&p.attackT<=0) p.attackT=SPR.chars[chosen].attack.frames/FPS.attack;
+  if (keys['KeyZ']&&p.attackT<=0&&SPR.chars[chosen].attack.weapon) p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
   if (p.attackT>0) p.attackT-=dt;
   if (p.castCd>0) p.castCd-=dt;
   if (p.muzzleT>0) p.muzzleT-=dt;
   if (keys['KeyX']&&p.castT<=0&&p.castCd<=0&&p.attackT<=0){
-    p.castT=SPR.chars[chosen].cast.frames/FPS.cast; p.castCd=0.55; p.castFired=false;
+    p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false;
   }
   if (p.castT>0){
     p.castT-=dt;
-    const cfi=Math.min(SPR.chars[chosen].cast.frames-1, Math.floor((SPR.chars[chosen].cast.frames/FPS.cast - p.castT)*FPS.cast));
+    const cf0=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast'));
+    const cfi=Math.min(SPR.chars[chosen].cast.frames-1, Math.floor((cf0 - p.castT)*pfps('cast')));
     if (!p.castFired && cfi>=3){
       p.castFired=true; p.muzzleT=0.14;
       bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false});
@@ -510,13 +517,13 @@ function update(dt){
 }
 function hurtPlayer(srcX,dmg){
   p.hp-=(dmg||1); p.inv=1.0; p.flash=0.35;
-  p.hurtT=SPR.chars[chosen].hurt.frames/FPS.hurt;
+  p.hurtT=Math.min(0.45, SPR.chars[chosen].hurt.frames/pfps('hurt'));
   const away=(p.x<srcX)?-1:1; p.vx=away*2; p.x+=away*8;
   if(p.onGround){ p.vy=-7; p.onGround=false; }
   if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; }
 }
 function curFrame(){
-  const a=SPR.chars[chosen][p.state], fps=FPS[p.state];
+  const a=SPR.chars[chosen][p.state], fps=pfps(p.state);
   if (p.state==='attack'||p.state==='hurt'||p.state==='kneel'||p.state==='cast') return Math.min(a.frames-1, Math.floor(p.clock*fps));
   return Math.floor(p.clock*fps)%a.frames;
 }
@@ -698,25 +705,48 @@ function drawCharSprite(ck,state,fi,cx,feetY,facing,scale,tint){
   ctx.restore();
 }
 
-let cardRects=[];
+let cardRects=[], dotRects=[];
+let creaperSkin='default';
+const SKINC={default:'#7b5cff', green:'#3ddc5a', blue:'#2f7bff', red:'#e0504a'};
 function drawSelect(){
   ctx.setTransform(RS,0,0,RS,0,0);
   camX=0; skyBG();
   drawFence();
   ctx.fillStyle='#1d1730'; ctx.fillRect(0,GROUND,W,H-GROUND); ctx.fillStyle='#5a4499'; ctx.fillRect(0,GROUND,W,8);
   ctx.textAlign='center';
-  ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText('Choose your Reaper', W/2, 60);
-  ctx.fillStyle='#9b8cff'; ctx.font='15px sans-serif'; ctx.fillText('tap a reaper to begin  ·  keys 1-4', W/2, 86);
-  const n=ORDER.length, cw=190, gap=(W-n*cw)/(n+1), cardY=110, cardH=232;
-  cardRects=[];
-  for (let i=0;i<n;i++){
-    const ck=ORDER[i]; const cx=gap+i*(cw+gap); const cardX=cx;
-    cardRects.push({x:cardX,y:cardY,w:cw,h:cardH,key:ck});
-    ctx.fillStyle='rgba(20,16,40,.55)'; ctx.strokeStyle = ck==='red'?'#e0504a':'#5a4d8c';
+  ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText('Choose your Creap', W/2, 56);
+  ctx.fillStyle='#9b8cff'; ctx.font='15px sans-serif'; ctx.fillText('tap a character to begin  ·  dots pick the cReaper cloak', W/2, 82);
+  const cw=250, gap=(W-2*cw)/3, cardY=104, cardH=246;
+  cardRects=[]; dotRects=[];
+  const roster=[{key:'creaper', label:'cReaper', ck:creaperSkin},{key:'dingbat', label:'Dingbat', ck:'dingbat'}];
+  for (let i=0;i<2;i++){
+    const it=roster[i], cardX=gap+i*(cw+gap);
+    cardRects.push({x:cardX,y:cardY,w:cw,h:cardH,key:it.key});
+    ctx.fillStyle='rgba(20,16,40,.55)';
+    ctx.strokeStyle = it.key==='creaper' ? (SKINC[creaperSkin]||'#5a4d8c') : '#8a6a3a';
     roundRect(cardX,cardY,cw,cardH,12); ctx.fill(); ctx.lineWidth=2; ctx.stroke();
-    const a=SPR.chars[ck].idle; const fi=Math.floor(gt*FPS.idle)%a.frames;
-    const sc=150/a.h; drawCharSprite(ck,'idle',fi, cardX+cw/2, cardY+cardH-58, 1, sc);
-    ctx.fillStyle='#eae6ff'; ctx.font='bold 18px sans-serif'; ctx.fillText(LABELS[ck]||ck, cardX+cw/2, cardY+cardH-18);
+    const a=SPR.chars[it.ck].idle;
+    const cfps=(SPR.chars[it.ck].fps&&SPR.chars[it.ck].fps.idle)||FPS.idle;
+    const fi=Math.floor(gt*cfps)%a.frames;
+    const sc=150/a.h; drawCharSprite(it.ck,'idle',fi, cardX+cw/2, cardY+cardH-54, 1, sc);
+    ctx.fillStyle='#eae6ff'; ctx.font='bold 18px sans-serif'; ctx.fillText(it.label, cardX+cw/2, cardY+cardH-16);
+    if (it.key==='creaper'){
+      // color dots floating above the character
+      const dn=ORDER.length, dr2=11, dgap=34, dx0=cardX+cw/2-((dn-1)*dgap)/2, dy=cardY+34;
+      for (let k=0;k<dn;k++){
+        const sk=ORDER[k], dx=dx0+k*dgap;
+        dotRects.push({x:dx-15,y:dy-15,w:30,h:30,skin:sk});
+        ctx.fillStyle=SKINC[sk]||'#888';
+        ctx.beginPath(); ctx.arc(dx,dy,dr2,0,7); ctx.fill();
+        if (sk===creaperSkin){
+          ctx.strokeStyle='#ffffff'; ctx.lineWidth=2.5;
+          ctx.beginPath(); ctx.arc(dx,dy,dr2+4.5,0,7); ctx.stroke();
+        } else {
+          ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1.5;
+          ctx.beginPath(); ctx.arc(dx,dy,dr2,0,7); ctx.stroke();
+        }
+      }
+    }
   }
   ctx.textAlign='left';
 }
