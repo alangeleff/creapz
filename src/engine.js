@@ -1,9 +1,9 @@
-const ASSET_VER='1780533316';
+const ASSET_VER='1780534098';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
   (function fix(o){ for (const k in o){
-    if ((k==='src'||k==='flame') && typeof o[k]==='string' && !o[k].startsWith('data:')) o[k]='./assets/'+o[k]+'?v='+ASSET_VER;
+    if ((k==='src'||k==='flame'||k==='vortex') && typeof o[k]==='string' && !o[k].startsWith('data:')) o[k]='./assets/'+o[k]+'?v='+ASSET_VER;
     else if (o[k] && typeof o[k]==='object') fix(o[k]);
   } })(S);
   return S;
@@ -89,6 +89,10 @@ SPR.bat={}; for (const k in SPRITES.bat){ const d=SPRITES.bat[k]; const img=new 
   const fimg=new Image(); total++; fimg.onload=()=>loaded++; fimg.src=d.flame;
   SPR.chkst={img,fimg,w:d.w,h:d.h,fpts:d.fpts}; }
 SPR.hpicon={}; for (const k in SPRITES.hpicon){ const d=SPRITES.hpicon[k]; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.hpicon[k]={img,w:d.w,h:d.h}; }
+{ const d=SPRITES.goal; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src;
+  const fimg=new Image(); total++; fimg.onload=()=>loaded++; fimg.src=d.flame;
+  const vimg=new Image(); total++; vimg.onload=()=>loaded++; vimg.src=d.vortex;
+  SPR.goal={img,fimg,vimg,w:d.w,h:d.h,fpts:d.fpts,vc:d.vc,vr:d.vr,vsz:d.vsz}; }
 { const d=SPRITES.grass; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.grass={img,w:d.w,h:d.h}; }
 for (const ck of ORDER){ SPR.chars[ck]={}; for (const an in SPRITES.chars[ck]) SPR.chars[ck][an]=L(SPRITES.chars[ck][an]); }
 const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, cast:32 };
@@ -107,7 +111,7 @@ function startGame(ck){ chosen=ck; mode='play'; reset(); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
-        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, deadT:0, spawn:sx, standPlat:null, castT:0, castCd:0, castFired:true };
+        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, deadT:0, spawn:sx, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38)); zbits=[]; bolts=[]; impacts=[];
   if (!keep){
     soulCount=0; chkOn=CHK.map(()=>false);
@@ -214,6 +218,19 @@ function update(dt){
     p.clock+=dt;
     return;
   }
+  if (p.winning){
+    p.winT+=dt; p.inv=1;
+    if (p.state!=='idle'){ p.state='idle'; p.clock=0; }
+    p.clock+=dt;
+    if (p.winT>1.0){
+      const gw=SPR.goal, gy=GROUND+10-gw.h;
+      const ty=gy+gw.vc[1]+52, k=Math.min(1,dt*4.5);
+      p.x+=(GOAL_X-p.x)*k; p.y+=(ty-p.y)*k;
+    }
+    if (p.winT>1.9){ p.winning=false; p.won=true; }
+    camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
+    return;
+  }
   // platforms tick
   for (const q of plats){
     q.dxf=0;
@@ -288,7 +305,7 @@ function update(dt){
     if (!chkOn[ci] && p.x>=CHK[ci]-10){ chkOn[ci]=true; p.spawn=CHK[ci]; }
   }
   p.x=Math.max(18,Math.min(WORLD-18,p.x));
-  if (p.x>=GOAL_X && p.onGround) p.won=true;
+  if (p.x>=GOAL_X-24 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; }
   let st;
   if (p.hurtT>0) st='hurt';
   else if (p.attackT>0) st='attack'; else if (p.castT>0) st='cast'; else if(!p.onGround) st='jump';
@@ -711,22 +728,22 @@ function drawBat(b){
 function drawPortal(cx,cy,size,t){
   ctx.save(); ctx.translate(cx,cy); ctx.scale(0.52,1);
   const g=ctx.createRadialGradient(0,0,size*0.08,0,0,size);
-  g.addColorStop(0,'rgba(200,245,255,0.95)'); g.addColorStop(0.4,'rgba(60,160,255,0.85)');
-  g.addColorStop(0.78,'rgba(20,60,160,0.65)'); g.addColorStop(1,'rgba(20,60,160,0)');
+  g.addColorStop(0,'rgba(245,230,255,0.95)'); g.addColorStop(0.4,'rgba(190,110,255,0.85)');
+  g.addColorStop(0.78,'rgba(110,40,200,0.65)'); g.addColorStop(1,'rgba(110,40,200,0)');
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,size,0,7); ctx.fill();
   ctx.lineCap='round';
   for (let i=0;i<5;i++){
     const a0=t*5+i*1.26;
     ctx.lineWidth=Math.max(1.5,size*0.07);
-    ctx.strokeStyle='rgba('+(110+i*26)+',225,255,0.55)';
+    ctx.strokeStyle='rgba('+(185+i*14)+','+(120+i*22)+',255,0.55)';
     ctx.beginPath(); ctx.arc(0,0,size*(0.28+0.14*i),a0,a0+2.1); ctx.stroke();
   }
-  ctx.strokeStyle='rgba(120,215,255,0.9)'; ctx.lineWidth=Math.max(2,size*0.05);
+  ctx.strokeStyle='rgba(215,150,255,0.9)'; ctx.lineWidth=Math.max(2,size*0.05);
   ctx.beginPath(); ctx.arc(0,0,size*0.96,0,7); ctx.stroke();
   ctx.restore();
 }
-function drawKneelGlitch(ck,fi,cx,feetY,facing,scale,gi){
-  const a=SPR.chars[ck].kneel, dw=a.w*scale, dh=a.h*scale;
+function drawGlitchAnim(ck,anim,fi,cx,feetY,facing,scale,gi){
+  const a=SPR.chars[ck][anim], dw=a.w*scale, dh=a.h*scale;
   const dx=cx-a.cxs[fi]*scale, dy=feetY-a.foots[fi]*scale;
   ctx.save();
   if (facing<0){ ctx.translate(cx,0); ctx.scale(-1,1); ctx.translate(-cx,0); }
@@ -744,8 +761,61 @@ function drawKneelGlitch(ck,fi,cx,feetY,facing,scale,gi){
   }
   ctx.restore();
 }
+function drawGoal(){
+  const g=SPR.goal; if(!g) return;
+  const sx=pxf(GOAL_X,1); if(sx<-160||sx>W+160) return;
+  const gy=GROUND+10-g.h, x0=sx-g.w/2;
+  const vx2=x0+g.vc[0], vy2=gy+g.vc[1];
+  // rotating vortex behind the arch
+  ctx.save();
+  ctx.translate(vx2,vy2); ctx.rotate(gt*0.85);
+  ctx.drawImage(g.vimg, -g.vsz/2, -g.vsz/2, g.vsz, g.vsz);
+  ctx.restore();
+  // breathing glow over the vortex
+  const pu=0.7+0.3*Math.sin(gt*3.4);
+  const gl=ctx.createRadialGradient(vx2,vy2,2,vx2,vy2,g.vr[1]*1.25);
+  gl.addColorStop(0,'rgba(220,170,255,'+(0.22*pu).toFixed(2)+')');
+  gl.addColorStop(1,'rgba(140,60,255,0)');
+  ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(vx2,vy2,g.vr[1]*1.3,0,7); ctx.fill();
+  // swirl arcs riding the vortex
+  ctx.save(); ctx.translate(vx2,vy2); ctx.scale(g.vr[0]/g.vr[1],1); ctx.lineCap='round';
+  for (let i=0;i<3;i++){
+    const a0=-gt*2.2+i*2.1;
+    ctx.strokeStyle='rgba('+(195+i*15)+','+(130+i*25)+',255,0.4)';
+    ctx.lineWidth=2.2-i*0.5;
+    ctx.beginPath(); ctx.arc(0,0,g.vr[1]*(0.35+0.2*i),a0,a0+1.9); ctx.stroke();
+  }
+  ctx.restore();
+  // stone arch on top
+  ctx.drawImage(g.img, x0, gy, g.w, g.h);
+  // torch flames flicker
+  for (const fp of g.fpts){
+    const fx=x0+fp[0], fy2=gy+fp[1];
+    const r=11+3*Math.sin(gt*12.5+fx*0.7)+2*Math.sin(gt*27+fx);
+    const fg=ctx.createRadialGradient(fx,fy2,1,fx,fy2,Math.max(6,r*2));
+    fg.addColorStop(0,'rgba(225,160,255,.40)'); fg.addColorStop(0.5,'rgba(170,80,255,.20)');
+    fg.addColorStop(1,'rgba(120,40,220,0)');
+    ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(fx,fy2,Math.max(6,r*2),0,7); ctx.fill();
+  }
+  const fl2=0.80+0.14*Math.sin(gt*11)+0.06*Math.sin(gt*26);
+  const sc2=1+0.05*Math.sin(gt*13);
+  ctx.save(); ctx.globalAlpha=Math.max(0,Math.min(1,fl2));
+  ctx.translate(x0+g.w/2, gy+g.h); ctx.scale(1,sc2);
+  ctx.drawImage(g.fimg, -g.w/2, -g.h, g.w, g.h);
+  ctx.restore(); ctx.globalAlpha=1;
+}
 function drawPlayerLayer(){
   const sx=p.x-camX;
+  if (p.winning){
+    const t=p.winT, gi=Math.min(1,t/1.6);
+    const fl=(Math.floor(gt*(6+26*gi*gi))%4===0)?Math.max(0.25,1-0.9*gi*gi):(Math.random()<0.12*gi*gi?0.55:1);
+    let s=1, al=1;
+    if (t>1.0){ const k=Math.min(1,(t-1.0)/0.8); s=Math.max(0.05,1-k); al=Math.max(0,1-k*0.92); }
+    ctx.globalAlpha=al*fl;
+    drawGlitchAnim(chosen,'idle',curFrame(), sx, p.y, p.facing, s, gi);
+    ctx.globalAlpha=1;
+    return;
+  }
   if (!p.dead){
     if (!(p.inv>0 && Math.floor(gt*16)%2===0)) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, p.inv>0?0.45:0);
     if (p.muzzleT>0){
@@ -781,13 +851,13 @@ function drawPlayerLayer(){
   const fl=(Math.floor(gt*frq)%4===0)?Math.max(0.25,1-0.9*g2):(Math.random()<0.12*g2?0.55:1);
   if (t<=1.0){
     ctx.globalAlpha=fl;
-    drawKneelGlitch(chosen,curFrame(), sx, p.y, p.facing, 1, gi);
+    drawGlitchAnim(chosen,'kneel',curFrame(), sx, p.y, p.facing, 1, gi);
     ctx.globalAlpha=1;
   } else if (t<=1.7){
     const k=(t-1.0)/0.7, s=Math.max(0.05,1-k);
     const cxp=sx+(pcx-sx)*k, fy=p.y+((pcy+58*s)-p.y)*k;
     ctx.globalAlpha=Math.max(0,1-k*0.9)*fl;
-    drawKneelGlitch(chosen,curFrame(), cxp, fy, p.facing, s, gi);
+    drawGlitchAnim(chosen,'kneel',curFrame(), cxp, fy, p.facing, s, gi);
     ctx.globalAlpha=1;
   }
 }
@@ -803,9 +873,7 @@ function draw(){
   for (const z of zombies) drawZombie(z);
   for (const b of bats) drawBat(b);
   drawZbits();
-  const fgx=pxf(GOAL_X,1);
-  if (fgx>-40&&fgx<W+40){ ctx.strokeStyle='#ddd'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(fgx,GROUND); ctx.lineTo(fgx,GROUND-78); ctx.stroke();
-    ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.moveTo(fgx,GROUND-78); ctx.lineTo(fgx+36,GROUND-64); ctx.lineTo(fgx,GROUND-50); ctx.fill(); }
+  drawGoal();
   const sa=SPR.soul;
   for (const s of souls){
     if (s.got&&s.pop>=1) continue; const sx=pxf(s.x,1); if(sx<-60||sx>W+60) continue;
