@@ -1,4 +1,4 @@
-const ASSET_VER='1780599071';
+const ASSET_VER='1780599309';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -181,7 +181,7 @@ async function loadSfx(key){
 }
 function playSfx(key){
   if (!AC) return;
-  if (!sfxGain){ sfxGain=AC.createGain(); sfxGain.gain.value=0.9; sfxGain.connect(AC.destination); }
+  if (!sfxGain){ sfxGain=AC.createGain(); sfxGain.gain.value=0.45; sfxGain.connect(AC.destination); }
   if (!sfxBuf[key]){ loadSfx(key); return; }
   const s=AC.createBufferSource(); s.buffer=sfxBuf[key]; s.connect(sfxGain); s.start();
 }
