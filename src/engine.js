@@ -87,6 +87,7 @@ SPR.bat={}; for (const k in SPRITES.bat){ const d=SPRITES.bat[k]; const img=new 
 { const d=SPRITES.chkst; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src;
   const fimg=new Image(); total++; fimg.onload=()=>loaded++; fimg.src=d.flame;
   SPR.chkst={img,fimg,w:d.w,h:d.h,fpts:d.fpts}; }
+SPR.hpicon={}; for (const k in SPRITES.hpicon){ const d=SPRITES.hpicon[k]; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.hpicon[k]={img,w:d.w,h:d.h}; }
 { const d=SPRITES.grass; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.grass={img,w:d.w,h:d.h}; }
 for (const ck of ORDER){ SPR.chars[ck]={}; for (const an in SPRITES.chars[ck]) SPR.chars[ck][an]=L(SPRITES.chars[ck][an]); }
 const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, cast:32 };
@@ -620,10 +621,11 @@ function drawSkullIcon(cx,cy,r){
   ctx.fillStyle='#1a1530'; ctx.beginPath(); ctx.arc(cx-r*0.42,cy-1,r*0.3,0,7); ctx.arc(cx+r*0.42,cy-1,r*0.3,0,7); ctx.fill();
 }
 function drawPlayerHP(){
-  const x=14,y=14,w=196,h=26, bx=x+30, bw=w-32;
+  const x=14,y=14,w=196,h=26, bx=x+34, bw=w-36;
   ctx.fillStyle='rgba(16,12,30,.72)'; roundRect(x-2,y-2,w+6,h+6,9); ctx.fill();
   ctx.strokeStyle='rgba(150,140,255,.4)'; ctx.lineWidth=1; ctx.stroke();
-  drawSkullIcon(x+13,y+h/2,9);
+  const hi=SPR.hpicon[chosen];
+  if (hi){ const ih=30, iw=hi.w*ih/hi.h; ctx.drawImage(hi.img, x+16-iw/2, y+h/2-ih/2, iw, ih); }
   ctx.fillStyle='rgba(0,0,0,.55)'; roundRect(bx,y+4,bw,h-8,6); ctx.fill();
   const frac=Math.max(0,Math.min(1,p.hpShown/PMAXHP));
   const low = frac<0.34 ? (0.55+0.45*Math.sin(gt*9)) : 0;
