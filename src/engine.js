@@ -1,4 +1,4 @@
-const ASSET_VER='1780602299';
+const ASSET_VER='1780602518';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -205,19 +205,19 @@ function setRunLoop(state){
   ensureSfxGain();
   if (!runSrc){
     runSrc=AC.createBufferSource(); runSrc.buffer=sfxBuf['sfx_run']; runSrc.loop=true;
-    const g=AC.createGain(); g.gain.value=0.55; runSrc.connect(g); g.connect(sfxGain);
+    const g=AC.createGain(); g.gain.value=1.9; runSrc.connect(g); g.connect(sfxGain);
     runSrc.start();
   }
   runSrc.playbackRate.value = state==='run' ? 1.0 : 0.62;
 }
-function playSfx(key, vol){
+function playSfx(key, vol, delay){
   if (!AC) return;
   ensureSfxGain();
   if (!sfxBuf[key]){ loadSfx(key); return; }
   const s=AC.createBufferSource(); s.buffer=sfxBuf[key];
   if (vol!==undefined && vol!==1){ const g=AC.createGain(); g.gain.value=vol; s.connect(g); g.connect(sfxGain); }
   else s.connect(sfxGain);
-  s.start();
+  s.start(delay ? AC.currentTime+delay : 0);
 }
 let banked=0, actScore=0, actSoulPts=0, actKillPts=0, killCount=0, totalEnemies=0, gotHit=false, actTime=0;
 let tally=null, fading=0, fadeIn=0;
@@ -647,7 +647,7 @@ function update(dt){
       const zfi=Math.floor(z.t*FZK[z.kw].attack)%SPR[z.kw].attack.frames;
       const zwb=worldWeaponBox(SPR[z.kw].attack, zfi, z.x, z.y, z.facing);
       if (zwb && p.inv<=0 && !p.dead && overlap(zwb, pBodyBox())) hurtPlayer(z.x, z.kw==='zgen'?2:1);
-    } else if (ad<KRNG[z.kw]){ z.state='attack'; z.atkT=SPR[z.kw].attack.frames/FZK[z.kw].attack; playSfx(z.kw==='gob'?'sfx_gspear':'sfx_zswing',0.8); }
+    } else if (ad<KRNG[z.kw]){ z.state='attack'; z.atkT=SPR[z.kw].attack.frames/FZK[z.kw].attack; if (z.kw==='gob') playSfx('sfx_gspear',0.8,0.18); else playSfx('sfx_zswing',0.8); }
     else if (ad<340){ z.state='walk'; z.x=clamp(z.x+z.facing*KSPD[z.kw], z.min, z.max); }
     else if (z.kw==='bd'){
       z.state='walk';
