@@ -1,4 +1,4 @@
-const ASSET_VER='1780603324';
+const ASSET_VER='1780603418';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -378,7 +378,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -395,7 +395,7 @@ function reset(keep){
   zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=(kw==='zgen')?3:((kw==='gob'||kw==='bd')?1:ZMAXHP);
     return {x:z[0], y:GROUND, t:Math.random(), facing:-1, state:'idle', atkT:0,
     dead:false, dieT:0, dframe:0, dstate:kw==='bd'?'walk':'idle', pdir:1, min:z[1], max:z[2], kw,
-    hp:mh, maxhp:mh, hpShown:mh, hitCd:0, shown:0}; });
+    hp:mh, maxhp:mh, hpShown:mh, hitCd:0, shown:0, aggro:false}; });
   const bspawn=ST.bats;
   bats = bspawn.map((b,i)=>({x:b[0], y:b[3], y0:b[3], t:Math.random()*3, ph:i*1.7, facing:-1, dir:i%2?1:-1,
     min:b[1], max:b[2], dead:false, dieT:0, yD:b[3], state:'idle', bt:0, biteCd:0}));
@@ -493,6 +493,8 @@ function update(dt){
   if (p.won){
     if (!tally) computeTally();
     tally.t+=dt;
+    const shown=Math.min(tally.rows.length, Math.floor(tally.t/0.42)+1);
+    if (!tally.skip && shown>(tally.sndRows||0)){ tally.sndRows=shown; playSfx('sfx_count',0.8); }
     const dur=tally.rows.length*0.42+0.7;
     if (tally.skip || tally.t>=dur) tally.done=true;
     if (tally.done){
@@ -638,9 +640,14 @@ function update(dt){
     z.hpShown += (z.hp-z.hpShown)*Math.min(1,dt*10);
     if (z.dead){ z.dieT+=dt; if(z.dieT<0.7) zbitsEmit(z,dt); continue; }
     const dx=p.x-z.x, ad=Math.abs(dx); z.facing = dx<0?-1:1;
+    if (!z.aggro && ad<340 && !p.dead){
+      z.aggro=true;
+      if (z.kw==='bd') playSfx('sfx_zsee',0.7);
+      else if (z.kw==='zombie'||z.kw==='zgen') playSfx('sfx_ksee',0.7);
+    } else if (z.aggro && ad>420) z.aggro=false;
     // player weapon strikes zombie body
     if (pwb && z.hitCd<=0 && overlap(pwb, zBodyBox(z))){
-      z.hp-=1; z.hitCd=0.45; z.shown=3; playSfx('sfx_meleehit');
+      z.hp-=1; z.hitCd=0.45; z.shown=3; playSfx('sfx_meleehit',0.6);
       z.x=clamp(z.x + (z.x<p.x?-12:12), z.min, z.max);
       if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); continue; }
     }
@@ -691,7 +698,7 @@ function update(dt){
     let bb=batBox(b);
     if (b.state==='bite' && b.bt>8/BITE_FPS && b.bt<23/BITE_FPS){ bb={x:bb.x+(b.facing<0?-30:0), y:bb.y-4, w:bb.w+30, h:bb.h+8}; }
     if (p.inv<=0 && !p.dead && overlap(pBodyBox(), bb)) hurtPlayer(b.x);
-    if (pwb && overlap(pwb, batBox(b))){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_meleehit'); playSfx('sfx_die',0.7); }
+    if (pwb && overlap(pwb, batBox(b))){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_meleehit',0.6); playSfx('sfx_die',0.7); }
   }
   for (const bo of bolts){
     if (bo.dead) continue;
