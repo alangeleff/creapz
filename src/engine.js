@@ -1,4 +1,4 @@
-const ASSET_VER='1780602026';
+const ASSET_VER='1780602299';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -156,30 +156,27 @@ function audioInit(){
     musicGain=AC.createGain(); musicGain.gain.value=0.55; musicGain.connect(AC.destination);
   }catch(e){ AC=null; }
 }
+function getMusicBuf(key){
+  if (!musicBuf[key]){
+    musicBuf[key]=fetch('./assets/audio/'+key+'.m4a?v='+ASSET_VER)
+      .then(r=>r.arrayBuffer()).then(ab=>AC.decodeAudioData(ab)).catch(()=>null);
+  }
+  return musicBuf[key];
+}
 async function playMusic(key){
   if (!AC || !key || window.SPRITES_INLINE) return;
   const req=++musicReq;
   if (musicSrc){ try{ musicSrc.stop(); }catch(e){} musicSrc=null; }
   musicKey=key;
-  if (!musicBuf[key]){
-    try{
-      const r=await fetch('./assets/audio/'+key+'.m4a?v='+ASSET_VER);
-      musicBuf[key]=await AC.decodeAudioData(await r.arrayBuffer());
-    }catch(e){ return; }
-  }
-  if (req!==musicReq) return;
-  const src=AC.createBufferSource(); src.buffer=musicBuf[key]; src.loop=true;
+  const buf=await getMusicBuf(key);
+  if (req!==musicReq || !buf || musicSrc) return;   // superseded, failed, or already started — never stack
+  const src=AC.createBufferSource(); src.buffer=buf; src.loop=true;
   src.connect(musicGain); src.start(); musicSrc=src;
 }
 function stopMusic(){ musicReq++; if (musicSrc){ try{ musicSrc.stop(); }catch(e){} musicSrc=null; musicKey=null; } }
-async function preloadMusic(key){
-  if (!AC || !key || musicBuf[key] || window.SPRITES_INLINE) return;
-  try{
-    const r=await fetch('./assets/audio/'+key+'.m4a?v='+ASSET_VER);
-    const buf=await AC.decodeAudioData(await r.arrayBuffer());
-    if (!musicBuf[key]) musicBuf[key]=buf;
-    if (musicKey===key && !musicSrc){ const s=AC.createBufferSource(); s.buffer=buf; s.loop=true; s.connect(musicGain); s.start(); musicSrc=s; }
-  }catch(e){}
+function preloadMusic(key){
+  if (!AC || !key || window.SPRITES_INLINE) return;
+  getMusicBuf(key);   // warm the cache only — playMusic is the sole starter
 }
 let audioPrimed=false;
 function primeAudio(){
