@@ -1,4 +1,4 @@
-const ASSET_VER='1780544016';
+const ASSET_VER='1780544952';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -95,6 +95,7 @@ SPR.trees={}; for (const k in SPRITES.trees){ const d=SPRITES.trees[k]; const im
 SPR.zombie={}; for (const k in SPRITES.zombie){ SPR.zombie[k]=L(SPRITES.zombie[k]); }
 SPR.zgen={}; for (const k in SPRITES.zgen){ SPR.zgen[k]=L(SPRITES.zgen[k]); }
 SPR.gob={}; for (const k in SPRITES.gob){ SPR.gob[k]=L(SPRITES.gob[k]); }
+SPR.bd={}; for (const k in SPRITES.bd){ SPR.bd[k]=L(SPRITES.bd[k]); }
 SPR.bat={}; for (const k in SPRITES.bat){ const d=SPRITES.bat[k]; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src;
   SPR.bat[k]={img,sw:d.sw,sh:d.sh,w:d.w,h:d.h,frames:d.frames,cxs:d.cxs,cys:d.cys}; }
 { const d=SPRITES.dirt; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.dirt={img,w:d.w,h:d.h}; }
@@ -112,9 +113,9 @@ SPR.hpicon={}; for (const k in SPRITES.hpicon){ const d=SPRITES.hpicon[k]; const
 for (const ck of ORDER){ SPR.chars[ck]={}; for (const an in SPRITES.chars[ck]) SPR.chars[ck][an]=L(SPRITES.chars[ck][an]); }
 const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, cast:32 };
 const FZ = { idle:24, walk:12, attack:16 };
-const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43} };
-const KSPD = { zombie:1.7, zgen:1.7, gob:2.4 };
-const KRNG = { zombie:74, zgen:74, gob:76 };  // gob spear fwd reach ~78 unmirrored
+const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12} };
+const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15 };
+const KRNG = { zombie:74, zgen:74, gob:76, bd:-1 };  // gob spear reach ~78; bd never melee-attacks (contact only)
 const ZSPEED = 1.7;
 const PMAXHP = 4, ZMAXHP = 2;
 const SOUL_FPS = 20;
@@ -123,6 +124,7 @@ const BAT_FPS = 15, BITE_FPS = 29, BAT_PATROL = 1.25, BAT_CHASE = 2.1, BAT_AGGRO
 let mode='select', chosen=ORDER[0];
 let p, souls, soulCount, gt=0, camX=0, zombies, plats, chkOn, bats, bolts, impacts;
 let paused=false, menuRects=[];
+let chkFx=[];
 const PB={x:14,y:92,w:40,h:32};
 function menuPanel(title, items, sub, titleColor){
   ctx.fillStyle='rgba(8,5,18,.72)'; ctx.fillRect(0,0,W,H);
@@ -189,7 +191,7 @@ function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
         hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, deadT:0, spawn:sx, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
-  camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38)); zbits=[]; bolts=[]; impacts=[];
+  camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38)); zbits=[]; bolts=[]; impacts=[]; chkFx=[];
   if (!keep){
     soulCount=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],got:false,pop:0,ph:i*0.31}));
@@ -198,9 +200,9 @@ function reset(keep){
     range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0,
     ct:0, falling:false, gone:false, dy:0, fv:0, rt:0}));
   const zspawn=ST.enemies;
-  zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=kw==='zgen'?3:(kw==='gob'?1:ZMAXHP);
+  zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=(kw==='zgen')?3:((kw==='gob'||kw==='bd')?1:ZMAXHP);
     return {x:z[0], y:GROUND, t:Math.random(), facing:-1, state:'idle', atkT:0,
-    dead:false, dieT:0, dframe:0, dstate:'idle', min:z[1], max:z[2], kw,
+    dead:false, dieT:0, dframe:0, dstate:kw==='bd'?'walk':'idle', pdir:1, min:z[1], max:z[2], kw,
     hp:mh, maxhp:mh, hpShown:mh, hitCd:0, shown:0}; });
   const bspawn=ST.bats;
   bats = bspawn.map((b,i)=>({x:b[0], y:b[3], y0:b[3], t:Math.random()*3, ph:i*1.7, facing:-1, dir:i%2?1:-1,
@@ -210,7 +212,7 @@ function onReset(){ if (p && p.dead && !p.won) reset(true); else reset(); }
 let zbits=[];
 const ZBIT_COLS=['#4a5d3a','#6b7d52','#8a8f96','#5d6168','#9aa4ab','#3a4030','#b9c0c6'];
 function zbitsBurst(z,n){
-  const b=zBodyBox(z), cols=z.kw==='zgen'?ZGEN_COLS:(z.kw==='gob'?GOB_COLS:ZBIT_COLS);
+  const b=zBodyBox(z), cols=z.kw==='zgen'?ZGEN_COLS:(z.kw==='gob'?GOB_COLS:(z.kw==='bd'?BD_COLS:ZBIT_COLS));
   for(let i=0;i<n;i++){
     zbits.push({x:b.x+Math.random()*b.w, y:b.y+Math.random()*b.h,
       vx:(Math.random()-0.5)*70, vy:-25-Math.random()*55,
@@ -220,7 +222,7 @@ function zbitsBurst(z,n){
 }
 function zbitsEmit(z,dt){
   const a=SPR[z.kw][z.dstate], k=z.dieT/0.7, dy=-34*k;
-  const cols=z.kw==='zgen'?ZGEN_COLS:(z.kw==='gob'?GOB_COLS:ZBIT_COLS);
+  const cols=z.kw==='zgen'?ZGEN_COLS:(z.kw==='gob'?GOB_COLS:(z.kw==='bd'?BD_COLS:ZBIT_COLS));
   const x0=z.x-a.w*0.30, w0=a.w*0.6, y0=z.y-a.foots[0]+dy, h0=a.foots[0];
   let n=Math.min(4,Math.max(1,Math.round(dt*46)));
   while(n--) zbits.push({x:x0+Math.random()*w0, y:y0+Math.random()*h0,
@@ -243,6 +245,7 @@ function drawZbits(){
   }
   ctx.globalAlpha=1;
 }
+const BD_COLS=['#b9c0c6','#8a8f96','#4a2a5a','#5d3a6b','#2c2f33','#d8dde2'];
 const GOB_COLS=['#3f6b3a','#5d8f54','#7b1d2a','#5a1420','#8a8f96','#2c4a28'];
 const ZGEN_COLS=['#15181f','#23262e','#383d49','#aac6d8','#8fb0c4','#5c1212'];
 const BAT_COLS=['#241a30','#3a2a4a','#51356b','#1a1422','#6b4a8a','#43314f'];
@@ -265,7 +268,11 @@ function worldWeaponBox(spr, fi, x, y, facing){
   return {x:Math.min(WX0,WX1), y:WY0, w:Math.abs(WX1-WX0), h:wb[3]-wb[1]};
 }
 function pBodyBox(){ return {x:p.x-20, y:p.y-94, w:40, h:86}; }
-function zBodyBox(z){ return z.kw==='gob' ? {x:z.x-19, y:z.y-78, w:38, h:74} : {x:z.x-24, y:z.y-112, w:48, h:104}; }
+function zBodyBox(z){
+  if (z.kw==='gob') return {x:z.x-19, y:z.y-78, w:38, h:74};
+  if (z.kw==='bd')  return {x:z.x-18, y:z.y-100, w:36, h:96};
+  return {x:z.x-24, y:z.y-112, w:48, h:104};
+}
 function pAttackBox(){ if(p.attackT<=0) return null; const reach=98,bh=110; const x=p.facing>0?p.x-8:p.x-reach+8; return {x,y:p.y-bh,w:reach,h:bh}; }
 function pBody(){ return {x:p.x-24,y:p.y-92,w:48,h:92}; }
 function zBody(z){ const a=SPR.zombie[z.state]; const bw=a.w*0.40, bh=a.foots[0]*0.82; return {x:z.x-bw/2,y:z.y-bh,w:bw,h:bh}; }
@@ -380,7 +387,7 @@ function update(dt){
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
   }
   for (let ci=0; ci<CHK.length; ci++){
-    if (!chkOn[ci] && p.x>=CHK[ci]-10){ chkOn[ci]=true; p.spawn=CHK[ci]; }
+    if (!chkOn[ci] && p.x>=CHK[ci]-10){ chkOn[ci]=true; p.spawn=CHK[ci]; chkFx.push({cx:CHK[ci], t:0, hit:false}); }
   }
   p.x=Math.max(18,Math.min(WORLD-18,p.x));
   if (p.x>=GOAL_X-24 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; }
@@ -418,6 +425,12 @@ function update(dt){
       if (zwb && p.inv<=0 && !p.dead && overlap(zwb, pBodyBox())) hurtPlayer(z.x, z.kw==='zgen'?2:1);
     } else if (ad<KRNG[z.kw]){ z.state='attack'; z.atkT=SPR[z.kw].attack.frames/FZK[z.kw].attack; }
     else if (ad<340){ z.state='walk'; z.x=clamp(z.x+z.facing*KSPD[z.kw], z.min, z.max); }
+    else if (z.kw==='bd'){
+      z.state='walk';
+      z.x+=z.pdir*KSPD.bd;
+      if (z.x>=z.max){ z.x=z.max; z.pdir=-1; } else if (z.x<=z.min){ z.x=z.min; z.pdir=1; }
+      z.facing=z.pdir;
+    }
     else z.state='idle';
     if (p.inv<=0 && !p.dead && overlap(pBodyBox(), zBodyBox(z))) hurtPlayer(z.x);
   }
@@ -486,6 +499,11 @@ function update(dt){
   }
   for (const im of impacts) im.t+=dt;
   impacts=impacts.filter(im=>im.t<0.32);
+  for (const fx of chkFx){
+    fx.t+=dt;
+    if (!fx.hit && fx.t>0.62){ fx.hit=true; p.hp=Math.min(PMAXHP, p.hp+1); }
+  }
+  chkFx=chkFx.filter(fx=>fx.t<1.1);
   bolts=bolts.filter(bo=>!bo.dead||bo.t<1.2);
   updateZbits(dt);
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
@@ -959,6 +977,52 @@ function draw(){
     ctx.globalAlpha=alpha; ctx.drawImage(sa.img, fi*sa.sw,0,sa.sw,sa.sh, sx-dw/2, s.y-dh/2, dw,dh); ctx.globalAlpha=1;
   }
   drawPlayerLayer();
+  for (const fx of chkFx){
+    const st=SPR.chkst; if(!st) break;
+    const sx=fx.cx-camX, gy=GROUND+8-st.h;
+    if (fx.t<0.62){
+      // purple energy streams rising up the statue
+      const k=fx.t/0.62;
+      for (let w2=0; w2<7; w2++){
+        const ph=((fx.t*1.7)+w2*0.143)%1;
+        const wy=GROUND+4-ph*(st.h+34);
+        const wx=sx+Math.sin((ph*6.0)+w2*2.4)*14;
+        const al=Math.max(0,(1-ph)*0.85)*Math.min(1,k*3);
+        const r=3+2.6*Math.sin(w2+ph*9);
+        const g2=ctx.createRadialGradient(wx,wy,0.5,wx,wy,Math.max(2,r*2.2));
+        g2.addColorStop(0,'rgba(235,200,255,'+(al).toFixed(2)+')');
+        g2.addColorStop(0.5,'rgba(185,110,255,'+(al*0.6).toFixed(2)+')');
+        g2.addColorStop(1,'rgba(130,50,230,0)');
+        ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(wx,wy,Math.max(2,r*2.2),0,7); ctx.fill();
+      }
+    } else if (fx.t<0.78){
+      // streak homing into the player
+      const k=(fx.t-0.62)/0.16;
+      const x0=sx, y0=gy-18, x1=p.x-camX, y1=p.y-52;
+      const ex=x0+(x1-x0)*k, ey=y0+(y1-y0)*k;
+      ctx.strokeStyle='rgba(210,150,255,'+(0.7*(1-k*0.5)).toFixed(2)+')'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(x0+(x1-x0)*Math.max(0,k-0.25), y0+(y1-y0)*Math.max(0,k-0.25)); ctx.lineTo(ex,ey); ctx.stroke();
+      const g3=ctx.createRadialGradient(ex,ey,1,ex,ey,13);
+      g3.addColorStop(0,'rgba(245,225,255,0.95)'); g3.addColorStop(1,'rgba(150,70,255,0)');
+      ctx.fillStyle=g3; ctx.beginPath(); ctx.arc(ex,ey,13,0,7); ctx.fill();
+    } else {
+      // burst on the player: +1 life
+      const k=(fx.t-0.78)/0.32, bx2=p.x-camX, by2=p.y-52;
+      ctx.strokeStyle='rgba(200,130,255,'+(0.85*(1-k)).toFixed(2)+')';
+      ctx.lineWidth=Math.max(1,3.5*(1-k));
+      ctx.beginPath(); ctx.arc(bx2,by2,8+44*k,0,7); ctx.stroke();
+      ctx.strokeStyle='rgba(245,225,255,'+(0.5*(1-k)).toFixed(2)+')';
+      ctx.beginPath(); ctx.arc(bx2,by2,(8+44*k)*0.66,0,7); ctx.stroke();
+      if (k<0.5){
+        const g4=ctx.createRadialGradient(bx2,by2,1,bx2,by2,26);
+        g4.addColorStop(0,'rgba(240,215,255,'+(0.6*(1-k*2)).toFixed(2)+')'); g4.addColorStop(1,'rgba(160,80,255,0)');
+        ctx.fillStyle=g4; ctx.beginPath(); ctx.arc(bx2,by2,26,0,7); ctx.fill();
+      }
+      ctx.fillStyle='rgba(235,210,255,'+(0.9*(1-k)).toFixed(2)+')';
+      ctx.font='bold 16px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('+1', bx2, by2-30-22*k); ctx.textAlign='left';
+    }
+  }
   for (const bo of bolts){
     if (bo.dead) continue;
     const bx=bo.x-camX; if(bx<-40||bx>W+40) continue;
