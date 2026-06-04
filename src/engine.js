@@ -1,4 +1,4 @@
-const ASSET_VER='1780601717';
+const ASSET_VER='1780602026';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -197,9 +197,25 @@ async function loadSfx(key){
     sfxBuf[key]=await AC.decodeAudioData(await r.arrayBuffer());
   }catch(e){}
 }
+function ensureSfxGain(){
+  if (AC && !sfxGain){ sfxGain=AC.createGain(); sfxGain.gain.value=0.45; sfxGain.connect(AC.destination); }
+}
+let runSrc=null;
+function setRunLoop(state){
+  if (!AC){ return; }
+  if (!state){ if (runSrc){ try{ runSrc.stop(); }catch(e){} runSrc=null; } return; }
+  if (!sfxBuf['sfx_run']){ loadSfx('sfx_run'); return; }
+  ensureSfxGain();
+  if (!runSrc){
+    runSrc=AC.createBufferSource(); runSrc.buffer=sfxBuf['sfx_run']; runSrc.loop=true;
+    const g=AC.createGain(); g.gain.value=0.55; runSrc.connect(g); g.connect(sfxGain);
+    runSrc.start();
+  }
+  runSrc.playbackRate.value = state==='run' ? 1.0 : 0.62;
+}
 function playSfx(key, vol){
   if (!AC) return;
-  if (!sfxGain){ sfxGain=AC.createGain(); sfxGain.gain.value=0.45; sfxGain.connect(AC.destination); }
+  ensureSfxGain();
   if (!sfxBuf[key]){ loadSfx(key); return; }
   const s=AC.createBufferSource(); s.buffer=sfxBuf[key];
   if (vol!==undefined && vol!==1){ const g=AC.createGain(); g.gain.value=vol; s.connect(g); g.connect(sfxGain); }
@@ -362,7 +378,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -461,6 +477,8 @@ function loop(now){
   const dt=Math.min(0.05,(now-last)/1000); last=now; gt+=dt;
   document.querySelector('.touch').style.display = mode==='play'?'flex':'none';
   if (musicGain) musicGain.gain.value = (mode==='play' && !paused) ? 0.55 : 0.22;
+  const moving = mode==='play' && !paused && p && !p.dead && !p.won && !p.winning && p.onGround && (p.state==='run'||p.state==='walk');
+  setRunLoop(moving ? p.state : null);
   if (mode==='select' && musicSrc) stopMusic();
   if (loaded<total) drawLoading();
   else if (mode==='select') drawSelect();
@@ -632,7 +650,7 @@ function update(dt){
       const zfi=Math.floor(z.t*FZK[z.kw].attack)%SPR[z.kw].attack.frames;
       const zwb=worldWeaponBox(SPR[z.kw].attack, zfi, z.x, z.y, z.facing);
       if (zwb && p.inv<=0 && !p.dead && overlap(zwb, pBodyBox())) hurtPlayer(z.x, z.kw==='zgen'?2:1);
-    } else if (ad<KRNG[z.kw]){ z.state='attack'; z.atkT=SPR[z.kw].attack.frames/FZK[z.kw].attack; }
+    } else if (ad<KRNG[z.kw]){ z.state='attack'; z.atkT=SPR[z.kw].attack.frames/FZK[z.kw].attack; playSfx(z.kw==='gob'?'sfx_gspear':'sfx_zswing',0.8); }
     else if (ad<340){ z.state='walk'; z.x=clamp(z.x+z.facing*KSPD[z.kw], z.min, z.max); }
     else if (z.kw==='bd'){
       z.state='walk';
@@ -660,7 +678,7 @@ function update(dt){
       b.x+=Math.sign(dxp)*Math.min(BAT_CHASE,Math.abs(dxp));
       b.y+=Math.sign(dyp)*Math.min(1.5,Math.abs(dyp));
       if (Math.abs(dxp)>6) b.facing=Math.sign(dxp);
-      if (dist<185 && b.biteCd<=0){ b.state='bite'; b.bt=0; if (Math.abs(dxp)>6) b.facing=Math.sign(dxp); }
+      if (dist<185 && b.biteCd<=0){ b.state='bite'; b.bt=0; if (Math.abs(dxp)>6) b.facing=Math.sign(dxp); playSfx('sfx_rwhoosh',0.8); }
     } else {
       b.x+=b.dir*BAT_PATROL;
       if (b.x>=b.max){ b.dir=-1; } else if (b.x<=b.min){ b.dir=1; }
