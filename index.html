@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Creaperz - Graveyard Run</title>
+<style>
+  html,body{margin:0;height:100%;background:#0d0b1a;color:#e8e6f5;
+    font-family:-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden;
+    touch-action:none;-webkit-user-select:none;user-select:none}
+  #wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    height:100dvh;gap:0;padding:0;box-sizing:border-box}
+  canvas{background:#0d0b1a;display:block;
+    width:min(100vw, calc(100dvh * 960 / 440)); height:auto; max-width:100vw}
+  .bar{display:none;font-size:13px;opacity:.8;text-align:center;padding:0 12px}
+  .bar b{color:#9b8cff}
+  .touch{position:fixed;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom));
+    display:flex;justify-content:space-between;
+    padding:0 calc(20px + env(safe-area-inset-left)) 0 calc(20px + env(safe-area-inset-left));
+    pointer-events:none;z-index:5}
+  .touch{padding-right:calc(20px + env(safe-area-inset-right))}
+  .grp{display:flex;gap:16px;pointer-events:auto}
+  .btn{width:66px;height:66px;border-radius:50%;border:1px solid rgba(255,255,255,.18);
+    background:rgba(155,140,255,.20);color:#fff;font-size:24px;font-weight:700;
+    touch-action:none;-webkit-tap-highlight-color:transparent;
+    display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+  .btn:active{background:rgba(155,140,255,.5);transform:scale(.94)}
+  .btn.jump{width:82px;height:82px;background:rgba(200,251,80,.22);border-color:rgba(200,251,80,.4)}
+  .btn.jump:active{background:rgba(200,251,80,.55)}
+  #rst,#chr{position:fixed;top:calc(12px + env(safe-area-inset-top));z-index:6;pointer-events:auto;
+    background:rgba(20,16,40,.45);color:#fff;border:1px solid rgba(255,255,255,.2);
+    border-radius:8px;padding:8px 12px;font-size:13px;backdrop-filter:blur(6px)}
+  #rst{right:calc(12px + env(safe-area-inset-right))} #chr{right:calc(88px + env(safe-area-inset-right))}
+  @media (hover:hover) and (pointer:fine){
+    .touch{opacity:.55}
+    .bar{display:block}
+    #wrap{gap:10px}
+    canvas{border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);
+      width:min(96vw, calc((100dvh - 60px) * 960 / 440))}
+  }
+</style>
+</head>
+<body>
+<button id="rst">Reset</button>
+<button id="chr">Characters</button>
+<div id="wrap">
+  <canvas id="c" width="960" height="440"></canvas>
+  <div class="bar">Walk, double-tap &amp; hold to run, jump pits &amp; tombstones, grab souls &nbsp;.&nbsp;
+    <b>&larr; &rarr;</b> <b>Shift</b> <b>Space</b> <b>Z</b> <b>R</b></div>
+</div>
+<div class="touch">
+  <div class="grp">
+    <button class="btn" id="bL" aria-label="left">&#9664;</button>
+    <button class="btn" id="bR" aria-label="right">&#9654;</button>
+  </div>
+  <div class="grp">
+    <button class="btn" id="bC" aria-label="cast" style="background:rgba(127,224,255,.22);border-color:rgba(127,224,255,.4)">&#10022;</button>
+    <button class="btn" id="bA" aria-label="attack">&#9876;</button>
+    <button class="btn jump" id="bJ" aria-label="jump">&#9650;</button>
+  </div>
+</div>
+<script src="./levels/stage1.js"></script>
+<script src="./src/engine.js"></script>
+</body>
+</html>
