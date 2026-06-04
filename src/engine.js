@@ -1,4 +1,4 @@
-const ASSET_VER='1780607004';
+const ASSET_VER='1780607355';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -78,7 +78,7 @@ function bindBtn(id,code){
   el.addEventListener('pointerleave',e=>{e.preventDefault();release(code);});
   el.addEventListener('pointercancel',e=>{e.preventDefault();release(code);});
 }
-bindBtn('bL','ArrowLeft'); bindBtn('bR','ArrowRight'); bindBtn('bJ','Space'); bindBtn('bA','KeyZ'); bindBtn('bC','KeyX');
+bindBtn('bL','ArrowLeft'); bindBtn('bR','ArrowRight'); bindBtn('bJ','Space'); bindBtn('bA','KeyZ'); bindBtn('bC','KeyX'); bindBtn('bD','ArrowDown');
 // canvas taps (character select)
 function canvasPt(e){ const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H }; }
 cv.addEventListener('pointerdown', e=>{
@@ -407,7 +407,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -508,7 +508,7 @@ if (!window.SPRITES_INLINE){
     ['title','act1','act2'].forEach(k=>{ total++; getMusicBuf(k).then(()=>loaded++); });
     ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing',
      'sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog',
-     'sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count'].forEach(k=>{ total++; loadSfx(k).then(()=>loaded++); });
+     'sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie'].forEach(k=>{ total++; loadSfx(k).then(()=>loaded++); });
   }
 }
 let last=performance.now();
@@ -590,13 +590,14 @@ function update(dt){
   }
   // mover carries the player
   if (p.onGround && p.standPlat && p.standPlat.t==='m') p.x+=p.standPlat.dxf;
+  const kneeling = p.onGround && (keys['ArrowDown']||keys['KeyS']) && p.attackT<=0 && p.castT<=0 && p.hurtT<=0;
   let dir=0;
-  if (keys['ArrowLeft']) dir=-1; else if (keys['ArrowRight']) dir=1;
+  if (!kneeling){ if (keys['ArrowLeft']) dir=-1; else if (keys['ArrowRight']) dir=1; }
   const dc=dir<0?'ArrowLeft':'ArrowRight';
   const running=(dir!==0&&runHeld[dc])||keys['ShiftLeft']||keys['ShiftRight'];
   const speed=running?RUN:WALK;
   if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0;
-  if ((keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; playSfx('sfx_jump',0.55); }
+  if (!kneeling && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; playSfx('sfx_jump',0.55); }
   if (keys['KeyZ']&&p.attackT<=0&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
     playSfx(chosen==='dingbat'?'sfx_wing':'sfx_slash');
@@ -656,7 +657,7 @@ function update(dt){
     gotHit=true; playSfx('sfx_hurt');
     p.hp-=1; p.x=p.spawn; p.y=GROUND; p.vy=0; p.vx=0; p.onGround=true; p.standPlat=null;
     p.inv=1.2; p.flash=0.35; p.hurtT=0;
-    if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; }
+    if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; playSfx('sfx_pdie'); }
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
   }
   for (let ci=0; ci<CHK.length; ci++){
@@ -666,7 +667,7 @@ function update(dt){
   if (p.x>=GOAL_X-24 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; playSfx('sfx_wportal'); }
   let st;
   if (p.hurtT>0) st='hurt';
-  else if (p.attackT>0) st='attack'; else if (p.castT>0) st='cast'; else if(!p.onGround) st='jump';
+  else if (p.attackT>0) st='attack'; else if (p.castT>0) st='cast'; else if (kneeling && p.onGround) st='kneel'; else if(!p.onGround) st='jump';
   else if (p.vx!==0) st=running?'run':'walk'; else st='idle';
   if (st!==p.state) p.clock=0; p.state=st; p.clock+=dt;
   const pb={x:p.x-26,y:p.y-96,w:52,h:96};
@@ -687,6 +688,7 @@ function update(dt){
     if (!z.aggro && ad<340 && !p.dead){
       z.aggro=true;
       if (z.kw==='bd') playSfx('sfx_zsee',0.7);
+      else if (z.kw==='gob') playSfx('sfx_gsee',0.7);
       else if (z.kw==='zombie'||z.kw==='zgen') playSfx('sfx_ksee',0.7);
     } else if (z.aggro && ad>420) z.aggro=false;
     // player weapon strikes zombie body
@@ -793,7 +795,7 @@ function hurtPlayer(srcX,dmg){
   p.hurtT=Math.min(0.45, SPR.chars[chosen].hurt.frames/pfps('hurt'));
   const away=(p.x<srcX)?-1:1; p.vx=away*2; p.x+=away*8;
   if(p.onGround){ p.vy=-7; p.onGround=false; }
-  if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; }
+  if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; playSfx('sfx_pdie'); }
 }
 function curFrame(){
   const a=SPR.chars[chosen][p.state], fps=pfps(p.state);
