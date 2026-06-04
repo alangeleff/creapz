@@ -1,4 +1,4 @@
-const ASSET_VER='1780601340';
+const ASSET_VER='1780601717';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -57,7 +57,7 @@ function release(code){
 addEventListener('keydown', e => {
   if (['ArrowLeft','ArrowRight','ArrowUp','Space',' '].includes(e.key)||e.code==='Space') e.preventDefault();
   if (mode==='select'){ if(e.key==='1') startGame(creaperSkin); else if(e.key==='2') startGame('dingbat'); return; }
-  if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won) paused=!paused; return; }
+  if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; playSfx('sfx_mtog'); } return; }
   if (e.code==='KeyR'){ paused=false; onReset(); return; }
   if (e.code==='KeyC'){ paused=false; mode='select'; return; }
   press(e.code);
@@ -74,25 +74,26 @@ bindBtn('bL','ArrowLeft'); bindBtn('bR','ArrowRight'); bindBtn('bJ','Space'); bi
 // canvas taps (character select)
 function canvasPt(e){ const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H }; }
 cv.addEventListener('pointerdown', e=>{
+  primeAudio();
   const pt=canvasPt(e);
   if (mode==='select'){
-    for (const d of dotRects){ if (pt.x>d.x&&pt.x<d.x+d.w&&pt.y>d.y&&pt.y<d.y+d.h){ creaperSkin=d.skin; return; } }
-    for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ startGame(c.key==='creaper'?creaperSkin:'dingbat'); break; } }
+    for (const d of dotRects){ if (pt.x>d.x&&pt.x<d.x+d.w&&pt.y>d.y&&pt.y<d.y+d.h){ creaperSkin=d.skin; playSfx('sfx_mtog'); return; } }
+    for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ playSfx('sfx_msel'); startGame(c.key==='creaper'?creaperSkin:'dingbat'); break; } }
     return;
   }
   if (mode!=='play') return;
   if (p.won){
     if (!tally) return;
-    if (!tally.done){ tally.skip=true; return; }
-    if (stageIdx+1<window.STAGES.length){ if (fading<=0) fading=0.0001; return; }
-    for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ r.action(); return; } }
+    if (!tally.done){ tally.skip=true; playSfx('sfx_mtog'); return; }
+    if (stageIdx+1<window.STAGES.length){ if (fading<=0){ fading=0.0001; playSfx('sfx_msel'); } return; }
+    for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ playSfx('sfx_msel'); r.action(); return; } }
     return;
   }
   if (menuOpen()){
-    for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ r.action(); return; } }
+    for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ playSfx('sfx_msel'); r.action(); return; } }
     return;
   }
-  if (pt.x>PB.x-6&&pt.x<PB.x+PB.w+6&&pt.y>PB.y-6&&pt.y<PB.y+PB.h+6 && !p.winning){ paused=true; }
+  if (pt.x>PB.x-6&&pt.x<PB.x+PB.w+6&&pt.y>PB.y-6&&pt.y<PB.y+PB.h+6 && !p.winning){ paused=true; playSfx('sfx_mtog'); }
 });
 
 // ---- load sprites ----
@@ -171,6 +172,23 @@ async function playMusic(key){
   src.connect(musicGain); src.start(); musicSrc=src;
 }
 function stopMusic(){ musicReq++; if (musicSrc){ try{ musicSrc.stop(); }catch(e){} musicSrc=null; musicKey=null; } }
+async function preloadMusic(key){
+  if (!AC || !key || musicBuf[key] || window.SPRITES_INLINE) return;
+  try{
+    const r=await fetch('./assets/audio/'+key+'.m4a?v='+ASSET_VER);
+    const buf=await AC.decodeAudioData(await r.arrayBuffer());
+    if (!musicBuf[key]) musicBuf[key]=buf;
+    if (musicKey===key && !musicSrc){ const s=AC.createBufferSource(); s.buffer=buf; s.loop=true; s.connect(musicGain); s.start(); musicSrc=s; }
+  }catch(e){}
+}
+let audioPrimed=false;
+function primeAudio(){
+  audioInit(); if (AC && AC.state==='suspended') AC.resume();
+  if (audioPrimed || !AC) return;
+  audioPrimed=true;
+  ['sfx_msel','sfx_mtog'].forEach(loadSfx);
+  (window.STAGES||[]).forEach(st2=>preloadMusic(st2.music));
+}
 let sfxBuf={}, sfxGain=null;
 async function loadSfx(key){
   if (!AC || sfxBuf[key] || window.SPRITES_INLINE) return;
@@ -344,7 +362,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ audioInit(); if (AC && AC.state==='suspended') AC.resume(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
