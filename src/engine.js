@@ -1,4 +1,4 @@
-const ASSET_VER='1780607355';
+const ASSET_VER='1780609080';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -85,7 +85,16 @@ cv.addEventListener('pointerdown', e=>{
   primeAudio();
   const pt=canvasPt(e);
   if (mode==='load'){
-    if (loaded>=total){ mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel'); }
+    if (loaded>=total){
+      mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel');
+      try{
+        if (matchMedia('(pointer:coarse)').matches && document.documentElement.requestFullscreen){
+          document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>{
+            try{ screen.orientation.lock('landscape').catch(()=>{}); }catch(e2){}
+          }).catch(()=>{});
+        }
+      }catch(e3){}
+    }
     return;
   }
   if (mode==='title'){
