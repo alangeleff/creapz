@@ -1,4 +1,4 @@
-const ASSET_VER='1780578883';
+const ASSET_VER='1780579866';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -356,7 +356,8 @@ function update(dt){
     const cfi=Math.min(SPR.chars[chosen].cast.frames-1, Math.floor((cf0 - p.castT)*pfps('cast')));
     if (!p.castFired && cfi>=3){
       p.castFired=true; p.muzzleT=0.14;
-      bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false});
+      if (chosen==='dingbat') bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'});
+      else bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'});
     }
   }
   let nx=p.x+p.vx;
@@ -499,9 +500,10 @@ function update(dt){
     if (hit){
       bo.dead=true;
       impacts.push({x:bo.x, y:bo.y, t:0});
+      const sc3=bo.kind==='wave'?['#d9a8ff','#b06cff','#8a3cff','#ffffff']:['#7fe0ff','#bfeaff','#3ca3ff','#ffffff'];
       for (let k2=0;k2<13;k2++) zbits.push({x:bo.x, y:bo.y, vx:(Math.random()-0.5)*220, vy:(Math.random()-0.5)*170,
         sz:1.8+Math.random()*2.8, life:0.28+Math.random()*0.25, t:0,
-        c:['#7fe0ff','#bfeaff','#3ca3ff','#ffffff'][(Math.random()*4)|0]});
+        c:sc3[(Math.random()*4)|0]});
     }
   }
   for (const im of impacts) im.t+=dt;
@@ -951,9 +953,10 @@ function drawPlayerLayer(){
       // hot muzzle burst at the hand
       const mr=10+26*k;
       const mg=ctx.createRadialGradient(hx,hy,1,hx,hy,mr);
+      const wave=chosen==='dingbat';
       mg.addColorStop(0,'rgba(255,255,255,'+(0.95*(1-k)).toFixed(2)+')');
-      mg.addColorStop(0.5,'rgba(140,225,255,'+(0.6*(1-k)).toFixed(2)+')');
-      mg.addColorStop(1,'rgba(60,140,255,0)');
+      mg.addColorStop(0.5, wave?'rgba(205,150,255,'+(0.6*(1-k)).toFixed(2)+')':'rgba(140,225,255,'+(0.6*(1-k)).toFixed(2)+')');
+      mg.addColorStop(1, wave?'rgba(140,60,255,0)':'rgba(60,140,255,0)');
       ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(hx,hy,mr,0,7); ctx.fill();
       for (let s2=0;s2<4;s2++){
         const a2=(s2/4)*6.28+k*2.5;
@@ -1055,7 +1058,25 @@ function draw(){
   }
   for (const bo of bolts){
     if (bo.dead) continue;
-    const bx=bo.x-camX; if(bx<-40||bx>W+40) continue;
+    const bx=bo.x-camX; if(bx<-60||bx>W+60) continue;
+    if (bo.kind==='wave'){
+      // soundwave: stacked crescent rings rippling forward from the mouth
+      const dir=Math.sign(bo.vx), grow=Math.min(1, bo.t*1.8);
+      ctx.lineCap='round';
+      for (let k=0;k<4;k++){
+        const ax=bx-dir*k*10;
+        const r=(7+k*4.5)*(0.6+0.4*grow)+2.2*Math.sin(gt*30+k*1.7);
+        const al=(k===0?0.95:0.78-k*0.18);
+        ctx.strokeStyle=k===0?'rgba(240,222,255,'+al.toFixed(2)+')':'rgba('+(196-k*14)+','+(126-k*10)+',255,'+al.toFixed(2)+')';
+        ctx.lineWidth=Math.max(1.4, 3.4-k*0.6);
+        const a0=dir>0?-1.05:Math.PI-1.05;
+        ctx.beginPath(); ctx.arc(ax,bo.y,Math.max(3,r),a0,a0+2.1); ctx.stroke();
+      }
+      const mg=ctx.createRadialGradient(bx,bo.y,1,bx,bo.y,9);
+      mg.addColorStop(0,'rgba(235,215,255,0.5)'); mg.addColorStop(1,'rgba(150,80,255,0)');
+      ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(bx,bo.y,9,0,7); ctx.fill();
+      continue;
+    }
     for (let g2=2; g2>=0; g2--){
       const gx2=bx-Math.sign(bo.vx)*g2*13, ga=[0.9,0.4,0.18][g2], r=[9,7,5][g2];
       const grd=ctx.createRadialGradient(gx2,bo.y,1,gx2,bo.y,r*2);
