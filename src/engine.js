@@ -1,4 +1,4 @@
-const ASSET_VER='1780606749';
+const ASSET_VER='1780607004';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -242,13 +242,15 @@ function sfxFire(key, vol, delay){
   if (vol!==undefined && vol!==1){ const g=AC.createGain(); g.gain.value=vol; s.connect(g); g.connect(sfxGain); }
   else s.connect(sfxGain);
   s.start(delay ? AC.currentTime+delay : 0);
+  return s;
 }
 function playSfx(key, vol, delay){
   if (!AC) return;
   ensureSfxGain();
-  if (!sfxBuf[key]){ loadSfx(key).then(()=>{ if (AC && sfxBuf[key]) sfxFire(key, vol, 0); }); return; }
-  sfxFire(key, vol, delay);
+  if (!sfxBuf[key]){ loadSfx(key).then(()=>{ if (AC && sfxBuf[key]) sfxFire(key, vol, 0); }); return null; }
+  return sfxFire(key, vol, delay);
 }
+let countSrc=null;
 let banked=0, actScore=0, actSoulPts=0, actKillPts=0, killCount=0, totalEnemies=0, gotHit=false, actTime=0;
 let tally=null, fading=0, fadeIn=0;
 function addScore(base, kind){
@@ -533,9 +535,12 @@ function update(dt){
     if (!tally) computeTally();
     tally.t+=dt;
     const shown=Math.min(tally.rows.length, Math.floor(tally.t/0.42)+1);
-    if (!tally.skip && shown>(tally.sndRows||0)){ tally.sndRows=shown; playSfx('sfx_count',0.8); }
+    if (!tally.skip && shown>(tally.sndRows||0)){ tally.sndRows=shown; countSrc=playSfx('sfx_count',0.8); }
     const dur=tally.rows.length*0.42+0.7;
-    if (tally.skip || tally.t>=dur) tally.done=true;
+    if (!tally.done && (tally.skip || tally.t>=dur)){
+      tally.done=true;
+      if (countSrc){ try{ countSrc.stop(); }catch(e){} countSrc=null; }
+    }
     if (tally.done){
       tally.hold+=dt;
       const hasNext=stageIdx+1<window.STAGES.length;
@@ -1506,7 +1511,7 @@ function drawLoading(){
     const a2=SPR.chars && SPR.chars.dingbat && SPR.chars.dingbat.run;
     if (a1 && a1.img.complete && a1.img.naturalWidth){
       const fi=Math.floor(gt*16)%a1.frames;
-      drawCharSprite('default','run',fi, W/2+46, by2+2, 1, 0.62);
+      drawCharSprite('default','run',fi, W/2+46, by2-9, 1, 0.62);
     }
     if (a2 && a2.img.complete && a2.img.naturalWidth){
       const fi2=Math.floor(gt*42)%a2.frames;
