@@ -1,4 +1,4 @@
-const ASSET_VER='1780604690';
+const ASSET_VER='1780605087';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -513,7 +513,7 @@ let last=performance.now();
 function loop(now){
   const dt=Math.min(0.05,(now-last)/1000); last=now; gt+=dt;
   document.querySelector('.touch').style.display = mode==='play'?'flex':'none';
-  if (musicGain) musicGain.gain.value = ((mode==='play' && !paused) ? 0.55 : 0.30) * musicVol;
+  if (musicGain) musicGain.gain.value = (mode==='play' ? (paused?0.22:0.55) : 0.62) * musicVol;
   const moving = mode==='play' && !paused && p && !p.dead && !p.won && !p.winning && p.onGround && (p.state==='run'||p.state==='walk');
   setRunLoop(moving ? p.state : null);
   if ((mode==='select'||mode==='title') && AC && AC.state==='running' && musicKey!=='title') playMusic('title');
