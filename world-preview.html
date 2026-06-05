@@ -47,7 +47,7 @@ let panel=null, toast=null, toastT=0;
 // mirrorFB: bat alternates legs via mirrored front/back; reaper's scythe forbids mirroring (bob cycle packed instead)
 const HEROES={
   bat:   {src:'assets/owbat3.png',  img:null, mirrorFB:true},
-  reaper:{src:'assets/owreap1.png', img:null, mirrorFB:false},
+  reaper:{src:'assets/owreap2.png', img:null, mirrorFB:false},
 };
 let heroSel='bat';
 for(const k in HEROES){ const img=new Image(); img.onload=()=>{ HEROES[k].img=img; }; img.src=HEROES[k].src; }
@@ -89,8 +89,10 @@ cv.addEventListener('pointerdown',e=>{
     if(dx*dx+dy*dy<r*r){
       if(n.locked){ toast='Sealed — the Blood Moon stirs...'; toastT=2.2; return; }
       if(hero===n.id&&!walking){ panel=n.id; return; }
-      const p=pathTo(hero,n.id);
-      if(p){ route=p.slice(1); walking=true; panel=null; }
+      // mid-walk redirects must stay ON RAILS: route from the segment's next node, never beeline
+      const anchor=(walking&&route.length)?route[0]:hero;
+      const p=pathTo(anchor,n.id);
+      if(p){ route=(walking&&route.length)?p:p.slice(1); walking=true; panel=null; }
       return;
     }
   }
