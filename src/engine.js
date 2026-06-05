@@ -26,7 +26,7 @@ let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
 const SAVEK='creapz_saves_v2', TOTAL_ACTS=27;   // 9 zones x 3 acts (the full realm)
-const ZONE_STAGES={cem:[0,1]};                 // zone -> stage indices per act
+const ZONE_STAGES={cem:[0,1],crypt:[2]};       // zone -> stage indices per act
 const RELEASED={cem:2};                        // publicly playable act count per zone (dev sees everything built)
 const DEVKEY='hellstone';
 let devMode=false;
@@ -35,8 +35,8 @@ try{
   if(q.has('dev')){ if(q.get('dev')==='off') localStorage.removeItem('creapz_dev'); else localStorage.setItem('creapz_dev', q.get('dev')); }
   devMode = localStorage.getItem('creapz_dev')===DEVKEY;
 }catch(e){}
-const STAGE_ZONE=['cem','cem'];                // stageIdx -> zone
-const STAGE_ACT=['cem1','cem2'];               // stageIdx -> act record id
+const STAGE_ZONE=['cem','cem','crypt'];        // stageIdx -> zone
+const STAGE_ACT=['cem1','cem2','crypt1'];      // stageIdx -> act record id
 let saves={slots:[null,null,null]}, slotIdx=-1;
 let prog={acts:{},heroAt:'cem'};               // alias of the bound slot
 try{ const s0=JSON.parse(localStorage.getItem(SAVEK)); if(s0&&Array.isArray(s0.slots)) saves={slots:[s0.slots[0]||null,s0.slots[1]||null,s0.slots[2]||null]}; }catch(e){}
@@ -118,9 +118,10 @@ function enterWorld(fromAct){
 function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
+  WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
   OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h}));
   SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:GROUND-o.h}));
-  PLAT_DEF = ST.plats; CHK = ST.chk; SOUL_POS = ST.souls;
+  PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
   STARS = Array.from({length:Math.ceil(WORLD/120)},()=>[Math.random()*WORLD,Math.random()*GROUND*0.8,Math.random()*1.6+0.6]);
   TREES = Array.from({length:Math.ceil(WORLD/180)},(_,k)=>({x:80+k*180+((k*53)%50), big:(k%4===0)}));
   GRAVES_BG = Array.from({length:Math.ceil(WORLD/150)},(_,k)=>[80+k*150+((k*53)%40),0.7+((k*29)%4)*0.1,(k%4===0)]);
@@ -378,7 +379,7 @@ function drawSoulFx(x,y,R,A,ph){
 const BAT_FPS = 15, BITE_FPS = 29, BAT_PATROL = 1.25, BAT_CHASE = 2.1, BAT_AGGRO = 280;
 
 let mode='select', chosen=ORDER[0];
-let p, souls, soulCount, gt=0, camX=0, zombies, plats, chkOn, bats, bolts, impacts;
+let p, souls, soulCount, gt=0, camX=0, camY=0, WORLDH=440, GOALY=360, zombies, plats, chkOn, bats, bolts, impacts;
 let paused=false, menuRects=[];
 let musicVol=1, sfxVol=1;
 try{ musicVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_mvol')??'1'))); sfxVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_svol')??'1'))); }catch(e){}
@@ -649,9 +650,12 @@ function activateSlot(i){
 }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
-  p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
-        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, diveT:0, diveRec:0, deadT:0, spawn:sx, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
-  camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38)); zbits=[]; bolts=[]; impacts=[]; chkFx=[];
+  const sy = keep && p && p.spawnY!==undefined ? p.spawnY : (segFloorsAt(sx)[0]!==undefined?segFloorsAt(sx)[0]:GROUND);
+  p = { x:sx, y:sy, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
+        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, diveT:0, diveRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
+  camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
+  camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
+  zbits=[]; bolts=[]; impacts=[]; chkFx=[];
   if (!keep){
     soulCount=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],got:false,pop:0,ph:i*0.31}));
@@ -661,7 +665,7 @@ function reset(keep){
     ct:0, falling:false, gone:false, dy:0, fv:0, rt:0}));
   const zspawn=ST.enemies;
   zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=(kw==='zgen')?3:((kw==='gob'||kw==='bd')?1:ZMAXHP);
-    return {x:z[0], y:GROUND, t:Math.random(), facing:-1, state:'idle', atkT:0,
+    return {x:z[0], y:(z[4]!==undefined?z[4]:GROUND), t:Math.random(), facing:-1, state:'idle', atkT:0,
     dead:false, dieT:0, dframe:0, dstate:kw==='bd'?'walk':'idle', pdir:1, min:z[1], max:z[2], kw,
     hp:mh, maxhp:mh, hpShown:mh, hitCd:0, shown:0, aggro:false}; });
   const bspawn=ST.bats;
@@ -717,6 +721,7 @@ function batBits(b,n){
     t:0, c:BAT_COLS[(Math.random()*BAT_COLS.length)|0]});
 }
 function onSeg(x){ for(const s of SEG){ if(x>=s[0]&&x<=s[1]) return true; } return false; }
+function segFloorsAt(x){ const out=[]; for(const s of SEG){ if(x>=s[0]&&x<=s[1]) out.push(s.length>2?s[2]:GROUND); } return out; }
 function overlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 function worldWeaponBox(spr, fi, x, y, facing){
@@ -894,7 +899,7 @@ function update(dt){
   p.x=nx;
   const prevFeet=p.y; if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else p.vy+=GRAV; p.y+=p.vy;
   if (p.vy>=0){
-    let cand=[]; if(onSeg(p.x)) cand.push({t:GROUND,q:null});
+    let cand=[]; for(const fy of segFloorsAt(p.x)) cand.push({t:fy,q:null});
     for (const s of SOLID){ if(p.x>=s.l&&p.x<=s.r) cand.push({t:s.top,q:null}); }
     for (const q of plats){ if(q.gone) continue; if(p.x>=q.x-8&&p.x<=q.x+q.w+8) cand.push({t:q.y+q.dy,q:q}); }
     cand=cand.filter(c=>prevFeet<=c.t+1&&p.y>=c.t).sort((a,b)=>a.t-b.t);
@@ -911,18 +916,22 @@ function update(dt){
       }
     }
   }
-  if (p.y>H+220){
+  if (p.y>WORLDH+220){
     gotHit=true; playSfx('sfx_hurt');
-    p.hp-=1; p.x=p.spawn; p.y=GROUND; p.vy=0; p.vx=0; p.onGround=true; p.standPlat=null;
+    p.hp-=1; p.x=p.spawn; p.y=(p.spawnY!==undefined?p.spawnY:GROUND); p.vy=0; p.vx=0; p.onGround=true; p.standPlat=null;
     p.inv=1.2; p.flash=0.35; p.hurtT=0;
     if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; playSfx('sfx_pdie'); }
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
+    camY=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
   }
   for (let ci=0; ci<CHK.length; ci++){
-    if (!chkOn[ci] && p.x>=CHK[ci]-10){ chkOn[ci]=true; p.spawn=CHK[ci]; chkFx.push({cx:CHK[ci], t:0, hit:false}); playSfx('sfx_ignite',1.6); }
+    if (!chkOn[ci] && p.x>=CHK[ci][0]-10 && Math.abs(p.y-CHK[ci][1])<170){
+      chkOn[ci]=true; p.spawn=CHK[ci][0]; p.spawnY=CHK[ci][1];
+      chkFx.push({cx:CHK[ci][0], cgy:CHK[ci][1], t:0, hit:false}); playSfx('sfx_ignite',1.6);
+    }
   }
   p.x=Math.max(18,Math.min(WORLD-18,p.x));
-  if (p.x>=GOAL_X-24 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; playSfx('sfx_wportal'); }
+  if (p.x>=GOAL_X-24 && Math.abs(p.y-GOALY)<120 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; playSfx('sfx_wportal'); }
   if (p.onGround && p.diveT>0){ p.diveT=0; p.diveRec=DIVE_REC; p.vx=0; p.clock=0; playSfx('sfx_meleehit',0.45); }
   let st;
   if (p.diveT>0) st='dive';
@@ -1054,6 +1063,9 @@ function update(dt){
   bolts=bolts.filter(bo=>!bo.dead||bo.t<1.2);
   updateZbits(dt);
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
+  const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
+  camY+=(_cty-camY)*Math.min(1,dt*7);
+  if (Math.abs(_cty-camY)<0.4) camY=_cty;
 }
 function hurtPlayer(srcX,dmg){
   if (p.diveT>0||p.diveRec>0) return;   // Power Dive i-frames (until normal stance resumes)
@@ -1092,6 +1104,7 @@ function drawFence(){
   for (let x=-off; x<W+gw; x+=gw) ctx.drawImage(g.img, x, baseY-gh, gw, gh);
 }
 function drawSpikes(){
+  if (WORLDH>H) return;   // tall worlds: gaps are shafts, not death pits
   for (let i=0;i<SEG.length-1;i++){
     const g0=SEG[i][1], g1=SEG[i+1][0];
     const x0=pxf(g0,1), x1=pxf(g1,1); if(x1<-20||x0>W+20) continue;
@@ -1136,8 +1149,8 @@ function drawPlats(){
 function drawChecks(){
   const st=SPR.chkst; if(!st) return;
   for (let i=0;i<CHK.length;i++){
-    const sx=pxf(CHK[i],1); if(sx<-120||sx>W+120) continue;
-    const on=chkOn[i], gy=GROUND+8-st.h, x0=sx-st.w/2;
+    const sx=pxf(CHK[i][0],1); if(sx<-120||sx>W+120) continue;
+    const on=chkOn[i], gy=CHK[i][1]+8-st.h, x0=sx-st.w/2;
     ctx.globalAlpha = on?1:0.82;
     ctx.drawImage(st.img, x0, gy, st.w, st.h);
     ctx.globalAlpha = 1;
@@ -1162,19 +1175,32 @@ function drawChecks(){
   }
 }
 function drawGround(){
+  const crypt=(ST.theme==='crypt');
   for (const s of SEG){
     const x0=pxf(s[0],1),x1=pxf(s[1],1); if(x1<-20||x0>W+20) continue;
-    ctx.save(); ctx.beginPath(); ctx.rect(x0,GROUND,x1-x0,H-GROUND); ctx.clip();
-    tileDirt(x0,x1,GROUND,0);
+    const sgy=s.length>2?s[2]:GROUND;
+    const bot=s.length>2?sgy+130:H;
+    if (sgy-camY>H+40 || bot-camY<-40) continue;
+    ctx.save(); ctx.beginPath(); ctx.rect(x0,sgy,x1-x0,bot-sgy); ctx.clip();
+    tileDirt(x0,x1,sgy,0);
+    if (crypt){ ctx.fillStyle='rgba(34,22,52,0.55)'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy);
+      ctx.fillStyle='rgba(224,169,60,0.10)'; ctx.fillRect(x0,sgy,x1-x0,10); }
     ctx.restore();
-    if (SPR.grass){
-      const gr=SPR.grass, gy=GROUND-Math.round(gr.h*0.55);
+    if (SPR.grass && !crypt){
+      const gr=SPR.grass, gy=sgy-Math.round(gr.h*0.55);
       ctx.save(); ctx.beginPath(); ctx.rect(x0,gy,x1-x0,gr.h); ctx.clip();
       const goff=((camX%gr.w)+gr.w)%gr.w;
       for (let gx=-goff; gx<W+gr.w; gx+=gr.w) ctx.drawImage(gr.img, gx, gy, gr.w, gr.h);
       ctx.restore();
     }
-    ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fillRect(x0,GROUND,3,H-GROUND); ctx.fillRect(x1-3,GROUND,3,H-GROUND);
+    if (crypt){ // amber crystal rim along terrace tops
+      ctx.fillStyle='rgba(232,182,72,0.85)';
+      for (let cx2=Math.max(x0,-10)+14; cx2<Math.min(x1,W+10)-10; cx2+=46){
+        const hh2=7+((cx2*7)%9);
+        ctx.beginPath(); ctx.moveTo(cx2,sgy); ctx.lineTo(cx2+5,sgy-hh2); ctx.lineTo(cx2+10,sgy); ctx.fill();
+      }
+    }
+    ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fillRect(x0,sgy,3,bot-sgy); ctx.fillRect(x1-3,sgy,3,bot-sgy);
   }
 }
 function drawObstacle(o){
@@ -1222,6 +1248,22 @@ function skyBG(){
   for (const [gx,sc,cr] of GRAVES_BG){ const x=pxf(gx,0.6); if(x>-40&&x<W+40) drawGraveBg(x,GROUND+4,sc,cr); }
   const fy=GROUND-30;
   for (let k=0;k<2;k++){ ctx.fillStyle=k?'rgba(150,140,200,.05)':'rgba(120,120,170,.07)'; const off=(gt*(10+k*8))%(W+200); for(let fx=-off;fx<W;fx+=W+120) ctx.fillRect(fx,fy-k*16,W+200,60); }
+}
+function caveBG(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#160f26'); g.addColorStop(1,'#0a0712');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<26;i++){ // amber torch-glow motes drifting in the dark, deep parallax
+    const wx=((i*397)%(W+200))-100+Math.sin(gt*0.5+i)*8;
+    const wy=((i*263)%Math.max(H,WORLDH));
+    const sy2=wy-camY*0.85;
+    if(sy2<-50||sy2>H+50) continue;
+    const a=0.10+0.07*Math.sin(gt*2+i*1.7);
+    const r=24+(i%4)*14;
+    const gr2=ctx.createRadialGradient(wx,sy2,1,wx,sy2,r);
+    gr2.addColorStop(0,'rgba(224,169,60,'+a.toFixed(2)+')'); gr2.addColorStop(1,'rgba(224,169,60,0)');
+    ctx.fillStyle=gr2; ctx.beginPath(); ctx.arc(wx,sy2,r,0,7); ctx.fill();
+  }
 }
 function vignette(){
   const vg=ctx.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,H*0.85);
@@ -1433,7 +1475,7 @@ function drawProgress(){
     ctx.beginPath(); ctx.arc(bx+fw,by+bh/2,3.2+1.2*pu,0,7); ctx.fill();
   }
   for (let i=0;i<CHK.length;i++){
-    const dx=bx+bw*(CHK[i]/GOAL_X), dy=by+bh/2;
+    const dx=bx+bw*(CHK[i][0]/GOAL_X), dy=by+bh/2;
     if (chkOn[i]){
       ctx.save(); ctx.shadowColor='rgba(127,224,255,1)'; ctx.shadowBlur=7;
       ctx.fillStyle='#bfeaff'; ctx.beginPath(); ctx.arc(dx,dy,3.6,0,7); ctx.fill(); ctx.restore();
@@ -1525,7 +1567,7 @@ function drawGlitchAnim(ck,anim,fi,cx,feetY,facing,scale,gi){
 function drawGoal(){
   const g=SPR.goal; if(!g) return;
   const sx=pxf(GOAL_X,1); if(sx<-160||sx>W+160) return;
-  const gy=GROUND+10-g.h, x0=sx-g.w/2;
+  const gy=GOALY+10-g.h, x0=sx-g.w/2;
   const vx2=x0+g.vc[0], vy2=gy+g.vc[1];
   // rotating vortex behind the arch
   ctx.save();
@@ -1638,9 +1680,9 @@ function drawPlayerLayer(){
 }
 function draw(){
   ctx.setTransform(RS,0,0,RS,0,0);
-  skyBG();
-  drawFence();
+  if (ST.theme==='crypt') caveBG(); else { skyBG(); drawFence(); }
   vignette();
+  ctx.save(); ctx.translate(0,-camY);
   drawSpikes();
   drawGround();
   drawChecks();
@@ -1658,13 +1700,13 @@ function draw(){
   drawPlayerLayer();
   for (const fx of chkFx){
     const st=SPR.chkst; if(!st) break;
-    const sx=fx.cx-camX, gy=GROUND+8-st.h;
+    const sx=fx.cx-camX, gy=(fx.cgy!==undefined?fx.cgy:GROUND)+8-st.h;
     if (fx.t<0.62){
       // purple energy streams rising up the statue
       const k=fx.t/0.62;
       for (let w2=0; w2<7; w2++){
         const ph=((fx.t*1.7)+w2*0.143)%1;
-        const wy=GROUND+4-ph*(st.h+34);
+        const wy=(fx.cgy!==undefined?fx.cgy:GROUND)+4-ph*(st.h+34);
         const wx=sx+Math.sin((ph*6.0)+w2*2.4)*14;
         const al=Math.max(0,(1-ph)*0.85)*Math.min(1,k*3);
         const r=3+2.6*Math.sin(w2+ph*9);
@@ -1753,6 +1795,11 @@ function draw(){
     ctx.beginPath(); ctx.arc(ix,im.y,r*0.72,0,7); ctx.stroke();
   }
   for (const z of zombies) drawZHP(z);
+  ctx.restore();
+  if (WORLDH>H){ // light dies as you descend
+    const dk=Math.max(0,Math.min(1,camY/(WORLDH-H)))*0.40;
+    ctx.fillStyle='rgba(2,1,6,'+dk.toFixed(2)+')'; ctx.fillRect(0,0,W,H);
+  }
   // HUD
   drawPlayerHP();
   ctx.fillStyle='rgba(20,16,36,.5)'; roundRect(14,54,128,28,7); ctx.fill();
