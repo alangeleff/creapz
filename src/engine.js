@@ -25,13 +25,60 @@ let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS;
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
-const PROGK='creapz_prog_v1';
+const SAVEK='creapz_saves_v2', TOTAL_ACTS=27;   // 9 zones x 3 acts (the full realm)
 const ZONE_STAGES={cem:[0,1]};                 // zone -> stage indices per act
 const STAGE_ZONE=['cem','cem'];                // stageIdx -> zone
 const STAGE_ACT=['cem1','cem2'];               // stageIdx -> act record id
-let prog={acts:{},heroAt:'cem'};
-try{ const p0=JSON.parse(localStorage.getItem(PROGK)); if(p0&&p0.acts) prog=p0; }catch(e){}
-function saveProg(){ try{ localStorage.setItem(PROGK,JSON.stringify(prog)); }catch(e){} }
+let saves={slots:[null,null,null]}, slotIdx=-1;
+let prog={acts:{},heroAt:'cem'};               // alias of the bound slot
+try{ const s0=JSON.parse(localStorage.getItem(SAVEK)); if(s0&&Array.isArray(s0.slots)) saves={slots:[s0.slots[0]||null,s0.slots[1]||null,s0.slots[2]||null]}; }catch(e){}
+try{ // migrate the Phase-A single save into slot 1
+  const p0=JSON.parse(localStorage.getItem('creapz_prog_v1'));
+  if(p0&&p0.acts&&!saves.slots[0]){
+    saves.slots[0]={chosen:'default',acts:p0.acts,heroAt:p0.heroAt||'cem',soulz:0,created:Date.now(),played:Date.now()};
+    localStorage.setItem(SAVEK,JSON.stringify(saves));
+  }
+  if(p0) localStorage.removeItem('creapz_prog_v1');
+}catch(e){}
+function saveAll(){ try{ localStorage.setItem(SAVEK,JSON.stringify(saves)); }catch(e){} }
+function bindSlot(i){ slotIdx=i; prog=saves.slots[i]; chosen=prog.chosen||'default'; }
+function slotStats(sl){ const n=Object.keys(sl.acts||{}).filter(k=>sl.acts[k].done).length; return {acts:n, pct:Math.max(1,Math.round(n*100/TOTAL_ACTS)), soulz:sl.soulz||0}; }
+function saveProg(){ if(slotIdx>=0&&prog){ prog.chosen=chosen; prog.played=Date.now(); } saveAll(); }
+let optMsg='', deferredInstall=null;
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredInstall=e; });
+function exportSave(){
+  try{
+    const blob=new Blob([JSON.stringify({v:2,game:'creapz',saves})],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='creapz-save-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    optMsg='save file exported — keep it somewhere safe'; playSfx('sfx_healthup');
+  }catch(e){ optMsg='export failed'; playSfx('sfx_hurt'); }
+}
+function importSave(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0]; if(!f) return;
+    f.text().then(tx=>{
+      try{
+        const d=JSON.parse(tx);
+        const sl=(d.saves&&d.saves.slots)||d.slots;
+        if(!Array.isArray(sl)) throw new Error('bad');
+        saves={slots:[sl[0]||null,sl[1]||null,sl[2]||null]}; saveAll();
+        slotIdx=-1; prog={acts:{},heroAt:'cem'};
+        optMsg='save imported — your stories are back'; playSfx('sfx_healthup');
+      }catch(err){ optMsg='import failed — not a cReapZ save file'; playSfx('sfx_hurt'); }
+    });
+  };
+  inp.click();
+}
+function installApp(){
+  if (matchMedia('(display-mode: standalone)').matches){ optMsg='already installed — you\u2019re playing the app'; }
+  else if (deferredInstall){ deferredInstall.prompt(); optMsg='follow the browser prompt'; }
+  else if (/iPhone|iPad|iPod/.test(navigator.userAgent)){ optMsg='iOS: tap Share, then \u201cAdd to Home Screen\u201d'; }
+  else { optMsg='use your browser menu \u2192 \u201cInstall app\u201d'; }
+  playSfx('sfx_mtog');
+}
 function getActs(zone){
   const sl=ZONE_STAGES[zone]||[];
   return [0,1,2].map(i=>{
@@ -51,6 +98,9 @@ function enterWorld(fromAct){
     launch:(zone,ai)=>{ const si=(ZONE_STAGES[zone]||[])[ai]; if(si===undefined) return;
       prog.heroAt=zone; saveProg(); banked=0; mode='play'; loadStage(si); },
     exit:()=>{ playSfx('sfx_msel'); mode='title'; menuShown=true; },
+    openSkins:()=>{ selMode='skin';
+      if(isDing(chosen)){ dingSkin=chosen; selFoc=1; } else { creaperSkin=chosen; selFoc=0; }
+      selRow=1; mode='select'; playSfx('sfx_mtog'); },
     heroAt:prog.heroAt,
     setHeroAt:z=>{ prog.heroAt=z; saveProg(); }});
 }
@@ -97,12 +147,17 @@ addEventListener('keydown', e => {
     if (e.code==='Escape'){ if(optionsOpen||cryptOpen){ optionsOpen=false; cryptOpen=false; playSfx('sfx_mtog'); } return; }
     if (cryptOpen){ if (e.code==='Enter'||e.code==='Space'){ cryptOpen=false; playSfx('sfx_mtog'); } return; }
     if (optionsOpen){
-      if (e.code==='ArrowUp'||e.code==='ArrowDown'){ optSel=(optSel+(e.code==='ArrowDown'?1:2))%3; playSfx('sfx_mtog'); }
+      if (e.code==='ArrowUp'||e.code==='ArrowDown'){ optSel=(optSel+(e.code==='ArrowDown'?1:5))%6; playSfx('sfx_mtog'); }
       else if (e.code==='ArrowLeft'||e.code==='ArrowRight'){
         const d=e.code==='ArrowRight'?'+':'-';
         if (optSel===0) titleMenuAction('m'+d); else if (optSel===1) titleMenuAction('s'+d);
       }
-      else if (e.code==='Enter'||e.code==='Space'){ if (optSel===2) titleMenuAction('close'); }
+      else if (e.code==='Enter'||e.code==='Space'){
+        if (optSel===2) titleMenuAction('export');
+        else if (optSel===3) titleMenuAction('import');
+        else if (optSel===4) titleMenuAction('install');
+        else if (optSel===5) titleMenuAction('close');
+      }
       return;
     }
     if (!menuShown){ menuShown=true; menuSel=0; playSfx('sfx_mtog'); return; }
@@ -111,14 +166,36 @@ addEventListener('keydown', e => {
     return;
   }
   if (['ArrowLeft','ArrowRight','ArrowUp','Space',' '].includes(e.key)||e.code==='Space') e.preventDefault();
+  if (mode==='slots'){
+    if (slotConfirm>=0){
+      if (e.code==='ArrowLeft'||e.code==='ArrowRight'){ confSel=confSel?0:1; playSfx('sfx_mtog'); }
+      else if (e.code==='Enter'||e.code==='Space'){
+        if(confSel===0){ saves.slots[slotConfirm]=null; saveAll(); playSfx('sfx_die'); } else playSfx('sfx_mtog');
+        slotConfirm=-1;
+      }
+      else if (e.code==='Escape'){ slotConfirm=-1; playSfx('sfx_mtog'); }
+      return;
+    }
+    if (e.code==='ArrowLeft'||e.code==='ArrowRight'){ slotSel=(slotSel+(e.code==='ArrowRight'?1:2))%3; playSfx('sfx_mtog'); }
+    else if (e.code==='Enter'||e.code==='Space'){ activateSlot(slotSel); }
+    else if ((e.code==='Delete'||e.code==='Backspace')&&saves.slots[slotSel]){ slotConfirm=slotSel; confSel=1; playSfx('sfx_mtog'); }
+    else if (e.code==='Escape'){ mode='title'; menuShown=true; playSfx('sfx_mtog'); }
+    return;
+  }
   if (mode==='select'){
-    if (e.key==='1'){ playSfx('sfx_msel'); startGame(creaperSkin); return; }
-    if (e.key==='2'){ playSfx('sfx_msel'); startGame(dingSkin); return; }
+    const skinOnly=(selMode==='skin');
+    if (e.code==='Escape'){
+      playSfx('sfx_mtog');
+      if (skinOnly){ saveProg(); enterWorld(false); } else { mode='slots'; }
+      return;
+    }
+    if (!skinOnly && e.key==='1'){ playSfx('sfx_msel'); startGame(creaperSkin); return; }
+    if (!skinOnly && e.key==='2'){ playSfx('sfx_msel'); startGame(dingSkin); return; }
     if (e.code==='ArrowUp'){ if (selRow===0){ selRow=1; playSfx('sfx_mtog'); } return; }
     if (e.code==='ArrowDown'){ if (selRow===1){ selRow=0; playSfx('sfx_mtog'); } return; }
     if (e.code==='ArrowLeft'||e.code==='ArrowRight'){
       const dd=e.code==='ArrowRight'?1:-1;
-      if (selRow===0) selFoc=(selFoc+1)%2;
+      if (selRow===0){ if(!skinOnly) selFoc=(selFoc+1)%2; }
       else if (selFoc===0){ const i=ORDER.indexOf(creaperSkin); creaperSkin=ORDER[(i+dd+ORDER.length)%ORDER.length]; }
       else { const i=DORDER.indexOf(dingSkin); dingSkin=DORDER[(i+dd+DORDER.length)%DORDER.length]; }
       playSfx('sfx_mtog'); return;
@@ -132,7 +209,6 @@ addEventListener('keydown', e => {
   }
   if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; panelSel=0; playSfx('sfx_mtog'); } return; }
   if (e.code==='KeyR'&&mode==='play'){ paused=false; onReset(); return; }
-  if (e.code==='KeyC'&&mode==='play'){ paused=false; mode='select'; return; }
   if (mode==='play' && p && p.won && tally){
     if (e.code==='Enter'||e.code==='Space'){
       if (!tally.done){ tally.skip=true; playSfx('sfx_mtog'); }
@@ -189,6 +265,17 @@ cv.addEventListener('pointerdown', e=>{
       return;
     }
     menuShown=true; playSfx('sfx_mtog');
+    return;
+  }
+  if (mode==='slots'){
+    if (slotConfirm>=0){
+      for (const r of confRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){
+        if(r.yes){ saves.slots[slotConfirm]=null; saveAll(); playSfx('sfx_die'); } else playSfx('sfx_mtog');
+        slotConfirm=-1; return; } }
+      slotConfirm=-1; return;
+    }
+    for (const r of delRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ slotConfirm=r.i; confSel=1; playSfx('sfx_mtog'); return; } }
+    for (const r of slotRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ slotSel=r.i; activateSlot(r.i); return; } }
     return;
   }
   if (mode==='select'){
@@ -287,6 +374,7 @@ try{ musicVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_mvol
 function saveVols(){ try{ localStorage.setItem('creapz_mvol',musicVol); localStorage.setItem('creapz_svol',sfxVol); }catch(e){} }
 let menuShown=false, optionsOpen=false, cryptOpen=false, titleFade=0;
 let menuSel=0, optSel=0, selFoc=0, selRow=0, panelSel=0;   // keyboard nav cursors
+let slotSel=0, slotConfirm=-1, confSel=1, selMode='new', slotRects=[], delRects=[], confRects=[];
 let TIMG=null;
 let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicKey=null, musicReq=0;
 function audioInit(){
@@ -400,6 +488,8 @@ function computeTally(){
     r.hi=Math.max(r.hi||0, total);
     r.souls=Math.max(r.souls||0, soulCount);
     r.maxSouls=souls.length;
+    if(r.secret===undefined) r.secret=null;   // reserved: cReapY stone / secret collectible
+    prog.soulz=(prog.soulz||0)+soulCount;
     saveProg();
   }
 }
@@ -531,7 +621,21 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie'].forEach(loadSfx); chosen=ck; banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(ck)); enterWorld(false); }
+const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie'];
+function bootIntoWorld(){ primeAudio(); SFXLIST.forEach(loadSfx); banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); enterWorld(false); }
+function startGame(ck){
+  if (selMode==='skin'){ chosen=ck; saveProg(); }
+  else {
+    saves.slots[slotIdx]={chosen:ck,acts:{},heroAt:'cem',soulz:0,created:Date.now(),played:Date.now()};
+    bindSlot(slotIdx); saveAll();
+  }
+  bootIntoWorld();
+}
+function activateSlot(i){
+  const sl=saves.slots[i];
+  if (sl){ bindSlot(i); playSfx('sfx_msel'); bootIntoWorld(); }
+  else { slotIdx=i; selMode='new'; selFoc=0; selRow=0; mode='select'; playSfx('sfx_msel'); }
+}
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -646,6 +750,7 @@ function loop(now){
   if (mode==='load') drawLoading();
   else if (mode==='title'){ titleFade=Math.min(1,titleFade+dt/1.1); drawTitle(); }
   else if (loaded<total) drawLoading();
+  else if (mode==='slots') drawSlots();
   else if (mode==='select') drawSelect();
   else if (mode==='world'){
     ctx.setTransform(RS,0,0,RS,0,0);
@@ -1136,20 +1241,95 @@ let creaperSkin='default', dingSkin='dingbat';
 const SKINC={default:'#7b5cff', green:'#3ddc5a', blue:'#2f7bff', red:'#e0504a', wraith:'#34343e', gilded:'#c49016', bone:'#ddd6c4', crimson:'#7a1a20'};
 const DSKINC={dingbat:'#8a5a2a', ding_onyx:'#3c3c46', ding_frost:'#8fa8c8', ding_blood:'#7a1f24'};
 const DORDER=['dingbat','ding_onyx','ding_frost','ding_blood'];
+function drawSlots(){
+  ctx.setTransform(RS,0,0,RS,0,0);
+  camX=0; skyBG(); drawFence();
+  ctx.fillStyle='#1d1730'; ctx.fillRect(0,GROUND,W,H-GROUND); ctx.fillStyle='#5a4499'; ctx.fillRect(0,GROUND,W,8);
+  ctx.textAlign='center';
+  ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText('Choose your Save', W/2, 56);
+  ctx.fillStyle='#9b8cff'; ctx.font='14px sans-serif'; ctx.fillText('three stories, one realm  ·  arrows + space  ·  Esc for title', W/2, 82);
+  const cw=272, gap=(W-3*cw)/4, cardY=104, cardH=250;
+  slotRects=[]; delRects=[];
+  for (let i=0;i<3;i++){
+    const sl=saves.slots[i], cardX=gap+i*(cw+gap);
+    slotRects.push({x:cardX,y:cardY,w:cw,h:cardH,i});
+    ctx.fillStyle='rgba(20,16,40,.62)';
+    ctx.strokeStyle = sl ? (isDing(sl.chosen)?(DSKINC[sl.chosen]||'#8a6a3a'):(SKINC[sl.chosen]||'#7b5cff')) : 'rgba(123,92,255,.4)';
+    roundRect(cardX,cardY,cw,cardH,12); ctx.fill(); ctx.lineWidth=2; ctx.stroke();
+    if (i===slotSel){
+      const pu=0.55+0.45*Math.sin(gt*4);
+      ctx.strokeStyle='rgba(200,251,80,'+pu.toFixed(2)+')'; ctx.lineWidth=3;
+      roundRect(cardX-5,cardY-5,cw+10,cardH+10,15); ctx.stroke();
+    }
+    ctx.fillStyle='rgba(200,190,255,.5)'; ctx.font='bold 12px sans-serif';
+    ctx.fillText('SLOT '+(i+1), cardX+cw/2, cardY+22);
+    if (!sl){
+      ctx.fillStyle='rgba(200,251,80,.85)'; ctx.font='52px sans-serif';
+      ctx.fillText('+', cardX+cw/2, cardY+cardH/2+6);
+      ctx.fillStyle='#9b8cff'; ctx.font='bold 15px sans-serif';
+      ctx.fillText('NEW GAME', cardX+cw/2, cardY+cardH/2+44);
+      continue;
+    }
+    const a=SPR.chars[sl.chosen]&&SPR.chars[sl.chosen].idle;
+    if (a){
+      const cfps=(SPR.chars[sl.chosen].fps&&SPR.chars[sl.chosen].fps.idle)||FPS.idle;
+      const fi=Math.floor(gt*cfps)%a.frames;
+      drawCharSprite(sl.chosen,'idle',fi, cardX+cw/2, cardY+150, 1, 110/a.h);
+    }
+    const st=slotStats(sl);
+    ctx.fillStyle='#eae6ff'; ctx.font='bold 16px sans-serif';
+    ctx.fillText(isDing(sl.chosen)?'Dingbat':'cReaper', cardX+cw/2, cardY+176);
+    ctx.font='13px sans-serif'; ctx.fillStyle='#b9a6ff';
+    ctx.fillText(st.acts+' / '+TOTAL_ACTS+' acts cleared  ·  '+(st.acts?st.pct:0)+'%', cardX+cw/2, cardY+200);
+    ctx.fillStyle='#7fe0ff';
+    ctx.fillText(st.soulz.toLocaleString('en-US')+' soulz banked', cardX+cw/2, cardY+221);
+    const dx2=cardX+cw-30, dy2=cardY+10;
+    delRects.push({x:dx2,y:dy2,w:22,h:22,i});
+    ctx.strokeStyle='rgba(226,59,59,.75)'; ctx.lineWidth=1.5;
+    roundRect(dx2,dy2,22,22,6); ctx.stroke();
+    ctx.fillStyle='rgba(226,59,59,.85)'; ctx.font='bold 13px sans-serif';
+    ctx.fillText('✕', dx2+11, dy2+16);
+  }
+  if (slotConfirm>=0){
+    ctx.fillStyle='rgba(8,5,18,.78)'; ctx.fillRect(0,0,W,H);
+    const mw=360, mh=150, mx=W/2-mw/2, my=H/2-mh/2;
+    ctx.fillStyle='rgba(22,16,44,.97)'; roundRect(mx,my,mw,mh,14); ctx.fill();
+    ctx.strokeStyle='rgba(226,59,59,.6)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#e23b3b'; ctx.font='bold 20px sans-serif';
+    ctx.fillText('Erase Slot '+(slotConfirm+1)+'?', W/2, my+38);
+    ctx.fillStyle='rgba(200,190,255,.7)'; ctx.font='12px sans-serif';
+    ctx.fillText('this story will be lost forever', W/2, my+60);
+    confRects=[];
+    [['ERASE',true],['KEEP',false]].forEach((it,k)=>{
+      const bw2=130, bx2=W/2-bw2-14+k*(bw2+28), by2=my+mh-62;
+      const hot=(confSel===k);
+      ctx.fillStyle=hot?(k===0?'rgba(226,59,59,.25)':'rgba(200,251,80,.16)'):'rgba(155,140,255,.14)';
+      roundRect(bx2,by2,bw2,42,10); ctx.fill();
+      ctx.strokeStyle=hot?(k===0?'#e23b3b':'#c8fb50'):'rgba(155,140,255,.45)'; ctx.lineWidth=hot?2:1; ctx.stroke();
+      ctx.fillStyle='#e8e6f5'; ctx.font='600 15px sans-serif';
+      ctx.fillText(it[0], bx2+bw2/2, by2+27);
+      confRects.push({x:bx2,y:by2,w:bw2,h:42,yes:it[1]});
+    });
+  }
+  ctx.textAlign='left';
+}
 function drawSelect(){
   ctx.setTransform(RS,0,0,RS,0,0);
   camX=0; skyBG();
   drawFence();
   ctx.fillStyle='#1d1730'; ctx.fillRect(0,GROUND,W,H-GROUND); ctx.fillStyle='#5a4499'; ctx.fillRect(0,GROUND,W,8);
   ctx.textAlign='center';
-  ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText('Choose your Creap', W/2, 56);
-  ctx.fillStyle='#9b8cff'; ctx.font='15px sans-serif'; ctx.fillText('tap a character to begin  ·  dots pick the colors  ·  or arrows + space', W/2, 82);
+  ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText(selMode==='skin'?'Choose your Skin':'Choose your Creap', W/2, 56);
+  ctx.fillStyle='#9b8cff'; ctx.font='15px sans-serif';
+  ctx.fillText(selMode==='skin'?'your character is bound to this story — colors only  ·  Esc returns to the realm':'tap a character to begin  ·  dots pick the colors  ·  or arrows + space', W/2, 82);
   const cw=250, gap=(W-2*cw)/3, cardY=104, cardH=246;
   cardRects=[]; dotRects=[];
   const roster=[{key:'creaper', label:'cReaper', ck:creaperSkin},{key:'dingbat', label:'Dingbat', ck:dingSkin}];
   for (let i=0;i<2;i++){
     const it=roster[i], cardX=gap+i*(cw+gap);
-    cardRects.push({x:cardX,y:cardY,w:cw,h:cardH,key:it.key});
+    const storyLocked = selMode==='skin' && ((it.key==='creaper')===isDing(chosen));
+    if (storyLocked) ctx.globalAlpha=0.32;
+    else cardRects.push({x:cardX,y:cardY,w:cw,h:cardH,key:it.key});
     ctx.fillStyle='rgba(20,16,40,.55)';
     ctx.strokeStyle = it.key==='creaper' ? (SKINC[creaperSkin]||'#5a4d8c') : (DSKINC[dingSkin]||'#8a6a3a');
     roundRect(cardX,cardY,cw,cardH,12); ctx.fill(); ctx.lineWidth=2; ctx.stroke();
@@ -1163,6 +1343,13 @@ function drawSelect(){
     const fi=Math.floor(gt*cfps)%a.frames;
     const sc=150/a.h; drawCharSprite(it.ck,'idle',fi, cardX+cw/2, cardY+cardH-54, 1, sc);
     ctx.fillStyle='#eae6ff'; ctx.font='bold 18px sans-serif'; ctx.fillText(it.label, cardX+cw/2, cardY+cardH-16);
+    if (storyLocked){
+      ctx.globalAlpha=1;
+      ctx.fillStyle='rgba(8,5,18,.55)'; roundRect(cardX,cardY,cw,cardH,12); ctx.fill();
+      ctx.fillStyle='#8a82a6'; ctx.font='bold 14px sans-serif';
+      ctx.fillText('BOUND TO ANOTHER STORY', cardX+cw/2, cardY+cardH/2);
+      continue;
+    }
     {
       // color dots floating above the character
       const isC=(it.key==='creaper');
@@ -1581,7 +1768,6 @@ function draw(){
     menuPanel('Paused', [
       {label:'Return to Overworld', action:()=>{ enterWorld(true); }},
       {label:'Restart Act', action:()=>{ paused=false; loadStage(stageIdx); }},
-      {label:'Characters', action:()=>{ paused=false; mode='select'; }},
       {label:'Close', action:()=>{ paused=false; }},
     ]);
   }
@@ -1633,7 +1819,7 @@ function drawTitle(){
 }
 function drawOptions(){
   ctx.fillStyle='rgba(8,5,18,.72)'; ctx.fillRect(0,0,W,H);
-  const mw=420, mh=250, mx=W/2-mw/2, my=H/2-mh/2;
+  const mw=420, mh=388, mx=W/2-mw/2, my=H/2-mh/2;
   ctx.fillStyle='rgba(22,16,44,.97)'; roundRect(mx,my,mw,mh,14); ctx.fill();
   ctx.strokeStyle='rgba(150,140,255,.5)'; ctx.lineWidth=1.5; ctx.stroke();
   ctx.textAlign='center'; ctx.fillStyle='#eae6ff'; ctx.font='bold 24px sans-serif';
@@ -1657,20 +1843,33 @@ function drawOptions(){
     ctx.fillStyle='#e8e6f5'; ctx.fillText('+', bx2+bw2+32, y+7);
     menuRects.push({x:bx2+bw2+14,y:y-16,w:36,h:32,action:row[1]+'+'});
   });
-  const by3=my+mh-52;
-  ctx.fillStyle=(optSel===2)?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(W/2-80,by3,160,38,10); ctx.fill();
-  ctx.strokeStyle=(optSel===2)?'#c8fb50':'rgba(155,140,255,.45)'; ctx.lineWidth=(optSel===2)?2:1; ctx.stroke();
-  ctx.fillStyle='#e8e6f5'; ctx.font='600 17px sans-serif'; ctx.textAlign='center';
-  ctx.fillText('Close', W/2, by3+25);
-  menuRects.push({x:W/2-80,y:by3,w:160,h:38,action:'close'});
+  [['Export Save','export',2],['Import Save','import',3],['Install App','install',4]].forEach((row,k)=>{
+    const y=my+196+k*46;
+    const hot=(optSel===row[2]);
+    ctx.fillStyle=hot?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(mx+60,y,mw-120,38,10); ctx.fill();
+    ctx.strokeStyle=hot?'#c8fb50':'rgba(155,140,255,.45)'; ctx.lineWidth=hot?2:1; ctx.stroke();
+    ctx.fillStyle='#e8e6f5'; ctx.font='600 15px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(row[0], W/2, y+25);
+    menuRects.push({x:mx+60,y:y,w:mw-120,h:38,action:row[1]});
+  });
+  if (optMsg){ ctx.fillStyle='#7fe0ff'; ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.fillText(optMsg, W/2, my+348); }
+  const by3=my+mh-30;
+  ctx.fillStyle=(optSel===5)?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(W/2-80,by3-12,160,34,10); ctx.fill();
+  ctx.strokeStyle=(optSel===5)?'#c8fb50':'rgba(155,140,255,.45)'; ctx.lineWidth=(optSel===5)?2:1; ctx.stroke();
+  ctx.fillStyle='#e8e6f5'; ctx.font='600 16px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Close', W/2, by3+11);
+  menuRects.push({x:W/2-80,y:by3-12,w:160,h:34,action:'close'});
   ctx.textAlign='left';
 }
 function titleMenuAction(a){
   playSfx('sfx_msel');
-  if (a==='play'){ mode='select'; }
+  if (a==='play'){ mode='slots'; slotSel=0; slotConfirm=-1; }
   else if (a==='crypt'){ cryptOpen=true; }
   else if (a==='options'){ optionsOpen=true; }
-  else if (a==='close'){ optionsOpen=false; cryptOpen=false; }
+  else if (a==='close'){ optionsOpen=false; cryptOpen=false; optMsg=''; }
+  else if (a==='export'){ exportSave(); }
+  else if (a==='import'){ importSave(); }
+  else if (a==='install'){ installApp(); }
   else if (a==='m-'){ musicVol=Math.max(0,Math.round((musicVol-0.1)*10)/10); saveVols(); }
   else if (a==='m+'){ musicVol=Math.min(1,Math.round((musicVol+0.1)*10)/10); saveVols(); }
   else if (a==='s-'){ sfxVol=Math.max(0,Math.round((sfxVol-0.1)*10)/10); if(sfxGain) sfxGain.gain.value=0.45*sfxVol; saveVols(); }

@@ -80,6 +80,7 @@ function startEdge(){ if(route.length) ptQ=edgePts(hero,route[0]).slice(1).map(p
 function panelRect(){ const w=Math.min(W-24,420), h=128; return {x:W/2-w/2,y:H-h-14,w,h}; }
 function chipRect(P,i){ const cw=(P.w-56)/3; return {x:P.x+16+i*(cw+12), y:P.y+58, w:cw, h:52}; }
 function menuBtnRect(){ return {x:12,y:12,w:84,h:34}; }
+function skinsBtnRect(){ return {x:104,y:12,w:84,h:34}; }
 function say(msg,t){ toast=msg; toastT=t||2.4; }
 
 function enter(o){
@@ -94,6 +95,8 @@ function tap(pt){
   const s=vs();
   const M=menuBtnRect();
   if(pt.x>M.x&&pt.x<M.x+M.w&&pt.y>M.y&&pt.y<M.y+M.h){ hooks.exit(); return; }
+  const SK=skinsBtnRect();
+  if(hooks.openSkins&&pt.x>SK.x&&pt.x<SK.x+SK.w&&pt.y>SK.y&&pt.y<SK.y+SK.h){ hooks.openSkins(); return; }
   if(panel){
     const P=panelRect();
     if(pt.x>P.x&&pt.x<P.x+P.w&&pt.y>P.y&&pt.y<P.y+P.h){
@@ -280,8 +283,13 @@ function frame(dt,t){
   ctx.strokeStyle='#7b5cff'; ctx.lineWidth=1.5; ctx.stroke();
   ctx.fillStyle='#c8fb50'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
   ctx.fillText('MENU', M.x+M.w/2, M.y+22);
+  const SK2=skinsBtnRect();
+  ctx.fillStyle='rgba(20,16,36,.78)'; ctx.beginPath(); ctx.roundRect(SK2.x,SK2.y,SK2.w,SK2.h,9); ctx.fill();
+  ctx.strokeStyle='#7b5cff'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='#b9a6ff'; ctx.font='bold 13px sans-serif';
+  ctx.fillText('SKINS', SK2.x+SK2.w/2, SK2.y+22);
   ctx.fillStyle='rgba(200,190,255,.55)'; ctx.font='11px sans-serif'; ctx.textAlign='left';
-  ctx.fillText('drag to look around · tap a zone to travel', M.x+M.w+12, M.y+22);
+  ctx.fillText('drag to look around · tap a zone to travel', SK2.x+SK2.w+12, M.y+22);
   if(toast&&toastT>0){ toastT-=dt;
     ctx.font='bold 14px sans-serif';
     const tw=ctx.measureText(toast).width+40;
