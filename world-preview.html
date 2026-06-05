@@ -44,7 +44,7 @@ let hero='cem', hx=ALL.cem.x, hy=ALL.cem.y, route=[], walking=false, facing=1;
 let panel=null, toast=null, toastT=0;
 
 let HERO=null;            // Alan's pixel DINGBATZ turnaround: rows side/front/back x 4 steps, 120px cells
-(function(){ const img=new Image(); img.onload=()=>{ HERO=img; }; img.src='assets/owbat.png'; })();
+(function(){ const img=new Image(); img.onload=()=>{ HERO=img; }; img.src='assets/owbat2.png'; })();
 let lastDir={r:1,m:1};
 
 function nbrs(id){ const o=[]; for(const [a,b] of EDGES){ if(a===id)o.push(b); if(b===id)o.push(a);} return o; }
