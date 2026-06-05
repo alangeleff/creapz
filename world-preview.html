@@ -43,12 +43,9 @@ const EDGES=[ ['cem','w1'],['w1','w2'],['w2','witch'],['w1','crypt'],
 let hero='cem', hx=ALL.cem.x, hy=ALL.cem.y, route=[], walking=false, facing=1;
 let panel=null, toast=null, toastT=0;
 
-let HERO=null;
-fetch('assets/sprites.json').then(r=>r.json()).then(sp=>{
-  const e=sp.chars.default.walk, img=new Image();
-  img.onload=()=>{ HERO={img,e}; };
-  img.src=e.src.startsWith('data:')?e.src:('assets/'+e.src);
-});
+let HERO=null;            // Alan's pixel DINGBATZ turnaround: rows side/front/back x 4 steps, 120px cells
+(function(){ const img=new Image(); img.onload=()=>{ HERO=img; }; img.src='assets/owbat.png'; })();
+let lastDir={r:1,m:1};
 
 function nbrs(id){ const o=[]; for(const [a,b] of EDGES){ if(a===id)o.push(b); if(b===id)o.push(a);} return o; }
 function pathTo(from,to){
@@ -183,12 +180,24 @@ function loop(){
     if(d<sp){ hx=tgt.x; hy=tgt.y; hero=tgt.id; route.shift(); if(!route.length) walking=false; }
     else { hx+=dx/d*sp; hy+=dy/d*sp; if(Math.abs(dx)>2) facing=dx>=0?1:-1; }
   }
-  const hop=walking?Math.abs(Math.sin(t*9))*5*s:0;
+  const hop=walking?Math.abs(Math.sin(t*9))*3*s:0;
   if(HERO){
-    const e=HERO.e, fi=walking?Math.floor(t*16)%e.frames:0, hsc=0.30*s*1.6;
+    const C=120;
+    if(walking&&route.length){
+      const tg2=ALL[route[0]], ddx=tg2.x-hx, ddy=tg2.y-hy;
+      if(Math.abs(ddx)>Math.abs(ddy)) lastDir={r:0,m:ddx>=0?1:-1};
+      else lastDir={r:ddy>=0?1:2,m:1};
+    }
+    const st4=Math.floor(t*7)%4, st8=Math.floor(t*7)%8;
+    let fi,mir;
+    if(lastDir.r===0){ fi=st4; mir=lastDir.m<0; }
+    else { fi=st8%4; mir=st8>=4; }
+    if(!walking){ fi=0; }
+    const hsc=(46*s)/C;
     ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(vx(hx),vy(hy)+4*s,11*s,4*s,0,0,7); ctx.fill();
-    ctx.save(); ctx.translate(vx(hx),vy(hy)+4*s-hop); ctx.scale(facing*hsc,hsc);
-    ctx.drawImage(HERO.img, fi*e.sw,0,e.sw,e.sh, -e.sw/2,-e.sh, e.sw,e.sh); ctx.restore();
+    ctx.save(); ctx.translate(vx(hx),vy(hy)+6*s-hop); ctx.scale(mir?-hsc:hsc,hsc);
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(HERO, fi*C,lastDir.r*C,C,C, -C/2,-C, C,C); ctx.restore();
   }
   // ---- act-select panel (bottom sheet) ----
   if(panel){
