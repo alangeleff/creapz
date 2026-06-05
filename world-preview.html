@@ -15,30 +15,33 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let W=0,H=0;
 function fit(){ const d=Math.min(2,window.devicePixelRatio||1); W=window.innerWidth; H=window.innerHeight; cv.width=W*d; cv.height=H*d; ctx.setTransform(d,0,0,d,0,0); }
 fit(); addEventListener('resize',fit);
-const VW=1000,VH=560;
+const VW=1647,VH=955;   // = painted plate pixel space
 function vs(){ return Math.min(W/VW,H/VH); }
 function vx(x){ return W/2+(x-VW/2)*vs(); }
 function vy(y){ return H/2+(y-VH/2)*vs(); }
 function rnd(i){ const x=Math.sin(i*127.1)*43758.5453; return x-Math.floor(x); }
 
-// ---- WORLD NODES: one node = one world, 3 acts inside (dot tracker) ----
+// painted plate as the world (Alan's art); my layer adds the game on top
+const MAPIMG=new Image(); let MAPok=false;
+MAPIMG.onload=()=>{ MAPok=true; }; MAPIMG.src='assets/owmap1.png';
+// ---- WORLD NODES aligned to painted landmarks ----
 const WORLDS=[
- {id:'cem',   x:130,y:430, name:'cReapY Cemetery', col:'#a98aff', acts:['done','done','open']},
- {id:'witch', x:395,y:255, name:'Witchwood',       col:'#3ddc5a', acts:['done','open','locked']},
- {id:'crypt', x:380,y:495, name:'Crypt Depths',    col:'#e0a93c', acts:['open','locked','locked']},
- {id:'harbor',x:660,y:455, name:'Drowned Harbor',  col:'#41c8ff', acts:['open','locked','locked']},
- {id:'spire', x:700,y:150, name:'Bell Spire',      col:'#ff8a5c', acts:['open','locked','locked']},
- {id:'castle',x:895,y:290, name:'Blood Moon Castle',col:'#e0506a',acts:['locked','locked','locked'], locked:true},
+ {id:'cem',   x:255,y:500, name:'cReapY Cemetery', col:'#a98aff', acts:['done','done','open']},
+ {id:'witch', x:630,y:195, name:'Witchwood',       col:'#3ddc5a', acts:['done','open','locked']},
+ {id:'crypt', x:590,y:645, name:'Crypt Depths',    col:'#e0a93c', acts:['open','locked','locked']},
+ {id:'harbor',x:1070,y:690,name:'Drowned Harbor',  col:'#41c8ff', acts:['open','locked','locked']},
+ {id:'spire', x:965,y:140, name:'Bell Spire',      col:'#ff8a5c', acts:['open','locked','locked']},
+ {id:'castle',x:1450,y:450,name:'Blood Moon Castle',col:'#e0506a',acts:['locked','locked','locked'], locked:true},
 ];
 // invisible waypoints make the web bend + loop
 const WAYPTS=[
- {id:'w1',x:255,y:395},{id:'w2',x:330,y:330},{id:'w3',x:520,y:380},
- {id:'w4',x:555,y:255},{id:'w5',x:790,y:390},{id:'w6',x:800,y:215},
+ {id:'w1',x:430,y:520},{id:'w2',x:520,y:360},{id:'w3',x:800,y:480},
+ {id:'w4',x:810,y:260},{id:'w5',x:1190,y:560},{id:'w6',x:1150,y:290},
 ];
 const ALL={}; for(const n of [...WORLDS,...WAYPTS]) ALL[n.id]=n;
 const EDGES=[ ['cem','w1'],['w1','w2'],['w2','witch'],['w1','crypt'],
  ['witch','w4'],['w4','w3'],['crypt','w3'],['w3','harbor'],
- ['w4','spire'],['harbor','w5'],['spire','w6'],['w5','castle'],['w6','castle'] ];
+ ['w4','spire'],['harbor','w5'],['spire','w6'],['w5','castle'],['w6','castle'],['w2','w3'] ];
 
 let hero='cem', hx=ALL.cem.x, hy=ALL.cem.y, route=[], walking=false, facing=1;
 let panel=null, toast=null, toastT=0;
@@ -104,44 +107,50 @@ let t0=performance.now(),last=t0;
 function loop(){
   const now=performance.now(), t=(now-t0)/1000, dt=Math.min(0.05,(now-last)/1000); last=now;
   const s=vs();
-  // ---- overhead terrain ----
-  ctx.fillStyle='#171226'; ctx.fillRect(0,0,W,H);            // night moor base
-  for(let i=0;i<60;i++){                                      // mottled ground
-    const x=rnd(i)*VW, y=rnd(i+200)*VH, r=18+rnd(i+400)*36;
-    ctx.fillStyle=i%3?'rgba(34,26,56,0.5)':'rgba(24,30,24,0.45)';
-    ctx.beginPath(); ctx.ellipse(vx(x),vy(y),r*s,r*0.7*s,0,0,7); ctx.fill();
+  // ---- painted plate background (procedural terrain = fallback while loading) ----
+  ctx.fillStyle='#06040e'; ctx.fillRect(0,0,W,H);
+  if(MAPok){ ctx.imageSmoothingEnabled=false; ctx.drawImage(MAPIMG, vx(0),vy(0), VW*s,VH*s); }
+  else {
+
+    ctx.fillStyle='#171226'; ctx.fillRect(0,0,W,H);            // night moor base
+    for(let i=0;i<60;i++){                                      // mottled ground
+      const x=rnd(i)*VW, y=rnd(i+200)*VH, r=18+rnd(i+400)*36;
+      ctx.fillStyle=i%3?'rgba(34,26,56,0.5)':'rgba(24,30,24,0.45)';
+      ctx.beginPath(); ctx.ellipse(vx(x),vy(y),r*s,r*0.7*s,0,0,7); ctx.fill();
+    }
+    // water (harbor bay, bottom right)
+    ctx.fillStyle='#16243c';
+    ctx.beginPath(); ctx.ellipse(vx(760),vy(540),230*s,90*s,-0.15,0,7); ctx.fill();
+    for(let i=0;i<8;i++){ ctx.strokeStyle='rgba(80,140,200,'+(0.25+0.15*Math.sin(t*1.5+i))+')'; ctx.lineWidth=1.5*s;
+      ctx.beginPath(); const wx=600+rnd(i+60)*300, wy=505+rnd(i+90)*45;
+      ctx.moveTo(vx(wx),vy(wy)); ctx.quadraticCurveTo(vx(wx+18),vy(wy-4),vx(wx+36),vy(wy)); ctx.stroke(); }
+    // forest cluster (around witchwood)
+    for(let i=0;i<26;i++){ const x=320+rnd(i+10)*210, y=170+rnd(i+30)*150;
+      if(Math.hypot(x-395,y-255)<34) continue;
+      ctx.fillStyle='#15301f'; ctx.beginPath(); ctx.arc(vx(x),vy(y),(9+rnd(i)*7)*s,0,7); ctx.fill();
+      ctx.fillStyle='#1d4029'; ctx.beginPath(); ctx.arc(vx(x-2),vy(y-2),(6+rnd(i)*5)*s,0,7); ctx.fill(); }
+    // graveyard speckle (around cemetery)
+    for(let i=0;i<14;i++){ const x=60+rnd(i+70)*180, y=370+rnd(i+110)*140;
+      if(Math.hypot(x-130,y-430)<34) continue;
+      ctx.fillStyle='#3a3354'; ctx.fillRect(vx(x),vy(y),5*s,8*s);
+      ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(vx(x),vy(y+8),6*s,2.5*s); }
+    // crypt stones (SE of crypt)
+    for(let i=0;i<8;i++){ const x=300+rnd(i+140)*170, y=470+rnd(i+150)*70;
+      if(Math.hypot(x-380,y-495)<36) continue;
+      ctx.fillStyle='#2e2a40'; ctx.beginPath(); ctx.arc(vx(x),vy(y),5*s,0,7); ctx.fill(); }
+    // spire mountains
+    for(let i=0;i<6;i++){ const x=640+rnd(i+170)*150, y=90+rnd(i+180)*110;
+      if(Math.hypot(x-700,y-150)<40) continue;
+      ctx.fillStyle='#272036';
+      ctx.beginPath(); ctx.moveTo(vx(x-12),vy(y+10)); ctx.lineTo(vx(x),vy(y-14)); ctx.lineTo(vx(x+12),vy(y+10)); ctx.closePath(); ctx.fill(); }
+
   }
-  // water (harbor bay, bottom right)
-  ctx.fillStyle='#16243c';
-  ctx.beginPath(); ctx.ellipse(vx(760),vy(540),230*s,90*s,-0.15,0,7); ctx.fill();
-  for(let i=0;i<8;i++){ ctx.strokeStyle='rgba(80,140,200,'+(0.25+0.15*Math.sin(t*1.5+i))+')'; ctx.lineWidth=1.5*s;
-    ctx.beginPath(); const wx=600+rnd(i+60)*300, wy=505+rnd(i+90)*45;
-    ctx.moveTo(vx(wx),vy(wy)); ctx.quadraticCurveTo(vx(wx+18),vy(wy-4),vx(wx+36),vy(wy)); ctx.stroke(); }
-  // forest cluster (around witchwood)
-  for(let i=0;i<26;i++){ const x=320+rnd(i+10)*210, y=170+rnd(i+30)*150;
-    if(Math.hypot(x-395,y-255)<34) continue;
-    ctx.fillStyle='#15301f'; ctx.beginPath(); ctx.arc(vx(x),vy(y),(9+rnd(i)*7)*s,0,7); ctx.fill();
-    ctx.fillStyle='#1d4029'; ctx.beginPath(); ctx.arc(vx(x-2),vy(y-2),(6+rnd(i)*5)*s,0,7); ctx.fill(); }
-  // graveyard speckle (around cemetery)
-  for(let i=0;i<14;i++){ const x=60+rnd(i+70)*180, y=370+rnd(i+110)*140;
-    if(Math.hypot(x-130,y-430)<34) continue;
-    ctx.fillStyle='#3a3354'; ctx.fillRect(vx(x),vy(y),5*s,8*s);
-    ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(vx(x),vy(y+8),6*s,2.5*s); }
-  // crypt stones (SE of crypt)
-  for(let i=0;i<8;i++){ const x=300+rnd(i+140)*170, y=470+rnd(i+150)*70;
-    if(Math.hypot(x-380,y-495)<36) continue;
-    ctx.fillStyle='#2e2a40'; ctx.beginPath(); ctx.arc(vx(x),vy(y),5*s,0,7); ctx.fill(); }
-  // spire mountains
-  for(let i=0;i<6;i++){ const x=640+rnd(i+170)*150, y=90+rnd(i+180)*110;
-    if(Math.hypot(x-700,y-150)<40) continue;
-    ctx.fillStyle='#272036';
-    ctx.beginPath(); ctx.moveTo(vx(x-12),vy(y+10)); ctx.lineTo(vx(x),vy(y-14)); ctx.lineTo(vx(x+12),vy(y+10)); ctx.closePath(); ctx.fill(); }
   // ---- path web: dirt ribbon + glowing dots ----
   for(const [a,b] of EDGES){
     const A=ALL[a],B=ALL[b];
     const litEdge=!(A.locked||B.locked);
-    ctx.strokeStyle=litEdge?'rgba(64,52,96,0.9)':'rgba(40,36,58,0.7)';
-    ctx.lineWidth=9*s; ctx.lineCap='round';
+    ctx.strokeStyle=litEdge?'rgba(120,100,180,0.18)':'rgba(40,36,58,0.25)';
+    ctx.lineWidth=7*s; ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(vx(A.x),vy(A.y)); ctx.lineTo(vx(B.x),vy(B.y)); ctx.stroke();
   }
   for(const [a,b] of EDGES){
