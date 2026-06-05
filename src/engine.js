@@ -1,4 +1,4 @@
-const ASSET_VER='1780694180';
+const ASSET_VER='1780694556';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -19,6 +19,7 @@ cv.width = W*RS; cv.height = H*RS;
 const GROUND = 360;
 const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
 const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
+const BASH_VX = 11.4, BASH_VY = 12.6;   // Scythe Bash (cReaper) — snappier than the dive per Alan
 const OBJ = SPRITES.obst;
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS;
 let STARS=[], TREES=[], GRAVES_BG=[];
@@ -723,7 +724,8 @@ function update(dt){
     if (performance.now()-diveReq.t<150 && !p.onGround && p.diveT<=0 && p.diveRec<=0
         && p.hurtT<=0 && p.castT<=0 && p.attackT<=0 && !p.dead && !p.won && !p.winning){
       const ddir = diveReq.dir || (keys['ArrowLeft']?-1:keys['ArrowRight']?1:p.facing);
-      p.diveT=1; p.facing=ddir; p.vx=ddir*DIVE_VX; p.vy=DIVE_VY; diveGhosts=[]; playSfx('sfx_rwhoosh',0.9);
+      const _dvx=isDing(chosen)?DIVE_VX:BASH_VX, _dvy=isDing(chosen)?DIVE_VY:BASH_VY;
+      p.diveT=1; p.facing=ddir; p.vx=ddir*_dvx; p.vy=_dvy; diveGhosts=[]; playSfx('sfx_rwhoosh',0.9);
     }
     diveReq=null;
   }
@@ -774,7 +776,7 @@ function update(dt){
     }
   }
   p.x=nx;
-  const prevFeet=p.y; if (p.diveT>0) p.vy=DIVE_VY; else p.vy+=GRAV; p.y+=p.vy;
+  const prevFeet=p.y; if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else p.vy+=GRAV; p.y+=p.vy;
   if (p.vy>=0){
     let cand=[]; if(onSeg(p.x)) cand.push({t:GROUND,q:null});
     for (const s of SOLID){ if(p.x>=s.l&&p.x<=s.r) cand.push({t:s.top,q:null}); }
