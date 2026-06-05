@@ -1085,8 +1085,11 @@ function curFrame(){
 // ---- scenery ----
 
 function pxf(wx,f){ return wx-camX*f; }
-function tileDirt(x0,x1,topY,darken,f){
-  const dt=SPR.dirt; if(!dt) return; const th=H-topY; const tw=dt.w*th/dt.h;
+function tileDirt(x0,x1,topY,darken,f,hgt){
+  const dt=SPR.dirt; if(!dt) return;
+  const th=(hgt!==undefined)?hgt:(H-topY);
+  if(th<=0) return;   // strips below the flat-world horizon: explicit height required (negative th = infinite tiling loop)
+  const tw=dt.w*th/dt.h;
   const fac=(f===undefined)?1:f;
   const off=(((camX*fac)%tw)+tw)%tw;
   for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(dt.img, x, topY, tw, th);
@@ -1182,7 +1185,7 @@ function drawGround(){
     const bot=s.length>2?sgy+130:H;
     if (sgy-camY>H+40 || bot-camY<-40) continue;
     ctx.save(); ctx.beginPath(); ctx.rect(x0,sgy,x1-x0,bot-sgy); ctx.clip();
-    tileDirt(x0,x1,sgy,0);
+    tileDirt(x0,x1,sgy,0,undefined,bot-sgy);
     if (crypt){ ctx.fillStyle='rgba(34,22,52,0.55)'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy);
       ctx.fillStyle='rgba(224,169,60,0.10)'; ctx.fillRect(x0,sgy,x1-x0,10); }
     ctx.restore();
