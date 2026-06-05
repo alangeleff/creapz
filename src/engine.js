@@ -1,4 +1,4 @@
-const ASSET_VER='1780636044';
+const ASSET_VER='1780690588';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -18,6 +18,7 @@ const RS = Math.min(2, Math.max(1, Math.round(window.devicePixelRatio || 1)));
 cv.width = W*RS; cv.height = H*RS;
 const GROUND = 360;
 const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
+const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
 const OBJ = SPRITES.obst;
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS;
 let STARS=[], TREES=[], GRAVES_BG=[];
@@ -44,9 +45,12 @@ const keys = {};
 const DOUBLE_TAP = 350;
 const lastRelease = { ArrowLeft:-1e9, ArrowRight:-1e9 };
 const runHeld = { ArrowLeft:false, ArrowRight:false };
+let diveReq=null, diveGhosts=[];   // Power Dive: double-tap-forward request + afterimage trail
 function press(code){
   if (code==='ArrowLeft'||code==='ArrowRight'){
     if (keys[code]) return; runHeld[code]=(performance.now()-lastRelease[code])<DOUBLE_TAP;
+    if (runHeld[code] && mode==='play' && p && !p.dead && !p.onGround)
+      diveReq={dir:code==='ArrowLeft'?-1:1, t:performance.now()};
   }
   keys[code]=true;
 }
@@ -158,7 +162,7 @@ for (const ck in SPRITES.chars){ SPR.chars[ck]={};
     if (an==='fps'){ SPR.chars[ck].fps=SPRITES.chars[ck].fps; continue; }
     SPR.chars[ck][an]=L(SPRITES.chars[ck][an]);
   } }
-const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, cast:32 };
+const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, cast:32, dive:1 };
 function isDing(ck){ return ck==='dingbat'||ck.slice(0,5)==='ding_'; }
 function pfps(st2){ const f=SPR.chars[chosen]&&SPR.chars[chosen].fps; return (f&&f[st2])||FPS[st2]; }
 const FZ = { idle:24, walk:12, attack:16 };
@@ -438,7 +442,7 @@ function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_so
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
-        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, deadT:0, spawn:sx, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
+        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, diveT:0, diveRec:0, deadT:0, spawn:sx, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38)); zbits=[]; bolts=[]; impacts=[]; chkFx=[];
   if (!keep){
     soulCount=0; chkOn=CHK.map(()=>false);
@@ -617,15 +621,26 @@ function update(dt){
   }
   // mover carries the player
   if (p.onGround && p.standPlat && p.standPlat.t==='m') p.x+=p.standPlat.dxf;
+  // --- Power Dive (Dingbat bonus attack): double-tap forward midair ---
+  if (diveReq){
+    if (performance.now()-diveReq.t<150 && !p.onGround && isDing(chosen) && p.diveT<=0 && p.diveRec<=0
+        && p.hurtT<=0 && p.castT<=0 && p.attackT<=0 && !p.dead && !p.won && !p.winning){
+      p.diveT=1; p.facing=diveReq.dir; p.vx=diveReq.dir*DIVE_VX; p.vy=DIVE_VY; diveGhosts=[]; playSfx('sfx_rwhoosh',0.9);
+    }
+    diveReq=null;
+  }
+  if (p.diveRec>0){ p.diveRec-=dt; p.vx=0; }
+  if (p.diveT>0){ diveGhosts.push({x:p.x,y:p.y}); if(diveGhosts.length>9) diveGhosts.shift(); }
+  else if (diveGhosts.length) diveGhosts.shift();
   const kneeling = p.onGround && (keys['ArrowDown']||keys['KeyS']) && p.attackT<=0 && p.castT<=0 && p.hurtT<=0;
   let dir=0;
   if (!kneeling){ if (keys['ArrowLeft']) dir=-1; else if (keys['ArrowRight']) dir=1; }
   const dc=dir<0?'ArrowLeft':'ArrowRight';
   const running=(dir!==0&&runHeld[dc])||keys['ShiftLeft']||keys['ShiftRight'];
   const speed=running?RUN:WALK;
-  if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0;
-  if (!kneeling && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; playSfx('sfx_jump',0.55); }
-  if (keys['KeyZ']&&p.attackT<=0&&SPR.chars[chosen].attack.weapon){
+  if (p.diveT<=0 && p.diveRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
+  if (!kneeling && p.diveRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; playSfx('sfx_jump',0.55); }
+  if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
     playSfx(isDing(chosen)?'sfx_wing':'sfx_slash');
   }
@@ -638,7 +653,7 @@ function update(dt){
   }
   if (p.castCd>0) p.castCd-=dt;
   if (p.muzzleT>0) p.muzzleT-=dt;
-  if (keys['KeyX']&&p.castT<=0&&p.castCd<=0&&p.attackT<=0){
+  if (keys['KeyX']&&p.castT<=0&&p.castCd<=0&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0){
     p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false;
   }
   if (p.castT>0){
@@ -661,7 +676,7 @@ function update(dt){
     }
   }
   p.x=nx;
-  const prevFeet=p.y; p.vy+=GRAV; p.y+=p.vy;
+  const prevFeet=p.y; if (p.diveT>0) p.vy=DIVE_VY; else p.vy+=GRAV; p.y+=p.vy;
   if (p.vy>=0){
     let cand=[]; if(onSeg(p.x)) cand.push({t:GROUND,q:null});
     for (const s of SOLID){ if(p.x>=s.l&&p.x<=s.r) cand.push({t:s.top,q:null}); }
@@ -692,8 +707,11 @@ function update(dt){
   }
   p.x=Math.max(18,Math.min(WORLD-18,p.x));
   if (p.x>=GOAL_X-24 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; playSfx('sfx_wportal'); }
+  if (p.onGround && p.diveT>0){ p.diveT=0; p.diveRec=DIVE_REC; p.vx=0; p.clock=0; playSfx('sfx_meleehit',0.45); }
   let st;
-  if (p.hurtT>0) st='hurt';
+  if (p.diveT>0) st='dive';
+  else if (p.diveRec>0) st='kneel';
+  else if (p.hurtT>0) st='hurt';
   else if (p.attackT>0) st='attack'; else if (p.castT>0) st='cast'; else if (kneeling && p.onGround) st='kneel'; else if(!p.onGround) st='jump';
   else if (p.vx!==0) st=running?'run':'walk'; else st='idle';
   if (st!==p.state) p.clock=0; p.state=st; p.clock+=dt;
@@ -719,6 +737,10 @@ function update(dt){
       else if (z.kw==='zombie'||z.kw==='zgen') playSfx('sfx_ksee',0.7);
     } else if (z.aggro && ad>420) z.aggro=false;
     // player weapon strikes zombie body
+    if (p.diveT>0 && z.hitCd<=0 && overlap(pBodyBox(), zBodyBox(z))){
+      z.hp-=1; z.hitCd=0.6; z.shown=3; playSfx('sfx_meleehit',0.6);
+      if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); continue; }
+    }
     if (pwb && z.hitCd<=0 && overlap(pwb, zBodyBox(z))){
       z.hp-=1; z.hitCd=0.45; z.shown=3; playSfx('sfx_meleehit',0.6);
       z.x=clamp(z.x + (z.x<p.x?-12:12), z.min, z.max);
@@ -771,6 +793,7 @@ function update(dt){
     let bb=batBox(b);
     if (b.state==='bite' && b.bt>8/BITE_FPS && b.bt<23/BITE_FPS){ bb={x:bb.x+(b.facing<0?-30:0), y:bb.y-4, w:bb.w+30, h:bb.h+8}; }
     if (p.inv<=0 && !p.dead && overlap(pBodyBox(), bb)) hurtPlayer(b.x);
+    if (p.diveT>0 && overlap(pBodyBox(), bb)){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_meleehit',0.6); playSfx('sfx_die',0.7); continue; }
     if (pwb && overlap(pwb, batBox(b))){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_meleehit',0.6); playSfx('sfx_die',0.7); }
   }
   for (const bo of bolts){
@@ -817,6 +840,7 @@ function update(dt){
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
 }
 function hurtPlayer(srcX,dmg){
+  if (p.diveT>0||p.diveRec>0) return;   // Power Dive i-frames (until normal stance resumes)
   gotHit=true; playSfx('sfx_hurt');
   p.hp-=(dmg||1); p.inv=1.0; p.flash=0.35;
   p.hurtT=0.45;  // single retro hurt still + flicker, fixed hit-stun
@@ -826,7 +850,7 @@ function hurtPlayer(srcX,dmg){
 }
 function curFrame(){
   const a=SPR.chars[chosen][p.state], fps=pfps(p.state);
-  if (p.state==='attack'||p.state==='hurt'||p.state==='kneel'||p.state==='cast') return Math.min(a.frames-1, Math.floor(p.clock*fps));
+  if (p.state==='attack'||p.state==='hurt'||p.state==='kneel'||p.state==='cast'||p.state==='dive') return Math.min(a.frames-1, Math.floor(p.clock*fps));
   return Math.floor(p.clock*fps)%a.frames;
 }
 
@@ -1247,7 +1271,19 @@ function drawPlayerLayer(){
     return;
   }
   if (!p.dead){
-    if (!(p.inv>0 && Math.floor(gt*16)%2===0)) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, p.inv>0?0.45:0);
+    if (p.state==='dive'){
+      for (let gi2=0; gi2<diveGhosts.length; gi2+=2){
+        const g2=diveGhosts[gi2], gsx=g2.x-camX;
+        ctx.save(); ctx.globalAlpha=0.05+0.12*(gi2/Math.max(1,diveGhosts.length));
+        ctx.translate(gsx, g2.y-44); ctx.rotate(p.facing*DIVE_ROT); ctx.translate(-gsx, -(g2.y-44));
+        drawCharSprite(chosen,'dive',0,gsx,g2.y,p.facing,1,0);
+        ctx.restore();
+      }
+      ctx.save(); ctx.translate(sx, p.y-44); ctx.rotate(p.facing*DIVE_ROT); ctx.translate(-sx, -(p.y-44));
+      drawCharSprite(chosen,'dive',0,sx,p.y,p.facing,1,0);
+      ctx.restore();
+    }
+    else if (!(p.inv>0 && Math.floor(gt*16)%2===0)) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, p.inv>0?0.45:0);
     if (p.muzzleT>0){
       const k=1-p.muzzleT/0.14, hx=sx+p.facing*42, hy=p.y-56;
       // soft rim glow washing over the character
