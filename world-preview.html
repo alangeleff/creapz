@@ -1,0 +1,228 @@
+<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>cReapZ — Overworld Prototype</title>
+<style>
+  @font-face{font-family:'Creepster';src:url('assets/fonts/Creepster.woff2') format('woff2')}
+  html,body{margin:0;padding:0;background:#0d0b1a;overflow:hidden;height:100%;font-family:sans-serif}
+  canvas{display:block;width:100vw;height:100vh;touch-action:none}
+</style>
+</head><body>
+<canvas id="cv"></canvas>
+<script>
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let W=0,H=0;
+function fit(){ const d=Math.min(2,window.devicePixelRatio||1); W=window.innerWidth; H=window.innerHeight; cv.width=W*d; cv.height=H*d; ctx.setTransform(d,0,0,d,0,0); }
+fit(); addEventListener('resize',fit);
+
+// ---- virtual map space 1000x520, scaled to screen ----
+const VW=1000,VH=520;
+function vs(){ return Math.min(W/VW,H/VH); }
+function vx(x){ return W/2+(x-VW/2)*vs(); }
+function vy(y){ return H/2+(y-VH/2)*vs(); }
+
+// ---- map data: 3 zones, 9 nodes ----
+const NODES=[
+ {id:0,x:95, y:415,z:0,label:'ACT I',  type:'act', state:'done'},
+ {id:1,x:215,y:355,z:0,label:'ACT II', type:'act', state:'done'},
+ {id:2,x:330,y:415,z:0,label:'ACT III',type:'boss',state:'open'},
+ {id:3,x:455,y:340,z:1,label:'ACT I',  type:'act', state:'open'},
+ {id:4,x:545,y:240,z:1,label:'ACT II', type:'act', state:'locked'},
+ {id:5,x:680,y:290,z:1,label:'ACT III',type:'boss',state:'locked'},
+ {id:6,x:600,y:135,z:1,label:'SECRET', type:'secret',state:'hidden'},
+ {id:7,x:790,y:205,z:2,label:'GATE',   type:'gate', state:'open', cost:30},
+ {id:8,x:905,y:130,z:2,label:'ACT I',  type:'act', state:'locked'},
+];
+const EDGES=[[0,1],[1,2],[2,3],[3,4],[4,5],[4,6],[5,7],[7,8]];
+const ZONES=[
+ {name:'cReapY Cemetery',  x0:20, x1:380,ty:480,col:'#7b5cff'},
+ {name:'Witchwood',        x0:390,x1:730,ty:455,col:'#3ddc5a'},
+ {name:'Drowned Harbor',   x0:740,x1:990,ty:330,col:'#41c8ff'},
+];
+let souls=47, fogA=1, gateOpen=false, info=null, infoT=0;
+
+// ---- hero sprite from the real game ----
+let HERO=null, hnode=2, hx=NODES[2].x, hy=NODES[2].y, route=[], facing=1, walking=false;
+fetch('assets/sprites.json').then(r=>r.json()).then(sp=>{
+  const e=sp.chars.default.walk, img=new Image();
+  img.onload=()=>{ HERO={img,e}; };
+  img.src=e.src.startsWith('data:')?e.src:('assets/'+e.src);
+});
+
+// ---- graph reachability over non-locked nodes ----
+function reachable(from,to){
+  const ok=n=>NODES[n].state!=='locked'&&NODES[n].state!=='hidden';
+  const q=[from],seen=new Set([from]),par={};
+  while(q.length){
+    const c=q.shift();
+    if(c===to){ const p=[to]; let k=to; while(k!==from){k=par[k];p.unshift(k);} return p; }
+    for(const [a,b] of EDGES){
+      const nb=a===c?b:(b===c?a:null);
+      if(nb!==null&&!seen.has(nb)&&ok(nb)){ seen.add(nb); par[nb]=c; q.push(nb); }
+    }
+  }
+  return null;
+}
+cv.addEventListener('pointerdown',e=>{
+  const s=vs();
+  for(const n of NODES){
+    if(n.state==='hidden') continue;
+    const dx=e.clientX-vx(n.x), dy=e.clientY-vy(n.y);
+    if(dx*dx+dy*dy<(34*s+12)*(34*s+12)){
+      if(n.state==='locked'){ info={t:'Locked — clear the path first',n}; infoT=2.4; return; }
+      if(n.id===hnode){
+        if(n.type==='gate'&&!gateOpen){
+          if(souls>=n.cost){ souls-=n.cost; gateOpen=true; info={t:'SOUL GATE OPENED — the fog recedes!',n}; infoT=3;
+            for(const m of NODES) if(m.z===2&&m.type!=='gate') m.state='open';
+          } else info={t:'Need '+n.cost+' soulz to open this gate',n};
+          infoT=3; return;
+        }
+        info={t:(n.type==='boss'?'BOSS ACT — ':'')+'This would launch the stage!',n}; infoT=2.4; return;
+      }
+      const p=reachable(hnode,n.id);
+      if(p){ route=p.slice(1); walking=true; }
+      else { info={t:'No open path there yet',n}; infoT=2.2; }
+      return;
+    }
+  }
+});
+
+// terrain decorations (deterministic)
+function rnd(i){ let x=Math.sin(i*127.1)*43758.5453; return x-Math.floor(x); }
+const STARS=[];for(let i=0;i<70;i++)STARS.push([rnd(i)*VW,rnd(i+99)*210,rnd(i+7)*1.4+0.5,rnd(i+31)*6.28]);
+
+let t0=performance.now(),last=t0;
+function loop(){
+  const now=performance.now(), t=(now-t0)/1000, dt=Math.min(0.05,(now-last)/1000); last=now;
+  const s=vs();
+  // sky
+  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0d0b1a'); g.addColorStop(0.6,'#191234'); g.addColorStop(1,'#241a40');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  for(const st of STARS){ ctx.globalAlpha=0.3+0.4*(0.5+0.5*Math.sin(t*1.2+st[3])); ctx.fillStyle='#cfe4ff'; ctx.fillRect(vx(st[0]),vy(st[1]),st[2],st[2]); }
+  ctx.globalAlpha=1;
+  // moon
+  ctx.fillStyle='#e8e6f7'; ctx.beginPath(); ctx.arc(vx(930),vy(48),26*s,0,7); ctx.fill();
+  ctx.fillStyle='#d3d0ea'; ctx.beginPath(); ctx.arc(vx(938),vy(42),6*s,0,7); ctx.arc(vx(920),vy(56),4*s,0,7); ctx.fill();
+  // rolling hills (3 layers)
+  for(let L2=0;L2<3;L2++){
+    ctx.fillStyle=['#1c1535','#251b44','#2e2253'][L2];
+    ctx.beginPath(); ctx.moveTo(0,H);
+    for(let x=0;x<=VW;x+=25){
+      const yy=300+L2*60+Math.sin(x*0.012+L2*2.2)*38+Math.sin(x*0.004+L2)*26;
+      ctx.lineTo(vx(x),vy(yy));
+    }
+    ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+  }
+  // zone tint pools + landmarks (placeholder shapes where Alan's art will live)
+  // cemetery: tombstones / witchwood: trees / harbor: ship mast
+  ctx.fillStyle='#3a3354';
+  for(let i=0;i<6;i++){ const x=40+i*58, y=438+rnd(i+50)*16; ctx.fillRect(vx(x),vy(y),7*s,12*s); }
+  ctx.strokeStyle='#274a33'; ctx.lineWidth=3*s;
+  for(let i=0;i<5;i++){ const x=420+i*64, y=400+rnd(i+80)*30;
+    ctx.beginPath(); ctx.moveTo(vx(x),vy(y)); ctx.lineTo(vx(x),vy(y-34)); ctx.stroke();
+    ctx.fillStyle='#1f3d2a'; ctx.beginPath(); ctx.arc(vx(x),vy(y-40),12*s,0,7); ctx.fill(); }
+  ctx.strokeStyle='#2c3e55'; ctx.beginPath(); ctx.moveTo(vx(900),vy(295)); ctx.lineTo(vx(900),vy(225)); ctx.stroke();
+  // path edges
+  for(const [a,b] of EDGES){
+    const A=NODES[a],B=NODES[b];
+    const lit=(A.state!=='locked'&&B.state!=='locked'&&A.state!=='hidden'&&B.state!=='hidden');
+    const dx=B.x-A.x, dy=B.y-A.y, len=Math.hypot(dx,dy), n=Math.floor(len/26);
+    for(let i=1;i<n;i++){
+      const px=A.x+dx*i/n, py=A.y+dy*i/n;
+      ctx.globalAlpha=lit?(0.5+0.3*Math.sin(t*3-i*0.8)):0.18;
+      ctx.fillStyle=lit?'#b9a6ff':'#5a5470';
+      ctx.beginPath(); ctx.arc(vx(px),vy(py),3.2*s,0,7); ctx.fill();
+    }
+  }
+  ctx.globalAlpha=1;
+  // nodes
+  for(const n of NODES){
+    if(n.state==='hidden'){ // secret: just a sparkle
+      ctx.globalAlpha=0.5+0.5*Math.sin(t*5+n.id);
+      ctx.fillStyle='#fff'; ctx.fillRect(vx(n.x)-1.5,vy(n.y)-1.5,3,3);
+      ctx.globalAlpha=1; continue;
+    }
+    const R=(n.type==='boss'?20:n.type==='gate'?17:14)*s;
+    const open=n.state!=='locked';
+    const pulse=n.state==='open'?1+0.08*Math.sin(t*4+n.id):1;
+    if(open){ const gr=ctx.createRadialGradient(vx(n.x),vy(n.y),0,vx(n.x),vy(n.y),R*2.4);
+      gr.addColorStop(0,(n.type==='gate'?'rgba(65,200,255,0.5)':n.state==='done'?'rgba(200,251,80,0.35)':'rgba(160,120,255,0.5)')); gr.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=gr; ctx.fillRect(vx(n.x)-R*2.4,vy(n.y)-R*2.4,R*4.8,R*4.8); }
+    ctx.fillStyle=n.state==='locked'?'#3c3650':(n.state==='done'?'#27331b':'#241a4d');
+    ctx.strokeStyle=n.state==='locked'?'#5a5470':(n.type==='gate'?'#41c8ff':n.state==='done'?'#c8fb50':'#a98aff');
+    ctx.lineWidth=2.5*s;
+    ctx.beginPath();
+    if(n.type==='boss'){ for(let k=0;k<6;k++){ const a2=k*Math.PI/3-Math.PI/2; const px=vx(n.x)+Math.cos(a2)*R*pulse, py=vy(n.y)+Math.sin(a2)*R*pulse; k?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); }
+    else ctx.arc(vx(n.x),vy(n.y),R*pulse,0,7);
+    ctx.fill(); ctx.stroke();
+    if(n.state==='done'){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=3*s; ctx.beginPath();
+      ctx.moveTo(vx(n.x)-5*s,vy(n.y)); ctx.lineTo(vx(n.x)-1*s,vy(n.y)+4*s); ctx.lineTo(vx(n.x)+6*s,vy(n.y)-4*s); ctx.stroke(); }
+    if(n.type==='gate'&&!gateOpen){ ctx.fillStyle='#bfeaff'; ctx.font='bold '+(11*s)+'px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('☉ '+n.cost, vx(n.x), vy(n.y)+4*s); }
+    if(n.type==='gate'&&gateOpen){ ctx.strokeStyle='#41c8ff'; ctx.beginPath(); ctx.arc(vx(n.x),vy(n.y),R*0.5,0,7); ctx.stroke(); }
+    ctx.fillStyle=n.state==='locked'?'#6e6886':'#d9d2f5'; ctx.font='bold '+(11*s)+'px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(n.label, vx(n.x), vy(n.y)+R+14*s);
+  }
+  // hero movement
+  if(walking&&route.length){
+    const tgt=NODES[route[0]];
+    const dx=tgt.x-hx, dy=tgt.y-hy, d=Math.hypot(dx,dy), sp2=120*dt;
+    if(d<sp2){ hx=tgt.x; hy=tgt.y; hnode=tgt.id; route.shift();
+      if(tgt.state==='hidden'){ tgt.state='open'; info={t:'You found a SECRET node!',n:tgt}; infoT=3; }
+      if(!route.length) walking=false;
+    } else { hx+=dx/d*sp2; hy+=dy/d*sp2; facing=dx>=0?1:-1; }
+  }
+  // reveal secret when standing adjacent
+  if(hnode===4&&NODES[6].state==='hidden'){ NODES[6].state='open'; info={t:'A hidden path shimmers into view...',n:NODES[6]}; infoT=3; }
+  // hero draw (real walk sprite)
+  if(HERO){
+    const e=HERO.e, fi=walking?Math.floor(t*16)%e.frames:0;
+    const hsc=0.42*s*1.6;
+    ctx.save();
+    ctx.translate(vx(hx),vy(hy)-10*s);
+    ctx.scale(facing*hsc,hsc);
+    ctx.drawImage(HERO.img, fi*e.sw,0,e.sw,e.sh, -e.sw/2,-e.sh, e.sw,e.sh);
+    ctx.restore();
+  } else { ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(vx(hx),vy(hy)-8*s,6*s,0,7); ctx.fill(); }
+  // fog over locked zone 2 (recedes when gate opens)
+  if(gateOpen&&fogA>0) fogA=Math.max(0,fogA-dt*0.5);
+  if(fogA>0){
+    ctx.save();
+    const fx=vx(740);
+    const fg=ctx.createLinearGradient(fx-60*s,0,fx+40*s,0);
+    fg.addColorStop(0,'rgba(13,11,26,0)'); fg.addColorStop(1,'rgba(18,14,34,'+(0.93*fogA)+')');
+    ctx.fillStyle=fg; ctx.fillRect(fx-60*s,0,W-fx+60*s,H);
+    for(let i=0;i<5;i++){ ctx.globalAlpha=0.10*fogA*(1+Math.sin(t*0.8+i)); ctx.fillStyle='#9a90c0';
+      ctx.beginPath(); ctx.arc(fx+(30+i*40)*s, vy(120+rnd(i+11)*260)+Math.sin(t*0.6+i*2)*12*s, (46+rnd(i)*30)*s,0,7); ctx.fill(); }
+    ctx.restore(); ctx.globalAlpha=1;
+  }
+  // zone names
+  ctx.font=(22*s)+'px Creepster, cursive'; ctx.textAlign='center';
+  for(const z of ZONES){
+    const locked=(z===ZONES[2]&&!gateOpen);
+    ctx.fillStyle=locked?'rgba(110,104,134,0.5)':z.col;
+    ctx.globalAlpha=locked?0.6:0.92;
+    ctx.fillText(locked?'? ? ?':z.name, vx((z.x0+z.x1)/2), vy(z.ty));
+  }
+  ctx.globalAlpha=1;
+  // HUD
+  ctx.fillStyle='rgba(20,16,36,.6)'; ctx.beginPath(); ctx.roundRect(12,12,150,34,8); ctx.fill();
+  ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(32,29,8,0,7); ctx.fill();
+  ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(32,29,4.5,0,7); ctx.fill();
+  ctx.fillStyle='#eaf6ff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='left'; ctx.fillText('x '+souls+' soulz', 48,34);
+  ctx.fillStyle='#9b8cff'; ctx.font='13px sans-serif'; ctx.textAlign='right';
+  ctx.fillText('OVERWORLD PROTOTYPE — tap nodes to travel', W-14, 24);
+  // info card
+  if(info&&infoT>0){ infoT-=dt;
+    const tw=ctx.measureText(info.t).width+40;
+    ctx.fillStyle='rgba(20,16,40,.85)'; ctx.strokeStyle='#7b5cff'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(W/2-tw/2,H-64,tw,38,9); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#eaf6ff'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(info.t, W/2, H-40);
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body></html>
