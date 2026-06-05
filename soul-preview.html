@@ -15,10 +15,9 @@ let W=0,H=0,DPR=1;
 function fit(){ DPR=Math.min(2,window.devicePixelRatio||1); W=window.innerWidth; H=window.innerHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
 fit(); addEventListener('resize',fit);
 
-// stars
-const STARS=[]; for(let i=0;i<90;i++) STARS.push([Math.random(),Math.random()*0.8,Math.random()*1.4+0.4,Math.random()*6.28]);
+const STARS=[]; for(let i=0;i<90;i++) STARS.push([Math.random(),Math.random()*0.9,Math.random()*1.4+0.4,Math.random()*6.28]);
 
-// ---- current soul (sprite strip from the game) ----
+// ---- current soul sprite (reference) ----
 let SA=null;
 fetch('assets/sprites.json').then(r=>r.json()).then(sp=>{
   const e=sp.soul; const img=new Image();
@@ -26,8 +25,7 @@ fetch('assets/sprites.json').then(r=>r.json()).then(sp=>{
   img.src=e.src.startsWith('data:')?e.src:('assets/'+e.src);
 });
 
-// ---- procedural soul ----
-// cached glow + core + mote sprites (built once — no per-frame gradients, no shadowBlur)
+// ---- cached bitmaps (built once) ----
 function radial(size, stops){
   const c=document.createElement('canvas'); c.width=c.height=size;
   const g=c.getContext('2d'), gr=g.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
@@ -37,61 +35,53 @@ function radial(size, stops){
 const GLOW=radial(128,[[0,'rgba(120,215,255,0.55)'],[0.35,'rgba(95,205,255,0.28)'],[0.7,'rgba(70,160,255,0.10)'],[1,'rgba(60,140,255,0)']]);
 const CORE=radial(64,[[0,'rgba(255,255,255,1)'],[0.28,'rgba(225,250,255,1)'],[0.55,'rgba(130,220,255,0.95)'],[0.82,'rgba(80,175,255,0.55)'],[1,'rgba(70,160,255,0)']]);
 const MOTE=radial(20,[[0,'rgba(255,255,255,1)'],[0.4,'rgba(160,230,255,0.9)'],[1,'rgba(110,200,255,0)']]);
+const RING=(function(){ const s=128,c=document.createElement('canvas'); c.width=c.height=s;
+  const g=c.getContext('2d'), gr=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(0.70,'rgba(120,215,255,0)');
+  gr.addColorStop(0.82,'rgba(170,235,255,0.85)'); gr.addColorStop(0.92,'rgba(95,205,255,0.25)'); gr.addColorStop(1,'rgba(95,205,255,0)');
+  g.fillStyle=gr; g.fillRect(0,0,s,s); return c; })();
 
-function drawProcSoul(x,y,t,ph,R){           // R = core radius
-  const bob=Math.sin(t*2.2+ph)*4;            // gentle hover
-  const breathe=0.5+0.5*Math.sin(t*2.6+ph*1.7);
-  const cy=y+bob;
-  // motes: tilted elliptical orbit, z from sin -> front/back of orb
-  const motes=[];
-  for(let i=0;i<3;i++){
-    const a=t*1.9+ph+i*2.094;
-    const mx=Math.cos(a)*R*1.95, my=Math.sin(a)*R*0.62 - Math.cos(a)*R*0.30;
-    const z=Math.sin(a);
-    motes.push({x:x+mx,y:cy+my,z,s:(2.1+0.9*(z*0.5+0.5))});
-  }
-  ctx.globalCompositeOperation='lighter';
-  // back motes
-  for(const m of motes) if(m.z<0){ ctx.globalAlpha=0.5; ctx.drawImage(MOTE,m.x-m.s*2,m.y-m.s*2,m.s*4,m.s*4); }
-  // halo (breathing)
-  const gs=R*(4.6+0.7*breathe); ctx.globalAlpha=0.55+0.40*breathe;
-  ctx.drawImage(GLOW,x-gs/2,cy-gs/2,gs,gs);
-  // core (slight pulse)
-  const cs=R*2*(1+0.07*breathe); ctx.globalAlpha=1;
-  ctx.drawImage(CORE,x-cs/2,cy-cs/2,cs,cs);
-  // rising wisp spark: one per ~1.6s cycle
+function bobOf(t,ph){ return Math.sin(t*2.2+ph)*4; }
+function L(){ ctx.globalCompositeOperation='lighter'; }
+function NL(){ ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over'; }
+function halo(x,cy,R,br,amt){ const gs=R*(4.6+0.7*br); ctx.globalAlpha=amt*(0.55+0.40*br); ctx.drawImage(GLOW,x-gs/2,cy-gs/2,gs,gs); }
+function core(x,cy,s,a){ ctx.globalAlpha=a==null?1:a; ctx.drawImage(CORE,x-s/2,cy-s/2,s,s); }
+function mote(x,y,s,a){ ctx.globalAlpha=a; ctx.drawImage(MOTE,x-s*2,y-s*2,s*4,s*4); }
+
+// ---- A ORBIT: motes on tilted ellipse + rising wisp ----
+function dA(x,y,t,ph,R){
+  const bob=bobOf(t,ph), br=0.5+0.5*Math.sin(t*2.6+ph*1.7), cy=y+bob;
+  const ms=[];
+  for(let i=0;i<3;i++){ const a=t*1.9+ph+i*2.094;
+    ms.push({x:x+Math.cos(a)*R*1.95, y:cy+Math.sin(a)*R*0.62-Math.cos(a)*R*0.30, z:Math.sin(a)}); }
+  L();
+  for(const m of ms) if(m.z<0) mote(m.x,m.y,2.1+0.9*(m.z*0.5+0.5),0.5);
+  halo(x,cy,R,br,1);
+  core(x,cy,R*2*(1+0.07*br));
   const wt=((t*0.62+ph)%1);
-  if(wt<0.7){ const wy=cy-R*1.2-wt*26, wa=(wt<0.15?wt/0.15:1-(wt-0.15)/0.55);
-    ctx.globalAlpha=0.8*wa; const ws=3.6; ctx.drawImage(MOTE,x+Math.sin(wt*9+ph)*4-ws*2,wy-ws*2,ws*4,ws*4); }
-  // front motes
-  for(const m of motes) if(m.z>=0){ ctx.globalAlpha=0.95; ctx.drawImage(MOTE,m.x-m.s*2,m.y-m.s*2,m.s*4,m.s*4); }
-  ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
+  if(wt<0.7){ const wa=(wt<0.15?wt/0.15:1-(wt-0.15)/0.55);
+    mote(x+Math.sin(wt*9+ph)*4, cy-R*1.2-wt*26, 3.6, 0.8*wa); }
+  for(const m of ms) if(m.z>=0) mote(m.x,m.y,2.1+0.9*(m.z*0.5+0.5),0.95);
+  NL();
 }
-
-function label(txt,x,y){ ctx.fillStyle='#9fb8d8'; ctx.font='bold 15px sans-serif'; ctx.textAlign='center'; ctx.fillText(txt,x,y); }
-
-let t0=performance.now();
-function loop(){
-  const t=(performance.now()-t0)/1000;
-  // night sky
-  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0d0b1a'); g.addColorStop(1,'#1a1430');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-  for(const s of STARS){ ctx.globalAlpha=0.35+0.45*(0.5+0.5*Math.sin(t*1.3+s[3])); ctx.fillStyle='#cfe4ff'; ctx.fillRect(s[0]*W,s[1]*H,s[2],s[2]); }
-  ctx.globalAlpha=1;
-  const midY=H*0.34;
-  // CURRENT (sprite)
-  if(SA){ const fi=Math.floor(t*20)%SA.frames;
-    ctx.drawImage(SA.img, fi*SA.sw,0,SA.sw,SA.sh, W*0.27-SA.w/2, midY-SA.h/2, SA.w,SA.h); }
-  label('CURRENT', W*0.27, midY+72);
-  // NEW (procedural) — core radius matched to current orb (~13px)
-  drawProcSoul(W*0.73, midY, t, 0, 13);
-  label('NEW', W*0.73, midY+72);
-  // trio row: phase-offset shimmer
-  const ty=H*0.72;
-  for(let i=0;i<3;i++) drawProcSoul(W*(0.5+(i-1)*0.22), ty, t, i*1.9, 13);
-  label('NEW x3 — offset phases (how a row feels in-stage)', W*0.5, ty+72);
-  requestAnimationFrame(loop);
+// ---- B WISP: will-o'-wisp flame, flicker + licks rising off the crown ----
+function dB(x,y,t,ph,R){
+  const bob=bobOf(t,ph), cy=y+bob;
+  const fl=0.5+0.32*Math.sin(t*8.5+ph)+0.18*Math.sin(t*13.7+ph*2.3);
+  L();
+  halo(x,cy,R,fl*0.6+0.2,0.9);
+  // flame body: vertically-stretched core + smaller inner tongue, both flickering
+  const w1=R*1.9*(1+0.05*fl), h1=R*2.7*(1+0.14*fl);
+  ctx.globalAlpha=0.95; ctx.drawImage(CORE,x-w1/2,cy-h1*0.58,w1,h1);
+  const w2=R*1.15, h2=R*1.7*(1+0.22*fl);
+  ctx.globalAlpha=1; ctx.drawImage(CORE,x-w2/2+Math.sin(t*10+ph)*1.2,cy-h2*0.62,w2,h2);
+  // licks: 3 sparks peeling off the crown, rising + wobbling
+  for(let i=0;i<3;i++){ const u=((t*0.9+ph+i/3)%1);
+    if(u<0.62){ const ua=(u<0.12?u/0.12:1-(u-0.12)/0.5);
+      mote(x+Math.sin(u*14+ph+i*2.1)*R*0.55, cy-R*1.1-u*22, 2.6*(1-u*0.6), 0.85*ua); } }
+  NL();
 }
-loop();
-</script>
-</body></html>
+// ---- C HALO: tilted saturn ring with a comet riding it ----
+function dC(x,y,t,ph,R){
+  const bob=bobOf(t,ph), br=0.5+0.5*Math.sin(t*2.4+ph*1.7), cy=y+bob;
+  const rx=R*2
