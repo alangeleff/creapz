@@ -1,50 +1,54 @@
 <!doctype html>
 <html><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>cReapZ — World Builder</title>
 <style>
  :root{--bg:#0c0a16;--panel:#15112a;--ink:#e8e6f5;--mut:#9b8cff;--lime:#c8fb50;--line:#2a2150;}
- *{box-sizing:border-box}
- html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;overflow:hidden}
+ *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;overflow:hidden;touch-action:none}
  #wrap{display:flex;height:100%}
- #pal{width:188px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:8px}
- #pal h3{font-size:11px;letter-spacing:.5px;color:var(--mut);margin:12px 6px 6px;text-transform:uppercase}
- .tool{display:flex;align-items:center;gap:8px;padding:8px 10px;margin:3px 0;border-radius:8px;background:#1d1838;border:1px solid transparent;cursor:pointer;font-size:13px;user-select:none}
- .tool:hover{background:#241d44}
+ #pal{width:182px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:8px}
+ #pal h3{font-size:10px;letter-spacing:.5px;color:var(--mut);margin:12px 6px 6px;text-transform:uppercase}
+ .tool{display:flex;align-items:center;gap:8px;padding:9px 10px;margin:4px 0;border-radius:8px;background:#1d1838;border:1px solid transparent;cursor:grab;font-size:13px;touch-action:none}
+ .tool:active{cursor:grabbing}
  .tool.on{border-color:var(--lime);background:#242a16}
- .sw{width:14px;height:14px;border-radius:3px;flex:none}
+ .tool .sw{width:15px;height:15px;border-radius:3px;flex:none}
+ .modebtn{display:flex;align-items:center;gap:8px;padding:9px 10px;margin:4px 0;border-radius:8px;background:#1d1838;border:1px solid transparent;cursor:pointer;font-size:13px}
+ .modebtn.on{border-color:var(--lime);background:#242a16}
  #main{flex:1;display:flex;flex-direction:column;min-width:0}
  #bar{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
- #bar input,#bar select{background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:12px}
+ #bar input,#bar select{background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 7px;font-size:12px}
  #bar label{font-size:11px;color:var(--mut)}
- .btn{background:#2a2150;color:var(--ink);border:1px solid #7b5cff;border-radius:7px;padding:7px 12px;font-size:13px;cursor:pointer}
- .btn:hover{background:#372a66}
+ .btn{background:#2a2150;color:var(--ink);border:1px solid #7b5cff;border-radius:7px;padding:8px 12px;font-size:13px;cursor:pointer}
  .btn.go{background:var(--lime);color:#10210a;border-color:var(--lime);font-weight:700}
  .btn.warn{border-color:#e23b3b;color:#ff9a9a}
  #cvWrap{flex:1;position:relative;overflow:hidden}
- canvas{display:block;background:#06040e;cursor:crosshair}
+ canvas{display:block;background:#06040e;touch-action:none}
  #hint{position:absolute;left:10px;bottom:8px;font-size:12px;color:#9b8cffaa;pointer-events:none}
- #sel{position:absolute;right:10px;top:10px;width:200px;background:#15112aee;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;display:none}
+ #ghost{position:fixed;pointer-events:none;z-index:50;font-size:11px;color:#10210a;background:#c8fb50dd;border-radius:6px;padding:3px 7px;display:none;transform:translate(-50%,-130%);white-space:nowrap;font-weight:700}
+ #sel{position:absolute;right:10px;top:10px;width:210px;background:#15112af2;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;display:none}
  #sel h4{margin:0 0 6px;color:var(--lime);font-size:13px}
- #sel .row{display:flex;justify-content:space-between;align-items:center;margin:5px 0;gap:6px}
- #sel input{width:70px;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:3px 5px;font-size:12px}
- #sel .del{width:100%;margin-top:8px;background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a;border-radius:6px;padding:6px;cursor:pointer}
- #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:#15112aee;border:1px solid #7b5cff;border-radius:8px;padding:8px 16px;font-size:13px;display:none}
+ #sel .row{display:flex;justify-content:space-between;align-items:center;margin:6px 0;gap:6px}
+ #sel input{width:74px;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px;font-size:13px}
+ #sel .del{width:100%;margin-top:8px;background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a;border-radius:6px;padding:8px;cursor:pointer}
+ #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:#15112af2;border:1px solid #7b5cff;border-radius:8px;padding:9px 16px;font-size:13px;display:none}
+ #zoomb{position:absolute;left:10px;top:10px;display:flex;gap:6px}
+ #zoomb button{width:38px;height:38px;border-radius:9px;background:#15112af2;border:1px solid var(--line);color:var(--ink);font-size:18px;cursor:pointer}
 </style>
 </head><body>
 <div id="wrap">
  <div id="pal"></div>
  <div id="main">
   <div id="bar">
-   <label>name</label><input id="fName" size="12" value="Crypt Depths">
+   <label>name</label><input id="fName" size="11" value="Crypt Depths">
    <label>act</label><input id="fAct" size="2" value="I">
    <label>theme</label><select id="fTheme"><option value="crypt">crypt</option><option value="">surface</option></select>
    <label>music</label><select id="fMusic"><option>act1</option><option selected>act2</option><option>title</option></select>
    <label>W</label><input id="fW" size="5" value="3200">
    <label>H</label><input id="fH" size="5" value="2900">
    <label>idx</label><input id="fIdx" size="2" value="2">
-   <button class="btn go" id="bPlay">▶ Play here</button>
+   <button class="btn go" id="bPlay">▶ Play</button>
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
    <button class="btn" id="bLoadCrypt">Load Crypt I</button>
@@ -52,234 +56,240 @@
   </div>
   <div id="cvWrap">
    <canvas id="cv"></canvas>
+   <div id="zoomb"><button id="zin">+</button><button id="zout">−</button></div>
    <div id="hint"></div>
    <div id="sel"></div>
    <div id="toast"></div>
   </div>
  </div>
 </div>
+<div id="ghost"></div>
 <script>
-const GRID=20, TERRACE_DROP=130;
-// element kinds: terrace, plat(s/m/c), chk, goal, soul, enemy(zombie/zgen/gob/bd), bat
+const GRID=20, TERRACE_DROP=130, DEF_TERR=600;
 const ENEMY_COLS={zombie:'#6b7d52',zgen:'#3ad07a',gob:'#c8a24a',bd:'#9a6cff'};
-const TOOLS=[
- {k:'select',label:'Select / Move',sw:'#888'},
+const STAMPS=[
  {k:'terrace',label:'Terrace ground',sw:'#7a5a36'},
  {k:'plat_s',label:'Platform · static',sw:'#caa46a'},
  {k:'plat_m',label:'Platform · moving',sw:'#6ad0ff'},
  {k:'plat_c',label:'Platform · crumble',sw:'#e0843c'},
  {k:'chk',label:'Checkpoint',sw:'#ff9a3c'},
  {k:'goal',label:'Goal (exit)',sw:'#e0506a'},
- {k:'soul',label:'Soul  (drag=line)',sw:'#7fe0ff'},
+ {k:'soul',label:'Soul',sw:'#7fe0ff'},
  {k:'zombie',label:'Enemy · Zombie',sw:ENEMY_COLS.zombie},
  {k:'zgen',label:'Enemy · Tank (zgen)',sw:ENEMY_COLS.zgen},
  {k:'gob',label:'Enemy · Goblin',sw:ENEMY_COLS.gob},
  {k:'bd',label:'Enemy · Hound (bd)',sw:ENEMY_COLS.bd},
  {k:'bat',label:'Bat (flyer)',sw:'#b07a5a'},
- {k:'erase',label:'Eraser',sw:'#e23b3b'},
 ];
-let tool='terrace';
-// model
+const LABELOF={}; STAMPS.forEach(s=>LABELOF[s.k]=s.label);
+let eraseMode=false;
 let M=blankLevel();
 function blankLevel(){ return {name:'Crypt Depths',act:'I',music:'act2',theme:'crypt',world:3200,h:2900,
   goal:3000,goalY:2480, seg:[], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[]}; }
 
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
-let camx=0,camy=0,zoom=0.42; // world->screen scale
-let CW=0,CH=0;
-function fit(){ const r=document.getElementById('cvWrap').getBoundingClientRect(); CW=r.width; CH=r.height; cv.width=CW; cv.height=CH; }
-addEventListener('resize',fit); fit();
+let camx=-40,camy=-40,zoom=0.42, CW=0,CH=0;
+function fit(){ const r=document.getElementById('cvWrap').getBoundingClientRect(); CW=r.width; CH=r.height; cv.width=CW; cv.height=CH; draw(); }
+addEventListener('resize',fit);
+function sx(x){return (x-camx)*zoom;} function sy(y){return (y-camy)*zoom;}
+function wx(px){return px/zoom+camx;} function wy(py){return py/zoom+camy;}
+function snap(v){return Math.round(v/GRID)*GRID;}
+function cvxy(e){ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
 
-function sx(x){ return (x-camx)*zoom; }
-function sy(y){ return (y-camy)*zoom; }
-function wx(px){ return px/zoom+camx; }
-function wy(py){ return py/zoom+camy; }
-function snap(v){ return Math.round(v/GRID)*GRID; }
-
-// ---- palette ----
+// ---- palette (drag sources) ----
 const pal=document.getElementById('pal');
-pal.innerHTML='<h3>Tools — click then place</h3>'+TOOLS.map(t=>
+pal.innerHTML='<h3>Drag a piece onto the map</h3>'+STAMPS.map(t=>
  `<div class="tool" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${t.label}</div>`).join('')
- +'<h3>View</h3><div style="font-size:11px;color:#9b8cffaa;padding:0 6px;line-height:1.7">'
- +'drag bg = pan<br>wheel = zoom<br>terrace/soul: drag to size<br>click piece = edit</div>';
-function setTool(k){ tool=k; [...pal.querySelectorAll('.tool')].forEach(e=>e.classList.toggle('on',e.dataset.k===k)); }
-pal.addEventListener('click',e=>{ const t=e.target.closest('.tool'); if(t) setTool(t.dataset.k); });
-setTool('terrace');
+ +'<h3>Modes</h3>'
+ +'<div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div>'
+ +'<h3>How</h3><div style="font-size:11px;color:#9b8cffaa;padding:0 6px;line-height:1.8">'
+ +'drag piece → ghost → drop<br>1 finger / drag = pan<br>2 fingers = pinch zoom<br>tap a piece = edit<br>drag a piece = move it<br>selected: drag ⟷ handles to size</div>';
+document.getElementById('mErase').onclick=function(){ eraseMode=!eraseMode; this.classList.toggle('on',eraseMode); sel=null; showSel(); };
 
-// ---- selection ----
-let sel=null; // {type,obj}
+// ---- selection / edit panel ----
+let sel=null;
 const selBox=document.getElementById('sel');
+const SEL_FIELDS={terrace:['x0','x1','gy'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y']};
 function showSel(){
  if(!sel){ selBox.style.display='none'; return; }
  selBox.style.display='block';
- const o=sel.obj; let html='<h4>'+sel.type+'</h4>';
- const fields=SEL_FIELDS[sel.type]||[];
- for(const f of fields){ html+=`<div class="row"><span>${f}</span><input data-f="${f}" value="${o[f]??''}"></div>`; }
+ const o=sel.obj; let html='<h4>'+(LABELOF[sel.kind]||sel.type)+'</h4>';
+ for(const f of (SEL_FIELDS[sel.type]||[])){ if(o[f]===undefined)continue; html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; }
  html+='<button class="del">Delete</button>';
  selBox.innerHTML=html;
- selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); o[inp.dataset.f]=isNaN(v)?inp.value:v; persist(); draw(); });
+ selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ o[inp.dataset.f]=v; syncBack(sel); persist(); draw(); } });
  selBox.querySelector('.del').onclick=()=>{ delObj(sel); sel=null; showSel(); persist(); draw(); };
 }
-const SEL_FIELDS={terrace:['x0','x1','gy'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],
- soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y']};
+function syncBack(s){ if(s.sync) s.sync(); }
 function delObj(s){
- if(s.type==='terrace') M.seg.splice(M.seg.indexOf(s.raw),1);
- else if(s.type==='plat') M.plats.splice(M.plats.indexOf(s.obj),1);
- else if(s.type==='chk') M.chk.splice(M.chk.indexOf(s.raw),1);
- else if(s.type==='soul') M.souls.splice(M.souls.indexOf(s.raw),1);
- else if(s.type==='enemy') M.enemies.splice(M.enemies.indexOf(s.raw),1);
- else if(s.type==='bat') M.bats.splice(M.bats.indexOf(s.raw),1);
+ const A={terrace:M.seg,chk:M.chk,soul:M.souls,enemy:M.enemies,bat:M.bats}[s.type];
+ if(A&&s.raw){ const i=A.indexOf(s.raw); if(i>=0)A.splice(i,1); }
+ else if(s.type==='plat'){ const i=M.plats.indexOf(s.obj); if(i>=0)M.plats.splice(i,1); }
  else if(s.type==='goal'){ M.goal=0; M.goalY=0; }
 }
 
-// ---- hit testing (returns {type,obj,raw}) ----
+// ---- hit test ----
 function hit(wxp,wyp){
- for(const s of M.seg){ if(wxp>=s[0]&&wxp<=s[1]&&wyp>=s[2]&&wyp<=s[2]+TERRACE_DROP) return mkTerr(s); }
- for(const p of M.plats){ const x=p.x??p.x0; if(wxp>=x-6&&wxp<=x+p.w+6&&Math.abs(wyp-p.y)<22) return {type:'plat',obj:p}; }
- for(const c of M.chk){ if(Math.hypot(wxp-c[0],wyp-(c[1]-30))<34) return {type:'chk',obj:objView(c,['x','gy']),raw:c}; }
- if(M.goal&&Math.hypot(wxp-M.goal,wyp-(M.goalY-30))<40) return {type:'goal',obj:{x:M.goal,gy:M.goalY},raw:'goal'};
- for(const s of M.souls){ if(Math.hypot(wxp-s[0],wyp-s[1])<22) return {type:'soul',obj:objView(s,['x','y']),raw:s}; }
- for(const e of M.enemies){ if(Math.abs(wxp-e[0])<30&&Math.abs(wyp-((e[4]??M.goalY)-30))<40) return {type:'enemy',obj:objView(e,['x','min','max','gy'],[0,1,2,4]),raw:e}; }
- for(const b of M.bats){ if(Math.hypot(wxp-b[0],wyp-b[3])<28) return {type:'bat',obj:objView(b,['x','min','max','y']),raw:b}; }
+ if(M.goal&&Math.hypot(wxp-M.goal,wyp-(M.goalY-30))<44) return {type:'goal',kind:'goal',obj:{x:M.goal,gy:M.goalY},raw:'goal',sync(){M.goal=this.obj.x;M.goalY=this.obj.gy;}};
+ for(const c of M.chk){ if(Math.hypot(wxp-c[0],wyp-(c[1]-30))<36) return wrap('chk',c,['x','gy'],[0,1]); }
+ for(const s of M.souls){ if(Math.hypot(wxp-s[0],wyp-s[1])<24) return wrap('soul',s,['x','y'],[0,1]); }
+ for(const b of M.bats){ if(Math.hypot(wxp-b[0],wyp-b[3])<28) return wrap('bat',b,['x','min','max','y'],[0,1,2,3]); }
+ for(const e of M.enemies){ const ey=(e[4]??M.goalY); if(Math.abs(wxp-e[0])<32&&wyp<ey+8&&wyp>ey-50) return wrap('enemy',e,['x','min','max','gy'],[0,1,2,4],e[3]); }
+ for(const p of M.plats){ const x=p.x??p.x0; if(wxp>=x-8&&wxp<=x+p.w+8&&Math.abs(wyp-p.y)<24) return {type:'plat',kind:'plat_'+p.t,obj:p,raw:p,sync(){}}; }
+ for(const s of M.seg){ if(wxp>=s[0]&&wxp<=s[1]&&wyp>=s[2]-4&&wyp<=s[2]+TERRACE_DROP) return wrap('terrace',s,['x0','x1','gy'],[0,1,2]); }
  return null;
 }
-function mkTerr(s){ return {type:'terrace',obj:objView(s,['x0','x1','gy']),raw:s}; }
-function objView(arr,names,idx){ const o={}; names.forEach((n,i)=>o[n]=arr[idx?idx[i]:i]);
- o.__sync=()=>{ names.forEach((n,i)=>arr[idx?idx[i]:i]=o[n]); }; return o; }
+function wrap(type,raw,names,idx,kind){ const o={}; names.forEach((n,i)=>o[n]=raw[idx[i]]);
+ return {type,kind:kind||type,obj:o,raw,sync(){names.forEach((n,i)=>raw[idx[i]]=o[n]);}}; }
 
-// ---- pointer ----
-let drag=null;
-cv.addEventListener('pointerdown',e=>{
- const px=e.offsetX,py=e.offsetY, wxp=wx(px),wyp=wy(py);
- if(e.button===1||e.shiftKey||tool==='select'&&!hit(wxp,wyp)){ drag={pan:true,px,py,cx:camx,cy:camy}; return; }
- if(tool==='select'){ const h=hit(wxp,wyp); sel=h; showSel();
-   if(h){ drag={move:true,h,px,py,start:JSON.parse(JSON.stringify(h.raw??h.obj))}; } return; }
- if(tool==='erase'){ const h=hit(wxp,wyp); if(h){ delObj(h); persist(); draw(); } return; }
- // placement
- const gx=snap(wxp), gy=snap(wyp);
- if(tool==='terrace'){ drag={make:'terrace',x0:gx,gy:gy}; }
- else if(tool==='soul'){ drag={make:'soulline',x:gx,y:gy,placed:[[gx,gy]]}; M.souls.push([gx,gy]); }
- else if(tool.startsWith('plat_')){ const t=tool.split('_')[1]; const p={x:gx,y:gy,w:120,t}; if(t==='m'){p.x0=gx;p.range=180;p.spd=0.3;delete p.x;p.x=gx;} M.plats.push(p); persist(); }
- else if(tool==='chk'){ M.chk.push([gx,gy]); persist(); }
- else if(tool==='goal'){ M.goal=gx; M.goalY=gy; persist(); }
- else if(tool==='bat'){ M.bats.push([gx,Math.max(0,gx-300),gx+300,gy]); persist(); }
- else if(ENEMY_COLS[tool]){ M.enemies.push([gx,Math.max(0,gx-300),gx+300,tool,gy]); persist(); }
+// ---- handles for selected terrace/platform (resize) ----
+function handles(s){
+ if(!s) return [];
+ if(s.type==='terrace') return [{id:'x0',x:s.obj.x0,y:s.obj.gy},{id:'x1',x:s.obj.x1,y:s.obj.gy}];
+ if(s.type==='plat'){ const x=s.obj.x??s.obj.x0; return [{id:'w',x:x+s.obj.w,y:s.obj.y}]; }
+ if(s.type==='enemy'||s.type==='bat'){ const yy=s.type==='bat'?s.obj.y:s.obj.gy; return [{id:'min',x:s.obj.min,y:yy},{id:'max',x:s.obj.max,y:yy}]; }
+ return [];
+}
+function hitHandle(wxp,wyp){ for(const h of handles(sel)){ if(Math.hypot(wxp-h.x,wyp-h.y)<16/zoom) return h; } return null; }
+
+// ---- pointer model: pan / pinch / move / select / handle-drag ----
+const ptrs=new Map();
+let act=null; // {mode:'pan'|'move'|'handle', ...}
+let pinch=null;
+let carry=null; // {kind} from palette drag
+
+// palette drag start
+pal.querySelectorAll('.tool').forEach(el=>{
+ el.addEventListener('pointerdown',e=>{ e.preventDefault(); carry={kind:el.dataset.k}; el.setPointerCapture(e.pointerId);
+   showGhost(e.clientX,e.clientY); });
+});
+const ghost=document.getElementById('ghost');
+function showGhost(cx,cy){ if(!carry)return; ghost.style.display='block'; ghost.textContent=LABELOF[carry.kind]; ghost.style.left=cx+'px'; ghost.style.top=cy+'px'; }
+addEventListener('pointermove',e=>{ if(carry){ showGhost(e.clientX,e.clientY); } });
+addEventListener('pointerup',e=>{ if(carry){ ghost.style.display='none';
+   const r=cv.getBoundingClientRect();
+   if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){ placeAt(carry.kind, snap(wx(e.clientX-r.left)), snap(wy(e.clientY-r.top))); }
+   carry=null; } });
+
+function placeAt(kind,gx,gy){
+ if(kind==='terrace'){ const s=[gx,gx+DEF_TERR,gy]; M.seg.push(s); M.seg.sort((a,b)=>a[2]-b[2]); sel=wrap('terrace',s,['x0','x1','gy'],[0,1,2]); }
+ else if(kind.startsWith('plat_')){ const t=kind.split('_')[1]; const p={x:gx,y:gy,w:120,t}; if(t==='m'){p.x0=gx;p.range=180;p.spd=0.3;} M.plats.push(p); sel={type:'plat',kind,obj:p,raw:p,sync(){}}; }
+ else if(kind==='chk'){ const c=[gx,gy]; M.chk.push(c); sel=wrap('chk',c,['x','gy'],[0,1]); }
+ else if(kind==='goal'){ M.goal=gx; M.goalY=gy; sel=null; }
+ else if(kind==='soul'){ M.souls.push([gx,gy]); sel=null; }
+ else if(kind==='bat'){ const b=[gx,Math.max(0,gx-300),gx+300,gy]; M.bats.push(b); sel=wrap('bat',b,['x','min','max','y'],[0,1,2,3]); }
+ else if(ENEMY_COLS[kind]){ const en=[gx,Math.max(0,gx-300),gx+300,kind,gy]; M.enemies.push(en); sel=wrap('enemy',en,['x','min','max','gy'],[0,1,2,4],kind); }
+ showSel(); persist(); draw();
+}
+
+cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,cvxy(e));
+ if(ptrs.size===2){ const p=[...ptrs.values()]; pinch={d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),z:zoom,
+   mx:(p[0].x+p[1].x)/2,my:(p[0].y+p[1].y)/2, bx:wx((p[0].x+p[1].x)/2),by:wy((p[0].y+p[1].y)/2)}; act=null; return; }
+ const c=cvxy(e), wxp=wx(c.x),wyp=wy(c.y);
+ if(eraseMode){ const h=hit(wxp,wyp); if(h){ delObj(h); persist(); draw(); } return; }
+ const hh=hitHandle(wxp,wyp);
+ if(hh){ act={mode:'handle',h:hh,start:JSON.parse(JSON.stringify(sel.obj))}; return; }
+ const h=hit(wxp,wyp);
+ if(h){ sel=h; showSel(); act={mode:'move',h,px:c.x,py:c.y,start:JSON.parse(JSON.stringify(h.obj)),moved:false}; }
+ else { sel=null; showSel(); act={mode:'pan',px:c.x,py:c.y,cx:camx,cy:camy}; }
  draw();
 });
 cv.addEventListener('pointermove',e=>{
- const px=e.offsetX,py=e.offsetY;
- document.getElementById('hint').textContent='x '+Math.round(wx(px))+'  y '+Math.round(wy(py))+'   ·   tool: '+tool;
- if(!drag){ draw(); return; }
- if(drag.pan){ camx=drag.cx-(px-drag.px)/zoom; camy=drag.cy-(py-drag.py)/zoom; draw(); return; }
- if(drag.move){ const dx=(px-drag.px)/zoom, dy=(py-drag.py)/zoom; moveObj(drag.h,drag.start,snap(dx),snap(dy)); persist(); showSel(); draw(); return; }
- if(drag.make==='terrace'){ drag.x1=snap(wx(px)); draw(); drawGhostTerr(drag); return; }
- if(drag.make==='soulline'){ const gx=snap(wx(px)),gy=snap(wy(py)); const last=drag.placed[drag.placed.length-1];
-   if(Math.abs(gx-last[0])>=GRID*2||Math.abs(gy-last[1])>=GRID*2){ M.souls.push([gx,gy]); drag.placed.push([gx,gy]); draw(); } return; }
+ if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId,cvxy(e));
+ const c=cvxy(e);
+ document.getElementById('hint').textContent='x '+Math.round(wx(c.x))+'  y '+Math.round(wy(c.y));
+ if(pinch&&ptrs.size>=2){ const p=[...ptrs.values()]; const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+   zoom=Math.max(0.12,Math.min(1.6,pinch.z*d/pinch.d)); camx=pinch.bx-pinch.mx/zoom; camy=pinch.by-pinch.my/zoom; draw(); return; }
+ if(!act) return;
+ if(act.mode==='pan'){ camx=act.cx-(c.x-act.px)/zoom; camy=act.cy-(c.y-act.py)/zoom; draw(); return; }
+ if(act.mode==='move'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); moveObj(act.h,act.start,dx,dy); act.moved=true; syncBack(act.h); persist(); showSel(); draw(); return; }
+ if(act.mode==='handle'){ resizeH(act.h,act.start, snap(wx(c.x)), snap(wy(c.y))); syncBack(sel); persist(); showSel(); draw(); return; }
 });
-addEventListener('pointerup',e=>{
- if(drag&&drag.make==='terrace'){ const x0=Math.min(drag.x0,drag.x1), x1=Math.max(drag.x0,drag.x1);
-   if(x1-x0>=GRID){ M.seg.push([x0,x1,drag.gy]); M.seg.sort((a,b)=>a[2]-b[2]); persist(); } }
- if(drag&&(drag.make||drag.move)) { persist(); }
- drag=null; draw();
-});
+function endPtr(e){ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null; if(ptrs.size===0) act=null; }
+cv.addEventListener('pointerup',endPtr); cv.addEventListener('pointercancel',endPtr);
+
 function moveObj(h,start,dx,dy){
- if(h.type==='terrace'){ h.raw[0]=start[0]+dx; h.raw[1]=start[1]+dx; h.raw[2]=start[2]+dy; M.seg.sort((a,b)=>a[2]-b[2]); }
- else if(h.type==='plat'){ if(h.obj.x0!==undefined)h.obj.x0=start.x0+dx; h.obj.x=(start.x??start.x0)+dx; h.obj.y=start.y+dy; }
- else if(h.type==='chk'){ h.raw[0]=start[0]+dx; h.raw[1]=start[1]+dy; }
- else if(h.type==='goal'){ M.goal=start.x?start.x+dx:M.goal+dx; M.goalY=start.gy?start.gy+dy:M.goalY+dy; }
- else if(h.type==='soul'){ h.raw[0]=start[0]+dx; h.raw[1]=start[1]+dy; }
- else if(h.type==='enemy'){ h.raw[0]=start[0]+dx; h.raw[1]=start[1]+dx; h.raw[2]=start[2]+dx; h.raw[4]=(start[4]??M.goalY)+dy; }
- else if(h.type==='bat'){ h.raw[0]=start[0]+dx; h.raw[1]=start[1]+dx; h.raw[2]=start[2]+dx; h.raw[3]=start[3]+dy; }
+ const o=h.obj;
+ if(h.type==='terrace'){ o.x0=start.x0+dx; o.x1=start.x1+dx; o.gy=start.gy+dy; }
+ else if(h.type==='plat'){ if(start.x0!==undefined)o.x0=start.x0+dx; o.x=(start.x??start.x0)+dx; o.y=start.y+dy; }
+ else if(h.type==='goal'){ o.x=start.x+dx; o.gy=start.gy+dy; }
+ else if(h.type==='enemy'){ o.x=start.x+dx; o.min=start.min+dx; o.max=start.max+dx; o.gy=start.gy+dy; }
+ else if(h.type==='bat'){ o.x=start.x+dx; o.min=start.min+dx; o.max=start.max+dx; o.y=start.y+dy; }
+ else { o.x=start.x+dx; (o.gy!==undefined)?o.gy=start.gy+dy:o.y=start.y+dy; }
 }
-cv.addEventListener('wheel',e=>{ e.preventDefault(); const px=e.offsetX,py=e.offsetY, bx=wx(px),by=wy(py);
- zoom*=e.deltaY<0?1.12:0.89; zoom=Math.max(0.12,Math.min(1.5,zoom)); camx=bx-px/zoom; camy=by-py/zoom; draw(); },{passive:false});
+function resizeH(h,start,gx,gy){
+ const o=sel.obj;
+ if(h.id==='x0'){ o.x0=Math.min(gx,o.x1-GRID); }
+ else if(h.id==='x1'){ o.x1=Math.max(gx,o.x0+GRID); }
+ else if(h.id==='w'){ const bx=o.x??o.x0; o.w=Math.max(GRID,gx-bx); }
+ else if(h.id==='min'){ o.min=Math.min(gx,o.x); }
+ else if(h.id==='max'){ o.max=Math.max(gx,o.x); }
+ if(sel.obj.gy!==undefined&&(h.id==='min'||h.id==='max')){} // y unaffected
+}
+document.getElementById('zin').onclick=()=>{ zoomAt(1.25); }; document.getElementById('zout').onclick=()=>{ zoomAt(0.8); };
+function zoomAt(f){ const bx=wx(CW/2),by=wy(CH/2); zoom=Math.max(0.12,Math.min(1.6,zoom*f)); camx=bx-(CW/2)/zoom; camy=by-(CH/2)/zoom; draw(); }
+cv.addEventListener('wheel',e=>{ e.preventDefault(); const c=cvxy(e),bx=wx(c.x),by=wy(c.y); zoom=Math.max(0.12,Math.min(1.6,zoom*(e.deltaY<0?1.12:0.89))); camx=bx-c.x/zoom; camy=by-c.y/zoom; draw(); },{passive:false});
 
 // ---- draw ----
 function draw(){
- syncFields();
- ctx.clearRect(0,0,CW,CH);
+ syncFields(); ctx.clearRect(0,0,CW,CH);
  ctx.fillStyle=M.theme==='crypt'?'#0a0712':'#0e1326'; ctx.fillRect(0,0,CW,CH);
- // world bounds
  ctx.strokeStyle='#2a2150'; ctx.lineWidth=2; ctx.strokeRect(sx(0),sy(0),M.world*zoom,M.h*zoom);
- // grid
- ctx.strokeStyle='#ffffff08'; ctx.lineWidth=1; ctx.beginPath();
- const g=GRID*5;
+ ctx.strokeStyle='#ffffff08'; ctx.lineWidth=1; ctx.beginPath(); const g=GRID*5;
  for(let x=0;x<=M.world;x+=g){ ctx.moveTo(sx(x),sy(0)); ctx.lineTo(sx(x),sy(M.h)); }
  for(let y=0;y<=M.h;y+=g){ ctx.moveTo(sx(0),sy(y)); ctx.lineTo(sx(M.world),sy(y)); }
  ctx.stroke();
- // terraces
- for(const s of M.seg){
-   ctx.fillStyle=M.theme==='crypt'?'#241834':'#3a2a1a';
-   ctx.fillRect(sx(s[0]),sy(s[2]),(s[1]-s[0])*zoom,TERRACE_DROP*zoom);
-   ctx.fillStyle=M.theme==='crypt'?'#e0a93c':'#5a8a3a';
-   ctx.fillRect(sx(s[0]),sy(s[2]),(s[1]-s[0])*zoom,4);
-   if(sel&&sel.type==='terrace'&&sel.raw===s){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(sx(s[0])-2,sy(s[2])-2,(s[1]-s[0])*zoom+4,TERRACE_DROP*zoom+4); }
- }
- // platforms
- for(const p of M.plats){ const x=p.x??p.x0;
-   ctx.fillStyle=p.t==='m'?'#6ad0ff':p.t==='c'?'#e0843c':'#caa46a';
-   ctx.fillRect(sx(x),sy(p.y),p.w*zoom,10*zoom>4?10*zoom:6);
-   if(p.t==='m'){ ctx.strokeStyle='#6ad0ff55'; ctx.beginPath(); ctx.moveTo(sx(x),sy(p.y+4)); ctx.lineTo(sx(x+(p.range||0)),sy(p.y+4)); ctx.stroke(); }
- }
- // souls
- for(const s of M.souls){ ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(sx(s[0]),sy(s[1]),Math.max(2.5,6*zoom),0,7); ctx.fill(); }
- // enemies
- for(const e of M.enemies){ const ey=(e[4]??M.goalY); ctx.fillStyle=ENEMY_COLS[e[3]]||'#aaa';
-   const ww=24*zoom, hh=34*zoom; ctx.fillRect(sx(e[0])-ww/2,sy(ey)-hh,ww,hh);
-   ctx.strokeStyle='#ffffff33'; ctx.beginPath(); ctx.moveTo(sx(e[1]),sy(ey)+3); ctx.lineTo(sx(e[2]),sy(ey)+3); ctx.stroke();
+ for(const s of M.seg){ ctx.fillStyle=M.theme==='crypt'?'#241834':'#3a2a1a'; ctx.fillRect(sx(s[0]),sy(s[2]),(s[1]-s[0])*zoom,TERRACE_DROP*zoom);
+   ctx.fillStyle=M.theme==='crypt'?'#e0a93c':'#5a8a3a'; ctx.fillRect(sx(s[0]),sy(s[2]),(s[1]-s[0])*zoom,4);
+   if(sel&&sel.raw===s){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(sx(s[0])-2,sy(s[2])-2,(s[1]-s[0])*zoom+4,TERRACE_DROP*zoom+4); } }
+ for(const p of M.plats){ const x=p.x??p.x0; ctx.fillStyle=p.t==='m'?'#6ad0ff':p.t==='c'?'#e0843c':'#caa46a';
+   ctx.fillRect(sx(x),sy(p.y),p.w*zoom,Math.max(5,10*zoom));
+   if(p.t==='m'){ ctx.strokeStyle='#6ad0ff55'; ctx.beginPath(); ctx.moveTo(sx(x),sy(p.y+5)); ctx.lineTo(sx(x+(p.range||0)),sy(p.y+5)); ctx.stroke(); }
+   if(sel&&sel.obj===p){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(sx(x)-2,sy(p.y)-2,p.w*zoom+4,Math.max(5,10*zoom)+4); } }
+ for(const s of M.souls){ ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(sx(s[0]),sy(s[1]),Math.max(3,6*zoom),0,7); ctx.fill(); }
+ for(const e of M.enemies){ const ey=(e[4]??M.goalY); ctx.fillStyle=ENEMY_COLS[e[3]]||'#aaa'; const ww=24*zoom,hh=34*zoom;
+   ctx.fillRect(sx(e[0])-ww/2,sy(ey)-hh,ww,hh); ctx.strokeStyle='#ffffff33'; ctx.beginPath(); ctx.moveTo(sx(e[1]),sy(ey)+3); ctx.lineTo(sx(e[2]),sy(ey)+3); ctx.stroke();
    ctx.fillStyle='#000a'; ctx.font='9px sans-serif'; ctx.fillText(e[3],sx(e[0])-ww/2+1,sy(ey)-hh+9); }
- // bats
  for(const b of M.bats){ ctx.fillStyle='#b07a5a'; ctx.beginPath(); ctx.ellipse(sx(b[0]),sy(b[3]),12*zoom,7*zoom,0,0,7); ctx.fill();
    ctx.strokeStyle='#b07a5a55'; ctx.beginPath(); ctx.moveTo(sx(b[1]),sy(b[3])); ctx.lineTo(sx(b[2]),sy(b[3])); ctx.stroke(); }
- // checkpoints
  for(const c of M.chk){ const X=sx(c[0]),Y=sy(c[1]); ctx.fillStyle='#ff9a3c'; ctx.fillRect(X-2,Y-46*zoom,4,46*zoom);
    ctx.beginPath(); ctx.moveTo(X+2,Y-46*zoom); ctx.lineTo(X+26*zoom,Y-38*zoom); ctx.lineTo(X+2,Y-30*zoom); ctx.fill(); }
- // goal
- if(M.goal){ const X=sx(M.goal),Y=sy(M.goalY); ctx.strokeStyle='#e0506a'; ctx.lineWidth=3;
-   ctx.beginPath(); ctx.arc(X,Y-34*zoom,22*zoom,0,7); ctx.stroke(); ctx.fillStyle='#e0506a'; ctx.font='11px sans-serif'; ctx.fillText('EXIT',X-12,Y+12); }
- // spawn marker (engine spawns x=90 on covering terrace)
- const sp=spawnY(90); if(sp!==null){ const X=sx(90),Y=sy(sp); ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y-30*zoom,9*zoom>4?9*zoom:5,0,7); ctx.fill(); ctx.fillStyle='#c8fb50'; ctx.font='10px sans-serif'; ctx.fillText('START',X-14,Y-44*zoom); }
+ if(M.goal){ const X=sx(M.goal),Y=sy(M.goalY); ctx.strokeStyle='#e0506a'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(X,Y-34*zoom,22*zoom,0,7); ctx.stroke();
+   ctx.fillStyle='#e0506a'; ctx.font='11px sans-serif'; ctx.fillText('EXIT',X-12,Y+12); }
+ const sp=spawnY(90); if(sp!==null){ const X=sx(90),Y=sy(sp); ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y-30*zoom,Math.max(5,9*zoom),0,7); ctx.fill();
+   ctx.fillStyle='#c8fb50'; ctx.font='10px sans-serif'; ctx.fillText('START',X-14,Y-44*zoom); }
+ // handles
+ for(const h of handles(sel)){ ctx.fillStyle='#c8fb50'; ctx.strokeStyle='#10210a'; ctx.lineWidth=2;
+   ctx.beginPath(); ctx.arc(sx(h.x),sy(h.y),7,0,7); ctx.fill(); ctx.stroke(); }
 }
 function spawnY(x){ let best=null; for(const s of M.seg){ if(x>=s[0]&&x<=s[1]){ if(best===null||s[2]<best)best=s[2]; } } return best; }
-function drawGhostTerr(d){ const x0=Math.min(d.x0,d.x1),x1=Math.max(d.x0,d.x1);
- ctx.fillStyle='#c8fb5066'; ctx.fillRect(sx(x0),sy(d.gy),(x1-x0)*zoom,TERRACE_DROP*zoom);
- ctx.fillStyle='#c8fb50'; ctx.fillRect(sx(x0),sy(d.gy),(x1-x0)*zoom,4); }
 
 // ---- fields ----
-function syncFields(){ M.name=v('fName'); M.act=v('fAct'); M.theme=v('fTheme'); M.music=v('fMusic');
- M.world=+v('fW')||M.world; M.h=+v('fH')||M.h; }
-function v(id){ return document.getElementById(id).value; }
+function syncFields(){ M.name=v('fName'); M.act=v('fAct'); M.theme=v('fTheme'); M.music=v('fMusic'); M.world=+v('fW')||M.world; M.h=+v('fH')||M.h; }
+function v(id){return document.getElementById(id).value;}
 function loadFields(){ document.getElementById('fName').value=M.name; document.getElementById('fAct').value=M.act;
- document.getElementById('fTheme').value=M.theme||''; document.getElementById('fMusic').value=M.music;
- document.getElementById('fW').value=M.world; document.getElementById('fH').value=M.h; }
+ document.getElementById('fTheme').value=M.theme||''; document.getElementById('fMusic').value=M.music; document.getElementById('fW').value=M.world; document.getElementById('fH').value=M.h; }
 ['fName','fAct','fTheme','fMusic','fW','fH'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{syncFields();persist();draw();}));
 
-// ---- persist / export / import / play ----
+// ---- persist / io / play ----
 function persist(){ syncFields(); try{ localStorage.setItem('creapz_editdraft',JSON.stringify(M)); }catch(e){} }
-function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2200); }
+function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
- o.world=M.world; o.h=M.h; o.goal=M.goal; o.goalY=M.goalY; o.seg=M.seg; o.obst=M.obst||[]; o.plats=M.plats; o.chk=M.chk; o.souls=M.souls; o.enemies=M.enemies; o.bats=M.bats; return o; }
+ o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats; return o; }
 document.getElementById('bExport').onclick=()=>{ const idx=+v('fIdx')||2; const o=cleanLevel();
  const js='window.STAGES=window.STAGES||[];window.STAGES['+idx+']='+JSON.stringify(o,null,1)+';\n';
- const blob=new Blob([js],{type:'text/javascript'}); const a=document.createElement('a');
- a.href=URL.createObjectURL(blob); a.download='level-'+(o.name.toLowerCase().replace(/[^a-z0-9]+/g,'')||'stage')+'-act'+o.act+'.js'; a.click();
- setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('exported — send it to Claude to commit'); };
+ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([js],{type:'text/javascript'}));
+ a.download='level-'+(o.name.toLowerCase().replace(/[^a-z0-9]+/g,'')||'stage')+'-act'+o.act+'.js'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('exported - send to Claude to commit'); };
 document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='.js,.json';
- inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{
-   let j=tx.trim(); const i=j.indexOf('={'); if(i>=0) j=j.slice(i+1, j.lastIndexOf('}')+1);
-   const o=JSON.parse(j); M=Object.assign(blankLevel(),o); M.theme=o.theme||''; loadFields(); persist(); draw(); toast('imported'); }
-   catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
-document.getElementById('bLoadCrypt').onclick=()=>{ fetch('./levels/crypt1.js?'+Date.now()).then(r=>r.text()).then(tx=>{
-   try{ const i=tx.indexOf('={'); const o=JSON.parse(tx.slice(i+1, tx.lastIndexOf('}')+1)); M=Object.assign(blankLevel(),o); M.theme=o.theme||''; loadFields(); persist(); draw(); toast('loaded current Crypt Act I'); }
-   catch(err){ toast('load failed: '+err.message); } }); };
-document.getElementById('bClear').onclick=()=>{ if(confirm('Clear the whole level?')){ M=blankLevel(); loadFields(); persist(); draw(); } };
-document.getElementById('bPlay').onclick=()=>{ try{ localStorage.setItem('creapz_testlevel',JSON.stringify(cleanLevel())); }catch(e){}
- location.href='./?test=1'; };
+ inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{ let j=tx.trim(); const i=j.indexOf('={'); if(i>=0)j=j.slice(i+1,j.lastIndexOf('}')+1);
+   M=Object.assign(blankLevel(),JSON.parse(j)); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
+document.getElementById('bLoadCrypt').onclick=()=>{ fetch('./levels/crypt1.js?'+Date.now()).then(r=>r.text()).then(tx=>{ try{ const i=tx.indexOf('={');
+   M=Object.assign(blankLevel(),JSON.parse(tx.slice(i+1,tx.lastIndexOf('}')+1))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('loaded current Crypt Act I'); }catch(err){ toast('load failed: '+err.message); } }); };
+document.getElementById('bClear').onclick=()=>{ if(confirm('Clear the whole level?')){ M=blankLevel(); loadFields(); sel=null; showSel(); persist(); draw(); } };
+document.getElementById('bPlay').onclick=()=>{ try{ localStorage.setItem('creapz_testlevel',JSON.stringify(cleanLevel())); }catch(e){} location.href='./?test=1'; };
 
 // ---- boot ----
 try{ const d=localStorage.getItem('creapz_editdraft'); if(d){ M=Object.assign(blankLevel(),JSON.parse(d)); } }catch(e){}
-loadFields();
-// center on top-left of world
-camx=-40; camy=-40; draw();
+loadFields(); fit();
 </script>
 </body></html>
