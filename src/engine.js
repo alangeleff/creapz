@@ -1,4 +1,4 @@
-const ASSET_VER='1780615505';
+const ASSET_VER='1780627890';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -132,7 +132,6 @@ const SPR = { chars:{} };
 let loaded=0, total=0;
 function L(d){ const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src;
   return {img,sw:d.sw,sh:d.sh,w:d.w,h:d.h,frames:d.frames,foots:d.foots,cxs:d.cxs,weapon:d.weapon}; }
-SPR.soul = L(SPRITES.soul);
 SPR.obst = {};
 for (const k in SPRITES.obst){ const d=SPRITES.obst[k]; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.obst[k]={img,w:d.w,h:d.h}; }
 SPR.trees={}; for (const k in SPRITES.trees){ const d=SPRITES.trees[k]; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.trees[k]={img,w:d.w,h:d.h}; }
@@ -173,7 +172,27 @@ function timeBrackets(idx){
   const s=idx*30;   // each act shifts brackets by 30s
   return [[90+s,3000],[120+s,2000],[180+s,1000]];
 }
-const SOUL_FPS = 20;
+// procedural soul (ASCEND design): cached radial bitmaps, no shadowBlur, no per-frame gradients
+function _srad(size,stops){ const c=document.createElement('canvas'); c.width=c.height=size;
+  const g=c.getContext('2d'), gr=g.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
+  for (const st of stops) gr.addColorStop(st[0],st[1]);
+  g.fillStyle=gr; g.fillRect(0,0,size,size); return c; }
+const SOUL_GLOW=_srad(128,[[0,'rgba(120,215,255,0.55)'],[0.35,'rgba(95,205,255,0.28)'],[0.7,'rgba(70,160,255,0.10)'],[1,'rgba(60,140,255,0)']]);
+const SOUL_CORE=_srad(64,[[0,'rgba(255,255,255,1)'],[0.28,'rgba(225,250,255,1)'],[0.55,'rgba(130,220,255,0.95)'],[0.82,'rgba(80,175,255,0.55)'],[1,'rgba(70,160,255,0)']]);
+const SOUL_MOTE=_srad(20,[[0,'rgba(255,255,255,1)'],[0.4,'rgba(160,230,255,0.9)'],[1,'rgba(110,200,255,0)']]);
+function drawSoulFx(x,y,R,A,ph){
+  const bob=Math.sin(gt*2.2+ph)*4, br=0.5+0.5*Math.sin(gt*2.6+ph*1.7), cy=y+bob;
+  ctx.globalCompositeOperation='lighter';
+  const gs=R*(4.6+0.7*br); ctx.globalAlpha=A*0.85*(0.55+0.40*br);
+  ctx.drawImage(SOUL_GLOW,x-gs/2,cy-gs/2,gs,gs);
+  const cs=R*1.9*(1+0.06*br); ctx.globalAlpha=A;
+  ctx.drawImage(SOUL_CORE,x-cs/2,cy-cs/2,cs,cs);
+  for(let i=0;i<5;i++){ const u=((gt*0.42+ph+i/5)%1);
+    const yy=cy+R*1.0-u*R*4.2, xx=x+Math.cos(u*10.5+ph+i)*R*1.25*(1-u*0.45);
+    const ua=(u<0.12?u/0.12:1-(u-0.12)/0.88), s=2.4*(1-u*0.5)*(R/13);
+    ctx.globalAlpha=A*0.9*ua; ctx.drawImage(SOUL_MOTE,xx-s*2,yy-s*2,s*4,s*4); }
+  ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
+}
 const BAT_FPS = 15, BITE_FPS = 29, BAT_PATROL = 1.25, BAT_CHASE = 2.1, BAT_AGGRO = 280;
 
 let mode='select', chosen=ORDER[0];
@@ -405,9 +424,7 @@ function drawTitleCard(){
   ctx.font="40px Creepster, sans-serif";
   ctx.fillStyle='#c8fb50'; ctx.fillText('ACT  '+ST.act, W*0.40, 312);
   // soul orb spinning beside the act numeral
-  const sa=SPR.soul;
-  if (sa){ const fi=Math.floor(gt*SOUL_FPS)%sa.frames; const dw=sa.w*0.55, dh=sa.h*0.55;
-    ctx.drawImage(sa.img, fi*sa.sw,0,sa.sw,sa.sh, W*0.34-dw/2, 299-dh/2, dw, dh); }
+  drawSoulFx(W*0.34, 299, 9, 1, 2.4);
   ctx.restore();
 }
 function drawPauseBtn(){
@@ -1284,12 +1301,10 @@ function draw(){
   for (const b of bats) drawBat(b);
   drawZbits();
   drawGoal();
-  const sa=SPR.soul;
   for (const s of souls){
     if (s.got&&s.pop>=1) continue; const sx=pxf(s.x,1); if(sx<-60||sx>W+60) continue;
     let alpha=1,sc=1; if(s.got){ alpha=Math.max(0,1-s.pop); sc=1+0.7*s.pop; }
-    const fi=Math.floor(gt*SOUL_FPS+s.ph*sa.frames)%sa.frames; const dw=sa.w*sc,dh=sa.h*sc;
-    ctx.globalAlpha=alpha; ctx.drawImage(sa.img, fi*sa.sw,0,sa.sw,sa.sh, sx-dw/2, s.y-dh/2, dw,dh); ctx.globalAlpha=1;
+    drawSoulFx(sx, s.y, 13*sc, alpha, s.ph*19);
   }
   drawPlayerLayer();
   for (const fx of chkFx){
