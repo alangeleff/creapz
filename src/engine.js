@@ -1,4 +1,4 @@
-const ASSET_VER='1780630211';
+const ASSET_VER='1780631068';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -64,7 +64,7 @@ addEventListener('keydown', e => {
     return;
   }
   if (['ArrowLeft','ArrowRight','ArrowUp','Space',' '].includes(e.key)||e.code==='Space') e.preventDefault();
-  if (mode==='select'){ if(e.key==='1'){ playSfx('sfx_msel'); startGame(creaperSkin); } else if(e.key==='2'){ playSfx('sfx_msel'); startGame('dingbat'); } return; }
+  if (mode==='select'){ if(e.key==='1'){ playSfx('sfx_msel'); startGame(creaperSkin); } else if(e.key==='2'){ playSfx('sfx_msel'); startGame(dingSkin); } return; }
   if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; playSfx('sfx_mtog'); } return; }
   if (e.code==='KeyR'){ paused=false; onReset(); return; }
   if (e.code==='KeyC'){ paused=false; mode='select'; return; }
@@ -108,8 +108,8 @@ cv.addEventListener('pointerdown', e=>{
     return;
   }
   if (mode==='select'){
-    for (const d of dotRects){ if (pt.x>d.x&&pt.x<d.x+d.w&&pt.y>d.y&&pt.y<d.y+d.h){ creaperSkin=d.skin; playSfx('sfx_mtog'); return; } }
-    for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ playSfx('sfx_msel'); startGame(c.key==='creaper'?creaperSkin:'dingbat'); break; } }
+    for (const d of dotRects){ if (pt.x>d.x&&pt.x<d.x+d.w&&pt.y>d.y&&pt.y<d.y+d.h){ if(d.who==='d') dingSkin=d.skin; else creaperSkin=d.skin; playSfx('sfx_mtog'); return; } }
+    for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ playSfx('sfx_msel'); startGame(c.key==='creaper'?creaperSkin:dingSkin); break; } }
     return;
   }
   if (mode!=='play') return;
@@ -159,6 +159,7 @@ for (const ck in SPRITES.chars){ SPR.chars[ck]={};
     SPR.chars[ck][an]=L(SPRITES.chars[ck][an]);
   } }
 const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, cast:32 };
+function isDing(ck){ return ck==='dingbat'||ck.slice(0,5)==='ding_'; }
 function pfps(st2){ const f=SPR.chars[chosen]&&SPR.chars[chosen].fps; return (f&&f[st2])||FPS[st2]; }
 const FZ = { idle:24, walk:12, attack:16 };
 const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12} };
@@ -433,7 +434,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', ck==='dingbat'); loadStage(stageIdx); }
+function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(ck)); loadStage(stageIdx); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -626,12 +627,12 @@ function update(dt){
   if (!kneeling && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; playSfx('sfx_jump',0.55); }
   if (keys['KeyZ']&&p.attackT<=0&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
-    playSfx(chosen==='dingbat'?'sfx_wing':'sfx_slash');
+    playSfx(isDing(chosen)?'sfx_wing':'sfx_slash');
   }
   if (p.attackT>0){
     p.attackT-=dt;
-    if (chosen==='dingbat'){
-      const afr=Math.floor((SPR.chars.dingbat.attack.frames/pfps('attack')-p.attackT)*pfps('attack'));
+    if (isDing(chosen)){
+      const afr=Math.floor((SPR.chars[chosen].attack.frames/pfps('attack')-p.attackT)*pfps('attack'));
       if (afr>=2 && afr<=7) p.x+=p.facing*(p.onGround?2.7:1.8);
     }
   }
@@ -647,7 +648,7 @@ function update(dt){
     const fireAt = chosen==='dingbat' ? 2 : 3;   // dingbat: bolt leaves on the open-mouth frame (11f @40fps)
     if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
-      if (chosen==='dingbat'){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
+      if (isDing(chosen)){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
       else { bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'}); playSfx('sfx_bolt'); }
     }
   }
@@ -1007,8 +1008,10 @@ function drawCharSprite(ck,state,fi,cx,feetY,facing,scale,tint){
 }
 
 let cardRects=[], dotRects=[];
-let creaperSkin='default';
+let creaperSkin='default', dingSkin='dingbat';
 const SKINC={default:'#7b5cff', green:'#3ddc5a', blue:'#2f7bff', red:'#e0504a'};
+const DSKINC={dingbat:'#8a5a2a', ding_onyx:'#3c3c46', ding_frost:'#8fa8c8', ding_blood:'#7a1f24'};
+const DORDER=['dingbat','ding_onyx','ding_frost','ding_blood'];
 function drawSelect(){
   ctx.setTransform(RS,0,0,RS,0,0);
   camX=0; skyBG();
@@ -1016,30 +1019,32 @@ function drawSelect(){
   ctx.fillStyle='#1d1730'; ctx.fillRect(0,GROUND,W,H-GROUND); ctx.fillStyle='#5a4499'; ctx.fillRect(0,GROUND,W,8);
   ctx.textAlign='center';
   ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText('Choose your Creap', W/2, 56);
-  ctx.fillStyle='#9b8cff'; ctx.font='15px sans-serif'; ctx.fillText('tap a character to begin  ·  dots pick the cReaper cloak', W/2, 82);
+  ctx.fillStyle='#9b8cff'; ctx.font='15px sans-serif'; ctx.fillText('tap a character to begin  ·  dots pick the colors', W/2, 82);
   const cw=250, gap=(W-2*cw)/3, cardY=104, cardH=246;
   cardRects=[]; dotRects=[];
-  const roster=[{key:'creaper', label:'cReaper', ck:creaperSkin},{key:'dingbat', label:'Dingbat', ck:'dingbat'}];
+  const roster=[{key:'creaper', label:'cReaper', ck:creaperSkin},{key:'dingbat', label:'Dingbat', ck:dingSkin}];
   for (let i=0;i<2;i++){
     const it=roster[i], cardX=gap+i*(cw+gap);
     cardRects.push({x:cardX,y:cardY,w:cw,h:cardH,key:it.key});
     ctx.fillStyle='rgba(20,16,40,.55)';
-    ctx.strokeStyle = it.key==='creaper' ? (SKINC[creaperSkin]||'#5a4d8c') : '#8a6a3a';
+    ctx.strokeStyle = it.key==='creaper' ? (SKINC[creaperSkin]||'#5a4d8c') : (DSKINC[dingSkin]||'#8a6a3a');
     roundRect(cardX,cardY,cw,cardH,12); ctx.fill(); ctx.lineWidth=2; ctx.stroke();
     const a=SPR.chars[it.ck].idle;
     const cfps=(SPR.chars[it.ck].fps&&SPR.chars[it.ck].fps.idle)||FPS.idle;
     const fi=Math.floor(gt*cfps)%a.frames;
     const sc=150/a.h; drawCharSprite(it.ck,'idle',fi, cardX+cw/2, cardY+cardH-54, 1, sc);
     ctx.fillStyle='#eae6ff'; ctx.font='bold 18px sans-serif'; ctx.fillText(it.label, cardX+cw/2, cardY+cardH-16);
-    if (it.key==='creaper'){
+    {
       // color dots floating above the character
-      const dn=ORDER.length, dr2=11, dgap=34, dx0=cardX+cw/2-((dn-1)*dgap)/2, dy=cardY+34;
+      const isC=(it.key==='creaper');
+      const list=isC?ORDER:DORDER, cmap=isC?SKINC:DSKINC, cur=isC?creaperSkin:dingSkin;
+      const dn=list.length, dr2=11, dgap=34, dx0=cardX+cw/2-((dn-1)*dgap)/2, dy=cardY+34;
       for (let k=0;k<dn;k++){
-        const sk=ORDER[k], dx=dx0+k*dgap;
-        dotRects.push({x:dx-15,y:dy-15,w:30,h:30,skin:sk});
-        ctx.fillStyle=SKINC[sk]||'#888';
+        const sk=list[k], dx=dx0+k*dgap;
+        dotRects.push({x:dx-15,y:dy-15,w:30,h:30,skin:sk,who:isC?'c':'d'});
+        ctx.fillStyle=cmap[sk]||'#888';
         ctx.beginPath(); ctx.arc(dx,dy,dr2,0,7); ctx.fill();
-        if (sk===creaperSkin){
+        if (sk===cur){
           ctx.strokeStyle='#ffffff'; ctx.lineWidth=2.5;
           ctx.beginPath(); ctx.arc(dx,dy,dr2+4.5,0,7); ctx.stroke();
         } else {
@@ -1066,7 +1071,7 @@ function drawPlayerHP(){
   const x=14,y=14,w=196,h=26, bx=x+44, bw=w-46;
   ctx.fillStyle='rgba(16,12,30,.72)'; roundRect(x-2,y-2,w+6,h+6,9); ctx.fill();
   ctx.strokeStyle='rgba(150,140,255,.4)'; ctx.lineWidth=1; ctx.stroke();
-  const hi=SPR.hpicon[chosen];
+  const hi=SPR.hpicon[isDing(chosen)?'dingbat':chosen];
   if (hi){ const ih=30, iw=hi.w*ih/hi.h; ctx.drawImage(hi.img, x+16-iw/2, y+h/2-ih/2, iw, ih); }
   ctx.fillStyle='rgba(0,0,0,.55)'; roundRect(bx,y+4,bw,h-8,6); ctx.fill();
   const frac=Math.max(0,Math.min(1,p.hpShown/PMAXHP));
@@ -1252,7 +1257,7 @@ function drawPlayerLayer(){
       // hot muzzle burst at the hand
       const mr=10+26*k;
       const mg=ctx.createRadialGradient(hx,hy,1,hx,hy,mr);
-      const wave=chosen==='dingbat';
+      const wave=isDing(chosen);
       mg.addColorStop(0,'rgba(255,255,255,'+(0.95*(1-k)).toFixed(2)+')');
       mg.addColorStop(0.5, wave?'rgba(205,150,255,'+(0.6*(1-k)).toFixed(2)+')':'rgba(140,225,255,'+(0.6*(1-k)).toFixed(2)+')');
       mg.addColorStop(1, wave?'rgba(140,60,255,0)':'rgba(60,140,255,0)');
