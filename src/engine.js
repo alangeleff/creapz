@@ -818,7 +818,7 @@ function update(dt){
     if (p.state!=='idle'){ p.state='idle'; p.clock=0; }
     p.clock+=dt;
     if (p.winT>1.0){
-      const gw=SPR.goal, gy=GROUND+10-gw.h;
+      const gw=SPR.goal, gy=GOALY+10-gw.h;
       const ty=gy+gw.vc[1]+52, k=Math.min(1,dt*4.5);
       p.x+=(GOAL_X-p.x)*k; p.y+=(ty-p.y)*k;
     }
@@ -1013,7 +1013,7 @@ function update(dt){
       b.y+=(b.y0-b.y)*0.03;
     }
     b.x=clamp(b.x,b.min-40,b.max+40);
-    b.y=clamp(b.y,70,GROUND-60);
+    b.y=clamp(b.y, b.y0-150, Math.min(WORLDH-60, b.y0+150));   // stay near patrol altitude (tall worlds: no cross-floor camping)
     b.yD=b.y+Math.sin(b.t*3.1+b.ph)*10;
     let bb=batBox(b);
     if (b.state==='bite' && b.bt>8/BITE_FPS && b.bt<23/BITE_FPS){ bb={x:bb.x+(b.facing<0?-30:0), y:bb.y-4, w:bb.w+30, h:bb.h+8}; }
@@ -1193,11 +1193,17 @@ function drawGround(){
       for (let gx=-goff; gx<W+gr.w; gx+=gr.w) ctx.drawImage(gr.img, gx, gy, gr.w, gr.h);
       ctx.restore();
     }
-    if (crypt){ // amber crystal rim along terrace tops
-      ctx.fillStyle='rgba(232,182,72,0.85)';
-      for (let cx2=Math.max(x0,-10)+14; cx2<Math.min(x1,W+10)-10; cx2+=46){
-        const hh2=7+((cx2*7)%9);
-        ctx.beginPath(); ctx.moveTo(cx2,sgy); ctx.lineTo(cx2+5,sgy-hh2); ctx.lineTo(cx2+10,sgy); ctx.fill();
+    if (crypt){ // embedded amber crystals glowing on the terrace face (clearly deco, nothing spike-like)
+      for (let cx2=Math.max(x0,-10)+22; cx2<Math.min(x1,W+10)-14; cx2+=74){
+        const cy3=sgy+34+((cx2*13)%52), r3=3+((cx2*7)%3);
+        const a3=0.45+0.25*Math.sin(gt*2.2+cx2*0.13);
+        const gr3=ctx.createRadialGradient(cx2,cy3,0.5,cx2,cy3,r3*3.4);
+        gr3.addColorStop(0,'rgba(248,206,98,'+a3.toFixed(2)+')');
+        gr3.addColorStop(0.45,'rgba(224,169,60,'+(a3*0.5).toFixed(2)+')');
+        gr3.addColorStop(1,'rgba(224,169,60,0)');
+        ctx.fillStyle=gr3; ctx.beginPath(); ctx.arc(cx2,cy3,r3*3.4,0,7); ctx.fill();
+        ctx.fillStyle='rgba(248,210,110,'+(0.5+a3*0.3).toFixed(2)+')';
+        ctx.beginPath(); ctx.arc(cx2,cy3,r3,0,7); ctx.fill();
       }
     }
     ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fillRect(x0,sgy,3,bot-sgy); ctx.fillRect(x1-3,sgy,3,bot-sgy);
