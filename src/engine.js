@@ -1,4 +1,4 @@
-const ASSET_VER='1780690588';
+const ASSET_VER='1780694180';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -80,8 +80,8 @@ function press(code){
   if (code==='ArrowLeft'||code==='ArrowRight'){
     if (keys[code]) return; runHeld[code]=(performance.now()-lastRelease[code])<DOUBLE_TAP;
   }
-  // Power Dive: melee button while midair (Dingbat) -> dive instead of melee
-  if (code==='KeyZ' && !keys[code] && mode==='play' && p && !p.dead && !p.onGround && isDing(chosen))
+  // Aerial attack: melee button midair -> Power Dive (Dingbat) / Scythe Bash (cReaper)
+  if (code==='KeyZ' && !keys[code] && mode==='play' && p && !p.dead && !p.onGround)
     diveReq={dir:0, t:performance.now()};   // dir resolved at trigger (held dir, else facing)
   keys[code]=true;
 }
@@ -718,9 +718,9 @@ function update(dt){
   }
   // mover carries the player
   if (p.onGround && p.standPlat && p.standPlat.t==='m') p.x+=p.standPlat.dxf;
-  // --- Power Dive (Dingbat bonus attack): melee button while midair ---
+  // --- Aerial attack (Power Dive / Scythe Bash): melee button while midair ---
   if (diveReq){
-    if (performance.now()-diveReq.t<150 && !p.onGround && isDing(chosen) && p.diveT<=0 && p.diveRec<=0
+    if (performance.now()-diveReq.t<150 && !p.onGround && p.diveT<=0 && p.diveRec<=0
         && p.hurtT<=0 && p.castT<=0 && p.attackT<=0 && !p.dead && !p.won && !p.winning){
       const ddir = diveReq.dir || (keys['ArrowLeft']?-1:keys['ArrowRight']?1:p.facing);
       p.diveT=1; p.facing=ddir; p.vx=ddir*DIVE_VX; p.vy=DIVE_VY; diveGhosts=[]; playSfx('sfx_rwhoosh',0.9);
@@ -738,7 +738,7 @@ function update(dt){
   const speed=running?RUN:WALK;
   if (p.diveT<=0 && p.diveRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
   if (!kneeling && p.diveRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; playSfx('sfx_jump',0.55); }
-  if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&(p.onGround||!isDing(chosen))&&SPR.chars[chosen].attack.weapon){
+  if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.onGround&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
     playSfx(isDing(chosen)?'sfx_wing':'sfx_slash');
   }
