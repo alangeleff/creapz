@@ -15,32 +15,36 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let W=0,H=0;
 function fit(){ const d=Math.min(2,window.devicePixelRatio||1); W=window.innerWidth; H=window.innerHeight; cv.width=W*d; cv.height=H*d; ctx.setTransform(d,0,0,d,0,0); }
 fit(); addEventListener('resize',fit);
-const VW=1000,VH=560;
+const VW=1672,VH=941;   // = painted plate pixel space (graded medium)
 function vs(){ return Math.min(W/VW,H/VH); }
 function vx(x){ return W/2+(x-VW/2)*vs(); }
 function vy(y){ return H/2+(y-VH/2)*vs(); }
 function rnd(i){ const x=Math.sin(i*127.1)*43758.5453; return x-Math.floor(x); }
 
-// ---- THE REALM OF CREAPZ: 9 zones, locked roster (stones in parens) ----
+// painted plate (Alan's generated realm art, medium grade) — game layer on top
+const MAPIMG=new Image(); let MAPok=false;
+MAPIMG.onload=()=>{ MAPok=true; }; MAPIMG.src='assets/owmap2.png';
+// ---- THE REALM OF CREAPZ: 9 zones aligned to painted landmarks ----
 const WORLDS=[
- {id:'cem',    x:110,y:430, name:'cReapY Cemetery',  col:'#a98aff', acts:['done','done','open']},   // Amethyst
- {id:'witch',  x:265,y:255, name:'Witchwood',        col:'#3ddc5a', acts:['done','open','locked']}, // Emerald
- {id:'crypt',  x:330,y:485, name:'Crypt Depths',     col:'#e0a93c', acts:['open','locked','locked']},// Topaz
- {id:'harbor', x:520,y:465, name:'Drowned Harbor',   col:'#41c8ff', acts:['open','locked','locked']},// Sapphire
- {id:'spire',  x:455,y:120, name:'Bell Spire',       col:'#8f86b8', acts:['open','locked','locked']},// Obsidian
- {id:'plains', x:565,y:285, name:'Ethereal Plains',  col:'#7df3e1', acts:['open','locked','locked']},// Fluorite
- {id:'charnel',x:705,y:415, name:'Charnel Peak',     col:'#ff5c4a', acts:['open','locked','locked']},// Ruby
- {id:'rift',   x:705,y:165, name:'The Rift',         col:'#d36cff', acts:['open','locked','locked']},// Chaos
- {id:'castle', x:895,y:290, name:'Blood Moon Castle',col:'#e0506a', acts:['locked','locked','locked'], locked:true},
+ {id:'cem',    x:220,y:590, name:'cReapY Cemetery',  col:'#a98aff', acts:['done','done','open']},   // Amethyst
+ {id:'witch',  x:425,y:350, name:'Witchwood',        col:'#3ddc5a', acts:['done','open','locked']}, // Emerald
+ {id:'crypt',  x:515,y:735, name:'Crypt Depths',     col:'#e0a93c', acts:['open','locked','locked']},// Topaz
+ {id:'harbor', x:835,y:800, name:'Drowned Harbor',   col:'#41c8ff', acts:['open','locked','locked']},// Sapphire
+ {id:'spire',  x:710,y:160, name:'Bell Spire',       col:'#8f86b8', acts:['open','locked','locked']},// Obsidian
+ {id:'plains', x:830,y:400, name:'Ethereal Plains',  col:'#7df3e1', acts:['open','locked','locked']},// Fluorite
+ {id:'charnel',x:1170,y:510,name:'Charnel Peak',     col:'#ff5c4a', acts:['open','locked','locked']},// Ruby
+ {id:'rift',   x:1130,y:160,name:'The Rift',         col:'#d36cff', acts:['open','locked','locked']},// Chaos
+ {id:'castle', x:1500,y:360,name:'Blood Moon Castle',col:'#e0506a', acts:['locked','locked','locked'], locked:true},
 ];
 const WAYPTS=[
- {id:'j1',x:205,y:360},{id:'j2',x:360,y:175},{id:'j3',x:560,y:380},
- {id:'j4',x:640,y:235},{id:'j5',x:625,y:455},{id:'j6',x:805,y:360},{id:'j7',x:805,y:225},
+ {id:'j1',x:460,y:515},{id:'j2',x:780,y:460},{id:'j3',x:700,y:305},
+ {id:'j4',x:700,y:765},{id:'j5',x:1030,y:740},{id:'j6',x:1310,y:475},
+ {id:'j7',x:1310,y:265},{id:'j8',x:975,y:335},{id:'j9',x:975,y:555},
 ];
 const ALL={}; for(const n of [...WORLDS,...WAYPTS]) ALL[n.id]=n;
-const EDGES=[ ['cem','j1'],['j1','witch'],['j1','crypt'],['witch','j2'],['j2','spire'],
- ['witch','plains'],['crypt','harbor'],['harbor','j3'],['j3','plains'],['spire','plains'],
- ['plains','j4'],['j4','rift'],['harbor','j5'],['j5','charnel'],['j4','charnel'],
+const EDGES=[ ['cem','j1'],['j1','witch'],['j1','crypt'],['witch','j3'],['j3','spire'],
+ ['witch','j2'],['j2','plains'],['j3','plains'],['plains','j8'],['j8','rift'],
+ ['crypt','j4'],['j4','harbor'],['harbor','j5'],['j5','charnel'],['plains','j9'],['j9','charnel'],
  ['charnel','j6'],['j6','castle'],['rift','j7'],['j7','castle'] ];
 
 let hero='cem', hx=ALL.cem.x, hy=ALL.cem.y, route=[], walking=false;
@@ -101,79 +105,85 @@ let t0=performance.now(),last=t0;
 function loop(){
   const now=performance.now(), t=(now-t0)/1000, dt=Math.min(0.05,(now-last)/1000); last=now;
   const s=vs();
-  // ---- night moor base ----
-  ctx.fillStyle='#171226'; ctx.fillRect(0,0,W,H);
-  for(let i=0;i<55;i++){
-    const x=rnd(i)*VW, y=rnd(i+200)*VH, r=18+rnd(i+400)*36;
-    ctx.fillStyle=i%3?'rgba(34,26,56,0.5)':'rgba(24,30,24,0.45)';
-    ctx.beginPath(); ctx.ellipse(vx(x),vy(y),r*s,r*0.7*s,0,0,7); ctx.fill();
+  // ---- painted plate background (procedural = loading fallback) ----
+  ctx.fillStyle='#06040e'; ctx.fillRect(0,0,W,H);
+  if(MAPok){ ctx.imageSmoothingEnabled=false; ctx.drawImage(MAPIMG, vx(0),vy(0), VW*s,VH*s); }
+  else {
+
+    ctx.fillStyle='#171226'; ctx.fillRect(0,0,W,H);
+    for(let i=0;i<55;i++){
+      const x=rnd(i)*VW, y=rnd(i+200)*VH, r=18+rnd(i+400)*36;
+      ctx.fillStyle=i%3?'rgba(34,26,56,0.5)':'rgba(24,30,24,0.45)';
+      ctx.beginPath(); ctx.ellipse(vx(x),vy(y),r*s,r*0.7*s,0,0,7); ctx.fill();
+    }
+    // blood moon (over castle corner)
+    ctx.fillStyle='#c0506a'; ctx.beginPath(); ctx.arc(vx(945),vy(60),26*s,0,7); ctx.fill();
+    ctx.fillStyle='#a83e56'; ctx.beginPath(); ctx.arc(vx(953),vy(52),6*s,0,7); ctx.arc(vx(936),vy(68),4*s,0,7); ctx.fill();
+    // CEMETERY: tombstones (around 60-200, 370-500)
+    for(let i=0;i<12;i++){ const x=45+rnd(i+50)*160, y=370+rnd(i+60)*125;
+      if(Math.hypot(x-110,y-430)<34) continue;
+      ctx.fillStyle='#3a3354'; ctx.fillRect(vx(x),vy(y),6*s,10*s);
+      ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(vx(x),vy(y+10),7*s,2.5*s); }
+    // WITCHWOOD: pines (180-360, 180-330)
+    for(let i=0;i<20;i++){ const x=175+rnd(i+10)*185, y=185+rnd(i+30)*140;
+      if(Math.hypot(x-265,y-255)<32) continue;
+      ctx.fillStyle='#15301f'; ctx.beginPath(); ctx.arc(vx(x),vy(y),(8+rnd(i)*7)*s,0,7); ctx.fill();
+      ctx.fillStyle='#1d4029'; ctx.beginPath(); ctx.arc(vx(x-2),vy(y-2),(5+rnd(i)*5)*s,0,7); ctx.fill(); }
+    // CRYPT: cave stones (270-400, 440-540)
+    for(let i=0;i<9;i++){ const x=265+rnd(i+140)*135, y=445+rnd(i+150)*85;
+      if(Math.hypot(x-330,y-485)<32) continue;
+      ctx.fillStyle='#2e2a40'; ctx.beginPath(); ctx.arc(vx(x),vy(y),(4+rnd(i+3)*4)*s,0,7); ctx.fill(); }
+    // HARBOR: water pool + dock strokes (440-620, 470-560)
+    ctx.fillStyle='#16243c'; ctx.beginPath(); ctx.ellipse(vx(540),vy(540),130*s,55*s,-0.1,0,7); ctx.fill();
+    for(let i=0;i<6;i++){ ctx.strokeStyle='rgba(80,140,200,'+(0.25+0.15*Math.sin(t*1.5+i))+')'; ctx.lineWidth=1.5*s;
+      ctx.beginPath(); const wx2=460+rnd(i+60)*150, wy=515+rnd(i+90)*35;
+      ctx.moveTo(vx(wx2),vy(wy)); ctx.quadraticCurveTo(vx(wx2+16),vy(wy-4),vx(wx2+32),vy(wy)); ctx.stroke(); }
+    ctx.strokeStyle='#4a3b28'; ctx.lineWidth=3*s;
+    ctx.beginPath(); ctx.moveTo(vx(505),vy(495)); ctx.lineTo(vx(540),vy(525)); ctx.stroke();
+    // BELL SPIRE: mountains + tower (380-540, 50-180)
+    for(let i=0;i<7;i++){ const x=380+rnd(i+170)*150, y=75+rnd(i+180)*95;
+      if(Math.hypot(x-455,y-120)<34) continue;
+      ctx.fillStyle='#272036';
+      ctx.beginPath(); ctx.moveTo(vx(x-13),vy(y+11)); ctx.lineTo(vx(x),vy(y-15)); ctx.lineTo(vx(x+13),vy(y+11)); ctx.closePath(); ctx.fill(); }
+    // ETHEREAL PLAINS: pale drifting mist (490-650, 240-330)
+    for(let i=0;i<8;i++){ const x=495+rnd(i+210)*145, y=245+rnd(i+220)*80;
+      ctx.globalAlpha=0.10+0.06*Math.sin(t*0.8+i*1.7);
+      ctx.fillStyle='#bdfcf2'; ctx.beginPath(); ctx.ellipse(vx(x)+Math.sin(t*0.5+i)*6*s,vy(y),(28+rnd(i)*18)*s,(9+rnd(i+5)*5)*s,0,0,7); ctx.fill(); }
+    ctx.globalAlpha=1;
+    // CHARNEL PEAK: dark-red ridge + lava cracks (640-780, 360-470)
+    for(let i=0;i<6;i++){ const x=645+rnd(i+250)*125, y=380+rnd(i+260)*75;
+      if(Math.hypot(x-705,y-415)<34) continue;
+      ctx.fillStyle='#33202a';
+      ctx.beginPath(); ctx.moveTo(vx(x-14),vy(y+12)); ctx.lineTo(vx(x),vy(y-16)); ctx.lineTo(vx(x+14),vy(y+12)); ctx.closePath(); ctx.fill(); }
+    for(let i=0;i<5;i++){ ctx.strokeStyle='rgba(255,110,40,'+(0.4+0.25*Math.sin(t*2.4+i*2))+')'; ctx.lineWidth=1.6*s;
+      const x=655+rnd(i+280)*100, y=395+rnd(i+290)*60;
+      ctx.beginPath(); ctx.moveTo(vx(x),vy(y)); ctx.lineTo(vx(x+10),vy(y+12)); ctx.lineTo(vx(x+6),vy(y+24)); ctx.stroke(); }
+    // BURNING CRATER: the secret underworld door (landmark — paint it innocently glowing)
+    const bcx=758,bcy=487;
+    ctx.fillStyle='#1c1018'; ctx.beginPath(); ctx.ellipse(vx(bcx),vy(bcy),26*s,12*s,0,0,7); ctx.fill();
+    ctx.strokeStyle='#3c2030'; ctx.lineWidth=2.5*s; ctx.stroke();
+    const emb=0.5+0.5*Math.sin(t*2.1);
+    ctx.fillStyle='rgba(255,120,40,'+(0.22+0.18*emb)+')';
+    ctx.beginPath(); ctx.ellipse(vx(bcx),vy(bcy),(15+3*emb)*s,(6+1.5*emb)*s,0,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,190,80,'+(0.5+0.3*emb)+')'; ctx.font=(10*s)+'px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Burning Crater', vx(bcx), vy(bcy)+24*s);
+    // THE RIFT: glitch shards (650-770, 110-215)
+    for(let i=0;i<10;i++){ const x=650+rnd(i+310)*115, y=112+rnd(i+320)*95;
+      if(Math.hypot(x-705,y-165)<30) continue;
+      const gl=Math.sin(t*3+i*2.3)>0.3;
+      ctx.fillStyle=gl?(i%2?'rgba(211,108,255,0.5)':'rgba(125,243,225,0.45)'):'rgba(60,40,90,0.4)';
+      ctx.fillRect(vx(x),vy(y),(3+rnd(i)*9)*s,(2+rnd(i+7)*4)*s); }
+    // CASTLE: island + moat (845-950, 240-350)
+    ctx.fillStyle='#16243c'; ctx.beginPath(); ctx.ellipse(vx(897),vy(300),62*s,40*s,0,0,7); ctx.fill();
+    ctx.fillStyle='#2a1620'; ctx.beginPath(); ctx.ellipse(vx(896),vy(296),44*s,28*s,0,0,7); ctx.fill();
+
   }
-  // blood moon (over castle corner)
-  ctx.fillStyle='#c0506a'; ctx.beginPath(); ctx.arc(vx(945),vy(60),26*s,0,7); ctx.fill();
-  ctx.fillStyle='#a83e56'; ctx.beginPath(); ctx.arc(vx(953),vy(52),6*s,0,7); ctx.arc(vx(936),vy(68),4*s,0,7); ctx.fill();
-  // CEMETERY: tombstones (around 60-200, 370-500)
-  for(let i=0;i<12;i++){ const x=45+rnd(i+50)*160, y=370+rnd(i+60)*125;
-    if(Math.hypot(x-110,y-430)<34) continue;
-    ctx.fillStyle='#3a3354'; ctx.fillRect(vx(x),vy(y),6*s,10*s);
-    ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(vx(x),vy(y+10),7*s,2.5*s); }
-  // WITCHWOOD: pines (180-360, 180-330)
-  for(let i=0;i<20;i++){ const x=175+rnd(i+10)*185, y=185+rnd(i+30)*140;
-    if(Math.hypot(x-265,y-255)<32) continue;
-    ctx.fillStyle='#15301f'; ctx.beginPath(); ctx.arc(vx(x),vy(y),(8+rnd(i)*7)*s,0,7); ctx.fill();
-    ctx.fillStyle='#1d4029'; ctx.beginPath(); ctx.arc(vx(x-2),vy(y-2),(5+rnd(i)*5)*s,0,7); ctx.fill(); }
-  // CRYPT: cave stones (270-400, 440-540)
-  for(let i=0;i<9;i++){ const x=265+rnd(i+140)*135, y=445+rnd(i+150)*85;
-    if(Math.hypot(x-330,y-485)<32) continue;
-    ctx.fillStyle='#2e2a40'; ctx.beginPath(); ctx.arc(vx(x),vy(y),(4+rnd(i+3)*4)*s,0,7); ctx.fill(); }
-  // HARBOR: water pool + dock strokes (440-620, 470-560)
-  ctx.fillStyle='#16243c'; ctx.beginPath(); ctx.ellipse(vx(540),vy(540),130*s,55*s,-0.1,0,7); ctx.fill();
-  for(let i=0;i<6;i++){ ctx.strokeStyle='rgba(80,140,200,'+(0.25+0.15*Math.sin(t*1.5+i))+')'; ctx.lineWidth=1.5*s;
-    ctx.beginPath(); const wx2=460+rnd(i+60)*150, wy=515+rnd(i+90)*35;
-    ctx.moveTo(vx(wx2),vy(wy)); ctx.quadraticCurveTo(vx(wx2+16),vy(wy-4),vx(wx2+32),vy(wy)); ctx.stroke(); }
-  ctx.strokeStyle='#4a3b28'; ctx.lineWidth=3*s;
-  ctx.beginPath(); ctx.moveTo(vx(505),vy(495)); ctx.lineTo(vx(540),vy(525)); ctx.stroke();
-  // BELL SPIRE: mountains + tower (380-540, 50-180)
-  for(let i=0;i<7;i++){ const x=380+rnd(i+170)*150, y=75+rnd(i+180)*95;
-    if(Math.hypot(x-455,y-120)<34) continue;
-    ctx.fillStyle='#272036';
-    ctx.beginPath(); ctx.moveTo(vx(x-13),vy(y+11)); ctx.lineTo(vx(x),vy(y-15)); ctx.lineTo(vx(x+13),vy(y+11)); ctx.closePath(); ctx.fill(); }
-  // ETHEREAL PLAINS: pale drifting mist (490-650, 240-330)
-  for(let i=0;i<8;i++){ const x=495+rnd(i+210)*145, y=245+rnd(i+220)*80;
-    ctx.globalAlpha=0.10+0.06*Math.sin(t*0.8+i*1.7);
-    ctx.fillStyle='#bdfcf2'; ctx.beginPath(); ctx.ellipse(vx(x)+Math.sin(t*0.5+i)*6*s,vy(y),(28+rnd(i)*18)*s,(9+rnd(i+5)*5)*s,0,0,7); ctx.fill(); }
-  ctx.globalAlpha=1;
-  // CHARNEL PEAK: dark-red ridge + lava cracks (640-780, 360-470)
-  for(let i=0;i<6;i++){ const x=645+rnd(i+250)*125, y=380+rnd(i+260)*75;
-    if(Math.hypot(x-705,y-415)<34) continue;
-    ctx.fillStyle='#33202a';
-    ctx.beginPath(); ctx.moveTo(vx(x-14),vy(y+12)); ctx.lineTo(vx(x),vy(y-16)); ctx.lineTo(vx(x+14),vy(y+12)); ctx.closePath(); ctx.fill(); }
-  for(let i=0;i<5;i++){ ctx.strokeStyle='rgba(255,110,40,'+(0.4+0.25*Math.sin(t*2.4+i*2))+')'; ctx.lineWidth=1.6*s;
-    const x=655+rnd(i+280)*100, y=395+rnd(i+290)*60;
-    ctx.beginPath(); ctx.moveTo(vx(x),vy(y)); ctx.lineTo(vx(x+10),vy(y+12)); ctx.lineTo(vx(x+6),vy(y+24)); ctx.stroke(); }
-  // BURNING CRATER: the secret underworld door (landmark — paint it innocently glowing)
-  const bcx=758,bcy=487;
-  ctx.fillStyle='#1c1018'; ctx.beginPath(); ctx.ellipse(vx(bcx),vy(bcy),26*s,12*s,0,0,7); ctx.fill();
-  ctx.strokeStyle='#3c2030'; ctx.lineWidth=2.5*s; ctx.stroke();
-  const emb=0.5+0.5*Math.sin(t*2.1);
-  ctx.fillStyle='rgba(255,120,40,'+(0.22+0.18*emb)+')';
-  ctx.beginPath(); ctx.ellipse(vx(bcx),vy(bcy),(15+3*emb)*s,(6+1.5*emb)*s,0,0,7); ctx.fill();
-  ctx.fillStyle='rgba(255,190,80,'+(0.5+0.3*emb)+')'; ctx.font=(10*s)+'px sans-serif'; ctx.textAlign='center';
-  ctx.fillText('Burning Crater', vx(bcx), vy(bcy)+24*s);
-  // THE RIFT: glitch shards (650-770, 110-215)
-  for(let i=0;i<10;i++){ const x=650+rnd(i+310)*115, y=112+rnd(i+320)*95;
-    if(Math.hypot(x-705,y-165)<30) continue;
-    const gl=Math.sin(t*3+i*2.3)>0.3;
-    ctx.fillStyle=gl?(i%2?'rgba(211,108,255,0.5)':'rgba(125,243,225,0.45)'):'rgba(60,40,90,0.4)';
-    ctx.fillRect(vx(x),vy(y),(3+rnd(i)*9)*s,(2+rnd(i+7)*4)*s); }
-  // CASTLE: island + moat (845-950, 240-350)
-  ctx.fillStyle='#16243c'; ctx.beginPath(); ctx.ellipse(vx(897),vy(300),62*s,40*s,0,0,7); ctx.fill();
-  ctx.fillStyle='#2a1620'; ctx.beginPath(); ctx.ellipse(vx(896),vy(296),44*s,28*s,0,0,7); ctx.fill();
   // ---- path web: THICK ribbons + glowing dots ----
   for(const [a,b] of EDGES){
     const A=ALL[a],B=ALL[b];
     const lit=!(A.locked||B.locked);
-    ctx.strokeStyle=lit?'rgba(64,52,96,0.9)':'rgba(40,36,58,0.7)';
-    ctx.lineWidth=9*s; ctx.lineCap='round';
+    ctx.strokeStyle=lit?'rgba(120,100,180,0.16)':'rgba(40,36,58,0.22)';
+    ctx.lineWidth=7*s; ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(vx(A.x),vy(A.y)); ctx.lineTo(vx(B.x),vy(B.y)); ctx.stroke();
   }
   for(const [a,b] of EDGES){
@@ -262,7 +272,7 @@ function loop(){
   // HUD + toggle + toast
   ctx.fillStyle='rgba(20,16,36,.6)'; ctx.beginPath(); ctx.roundRect(12,12,250,30,8); ctx.fill();
   ctx.fillStyle='#9b8cff'; ctx.font='12px sans-serif'; ctx.textAlign='left';
-  ctx.fillText('REALM OF CREAPZ — template v3 (9 zones)', 22,31);
+  ctx.fillText('REALM OF CREAPZ — overworld (art v1, medium grade)', 22,31);
   ctx.fillStyle='rgba(20,16,36,.6)'; ctx.beginPath(); ctx.roundRect(W-112,12,100,30,8); ctx.fill();
   ctx.strokeStyle='#7b5cff'; ctx.lineWidth=1; ctx.stroke();
   ctx.fillStyle='#c8fb50'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
