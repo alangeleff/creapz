@@ -101,7 +101,9 @@ function getActs(zone){
   });
 }
 function zoneOpen(z){ return !!(ZONE_STAGES[z]&&ZONE_STAGES[z].length&&(devMode||(RELEASED[z]||0)>0)); }
+function bootTest(){ document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); banked=0; loadStage(window.__testIdx); mode='play'; }
 function enterWorld(fromAct){
+  if(testMode){ try{ if(history.length>1) history.back(); else location.href='editor'; }catch(e){ location.href='editor'; } return; }
   paused=false; tally=null; fading=0; fadeIn=0.5; panelSel=0;
   if(fromAct){ prog.heroAt=STAGE_ZONE[stageIdx]||prog.heroAt; saveProg(); }
   mode='world';
@@ -744,7 +746,19 @@ function zBody(z){ const a=SPR.zombie[z.state]; const bw=a.w*0.40, bh=a.foots[0]
 function zAtkBox(z){ const reach=78,bh=104; const x=z.facing>0?z.x-6:z.x-reach+6; return {x,y:z.y-bh,w:reach,h:bh}; }
 const PW=52, PH=88;
 
-loadStage(0); mode='load'; titleT=99;
+// --- Editor test-play: boot straight into a draft level from localStorage ---
+let testMode=false;
+try{
+  const q=new URLSearchParams(location.search);
+  if(q.get('test')==='1'){
+    const raw=localStorage.getItem('creapz_testlevel');
+    if(raw){ const st=JSON.parse(raw); window.STAGES=window.STAGES||[]; window.STAGES.push(st);
+      window.__testIdx=window.STAGES.length-1; testMode=true;
+      try{ const sv=JSON.parse(localStorage.getItem('creapz_saves_v2')); const sl=sv&&sv.slots&&sv.slots.find(x=>x); chosen=(sl&&sl.chosen)||'default'; }catch(e){ chosen='default'; }
+    }
+  }
+}catch(e){}
+loadStage(testMode?window.__testIdx:0); mode='load'; titleT=99;
 if (!window.SPRITES_INLINE){
   total++; TIMG=new Image(); TIMG.onload=()=>loaded++; TIMG.onerror=()=>loaded++; TIMG.src='./assets/title.png?v='+ASSET_VER;
   audioInit();
@@ -763,6 +777,7 @@ function loop(now){
   const moving = mode==='play' && !paused && p && !p.dead && !p.won && !p.winning && p.onGround && (p.state==='run'||p.state==='walk');
   setRunLoop(moving ? p.state : null);
   if ((mode==='select'||mode==='title'||mode==='world') && AC && AC.state==='running' && musicKey!=='title') playMusic('title');
+  if (testMode && mode==='load' && loaded>=total){ bootTest(); }
   if (mode==='load') drawLoading();
   else if (mode==='title'){ titleFade=Math.min(1,titleFade+dt/1.1); drawTitle(); }
   else if (loaded<total) drawLoading();
