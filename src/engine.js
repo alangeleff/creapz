@@ -23,6 +23,36 @@ const OBJ = SPRITES.obst;
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS;
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
+// ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
+const PROGK='creapz_prog_v1';
+const ZONE_STAGES={cem:[0,1]};                 // zone -> stage indices per act
+const STAGE_ZONE=['cem','cem'];                // stageIdx -> zone
+const STAGE_ACT=['cem1','cem2'];               // stageIdx -> act record id
+let prog={acts:{},heroAt:'cem'};
+try{ const p0=JSON.parse(localStorage.getItem(PROGK)); if(p0&&p0.acts) prog=p0; }catch(e){}
+function saveProg(){ try{ localStorage.setItem(PROGK,JSON.stringify(prog)); }catch(e){} }
+function getActs(zone){
+  const sl=ZONE_STAGES[zone]||[];
+  return [0,1,2].map(i=>{
+    if(i>=sl.length) return sl.length?'soon':'locked';
+    const rec=prog.acts[zone+(i+1)];
+    if(rec&&rec.done) return 'done';
+    if(i===0) return 'open';
+    const prev=prog.acts[zone+i];
+    return (prev&&prev.done)?'open':'locked';
+  });
+}
+function enterWorld(fromAct){
+  paused=false; tally=null; fading=0; fadeIn=0.5; panelSel=0;
+  if(fromAct){ prog.heroAt=STAGE_ZONE[stageIdx]||prog.heroAt; saveProg(); }
+  mode='world';
+  WORLDMODE.enter({ctx,W,H,keys,isDing:isDing(chosen),getActs,playSfx,
+    launch:(zone,ai)=>{ const si=(ZONE_STAGES[zone]||[])[ai]; if(si===undefined) return;
+      prog.heroAt=zone; saveProg(); banked=0; mode='play'; loadStage(si); },
+    exit:()=>{ playSfx('sfx_msel'); mode='title'; menuShown=true; },
+    heroAt:prog.heroAt,
+    setHeroAt:z=>{ prog.heroAt=z; saveProg(); }});
+}
 function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
@@ -95,14 +125,17 @@ addEventListener('keydown', e => {
     if (e.code==='Enter'||e.code==='Space'){ playSfx('sfx_msel'); startGame(selFoc===0?creaperSkin:dingSkin); }
     return;
   }
+  if (mode==='world'){
+    if (e.code==='Escape'){ if(!WORLDMODE.escape()){ mode='title'; menuShown=true; } playSfx('sfx_mtog'); return; }
+    press(e.code); return;
+  }
   if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; panelSel=0; playSfx('sfx_mtog'); } return; }
-  if (e.code==='KeyR'){ paused=false; onReset(); return; }
-  if (e.code==='KeyC'){ paused=false; mode='select'; return; }
+  if (e.code==='KeyR'&&mode==='play'){ paused=false; onReset(); return; }
+  if (e.code==='KeyC'&&mode==='play'){ paused=false; mode='select'; return; }
   if (mode==='play' && p && p.won && tally){
     if (e.code==='Enter'||e.code==='Space'){
       if (!tally.done){ tally.skip=true; playSfx('sfx_mtog'); }
-      else if (stageIdx+1<window.STAGES.length){ if (fading<=0){ fading=0.0001; playSfx('sfx_msel'); } }
-      else if (menuRects[panelSel]){ playSfx('sfx_msel'); menuRects[panelSel].action(); }
+      else if (fading<=0){ fading=0.0001; playSfx('sfx_msel'); }
     }
     else if (tally.done && (e.code==='ArrowLeft'||e.code==='ArrowRight') && menuRects.length){
       panelSel=(panelSel+1)%menuRects.length; playSfx('sfx_mtog');
@@ -127,9 +160,13 @@ function bindBtn(id,code){
 bindBtn('bL','ArrowLeft'); bindBtn('bR','ArrowRight'); bindBtn('bJ','Space'); bindBtn('bA','KeyZ'); bindBtn('bC','KeyX'); bindBtn('bD','ArrowDown');
 // canvas taps (character select)
 function canvasPt(e){ const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H }; }
+cv.addEventListener('pointermove', e=>{ if(mode==='world') WORLDMODE.pmove(canvasPt(e)); });
+cv.addEventListener('pointerup',   e=>{ if(mode==='world') WORLDMODE.pup(canvasPt(e)); });
+cv.addEventListener('pointercancel', e=>{ if(mode==='world') WORLDMODE.pup(canvasPt(e)); });
 cv.addEventListener('pointerdown', e=>{
   primeAudio();
   const pt=canvasPt(e);
+  if (mode==='world'){ WORLDMODE.pdown(pt); return; }
   if (mode==='load'){
     if (loaded>=total){
       mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel');
@@ -162,8 +199,7 @@ cv.addEventListener('pointerdown', e=>{
   if (p.won){
     if (!tally) return;
     if (!tally.done){ tally.skip=true; playSfx('sfx_mtog'); return; }
-    if (stageIdx+1<window.STAGES.length){ if (fading<=0){ fading=0.0001; playSfx('sfx_msel'); } return; }
-    for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ playSfx('sfx_msel'); r.action(); return; } }
+    if (fading<=0){ fading=0.0001; playSfx('sfx_msel'); }
     return;
   }
   if (menuOpen()){
@@ -356,6 +392,15 @@ function computeTally(){
   }
   const total=actScore+bonus;
   tally={rows, total, t:0, skip:false, done:false, hold:0};
+  const aid=STAGE_ACT[stageIdx];
+  if (aid){
+    const r=prog.acts[aid]||(prog.acts[aid]={});
+    r.done=true;
+    r.hi=Math.max(r.hi||0, total);
+    r.souls=Math.max(r.souls||0, soulCount);
+    r.maxSouls=souls.length;
+    saveProg();
+  }
 }
 let chkFx=[];
 const PB={x:14,y:92,w:40,h:32};
@@ -423,10 +468,10 @@ function drawTally(){
   ctx.textAlign='center'; ctx.font='14px sans-serif'; ctx.fillStyle='rgba(232,230,245,.8)';
   menuRects=[];
   if (tally.done){
-    if (hasNext){
+    if (true){
       const pu=0.55+0.45*Math.sin(gt*4);
       ctx.fillStyle='rgba(200,251,80,'+pu.toFixed(2)+')';
-      ctx.fillText('Act '+window.STAGES[stageIdx+1].act+' rises...  ·  tap to continue', W/2, ty+56);
+      ctx.fillText('Return to the overworld  ·  tap to continue', W/2, ty+56);
     } else {
       const bw2=170, bh2=40, by2=ty+44;
       if (panelSel>=2) panelSel=0;
@@ -485,7 +530,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
-function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie'].forEach(loadSfx); chosen=ck; mode='play'; banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(ck)); loadStage(stageIdx); }
+function startGame(ck){ primeAudio(); ['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie'].forEach(loadSfx); chosen=ck; banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(ck)); enterWorld(false); }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   p = { x:sx, y:GROUND, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
@@ -596,11 +641,16 @@ function loop(now){
   if (musicGain) musicGain.gain.value = (mode==='play' ? (paused?0.22:0.55) : 0.62) * musicVol;
   const moving = mode==='play' && !paused && p && !p.dead && !p.won && !p.winning && p.onGround && (p.state==='run'||p.state==='walk');
   setRunLoop(moving ? p.state : null);
-  if ((mode==='select'||mode==='title') && AC && AC.state==='running' && musicKey!=='title') playMusic('title');
+  if ((mode==='select'||mode==='title'||mode==='world') && AC && AC.state==='running' && musicKey!=='title') playMusic('title');
   if (mode==='load') drawLoading();
   else if (mode==='title'){ titleFade=Math.min(1,titleFade+dt/1.1); drawTitle(); }
   else if (loaded<total) drawLoading();
   else if (mode==='select') drawSelect();
+  else if (mode==='world'){
+    ctx.setTransform(RS,0,0,RS,0,0);
+    WORLDMODE.frame(dt, gt);
+    if (fadeIn>0){ fadeIn-=dt; ctx.fillStyle='rgba(5,3,12,'+Math.min(1,fadeIn/0.5).toFixed(2)+')'; ctx.fillRect(0,0,W,H); }
+  }
   else { update(dt); draw(); }
   requestAnimationFrame(loop);
 }
@@ -622,10 +672,9 @@ function update(dt){
     }
     if (tally.done){
       tally.hold+=dt;
-      const hasNext=stageIdx+1<window.STAGES.length;
-      if (hasNext && (tally.hold>3.0 || fading>0)){
+      if (tally.hold>3.0 || fading>0){
         fading+=dt;
-        if (fading>=0.65){ banked+=tally.total; loadStage(stageIdx+1); }
+        if (fading>=0.65){ enterWorld(true); }
       }
     }
     return;
@@ -1522,14 +1571,15 @@ function draw(){
     menuPanel('YOU DIED', [
       {label: p.spawn>90?'Rise at Checkpoint':'Try Again', action:()=>{ paused=false; onReset(); }},
       {label:'Restart Act', action:()=>{ paused=false; loadStage(stageIdx); }},
-      {label:'Characters', action:()=>{ paused=false; mode='select'; }},
+      {label:'Return to Overworld', action:()=>{ enterWorld(true); }},
     ], null, '#e23b3b');
   } else if (p.won){
     drawTally();
   } else if (paused){
     menuPanel('Paused', [
-      {label:'Characters', action:()=>{ paused=false; mode='select'; }},
+      {label:'Return to Overworld', action:()=>{ enterWorld(true); }},
       {label:'Restart Act', action:()=>{ paused=false; loadStage(stageIdx); }},
+      {label:'Characters', action:()=>{ paused=false; mode='select'; }},
       {label:'Close', action:()=>{ paused=false; }},
     ]);
   }
