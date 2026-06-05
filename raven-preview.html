@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Ravenbeast Preview</title>
+<style>
+ body{margin:0;background:#0d0b1a;color:#eaf6ff;font-family:sans-serif;text-align:center}
+ h2{font-size:15px;margin:14px 0 4px;color:#c8fb50}
+ .panel{display:inline-block;margin:6px 10px}
+ canvas{image-rendering:auto;background:#1a1430;border-radius:12px}
+ .ctl{margin:10px}
+ button{background:#2a2150;color:#eaf6ff;border:1px solid #7b5cff;border-radius:8px;padding:8px 14px;margin:0 6px;font-size:14px}
+ button.on{background:#7b5cff}
+ input[type=range]{width:200px;vertical-align:middle}
+</style></head><body>
+<h2>SKELETAL RAVENBEAST — sheet test</h2>
+<div class="ctl">
+  <button id="bRaw">RAW ORDER</button><button id="bSmart" class="on">SMART ORDER</button>
+  <span style="font-size:13px">fps <input id="fps" type="range" min="4" max="30" value="12"> <span id="fv">12</span></span>
+</div>
+<div class="panel"><canvas id="c0" width="230" height="250"></canvas><div style="font-size:12px;margin-top:4px">IDLE <span id="f0"></span></div></div>
+<div class="panel"><canvas id="c1" width="230" height="250"></canvas><div style="font-size:12px;margin-top:4px">WALK <span id="f1"></span></div></div>
+<script>
+const ORD={idle:[0, 15, 10, 5, 17, 16, 8, 4, 6, 9, 14, 19, 12, 11, 18, 13, 7, 1, 2, 3],walk:[0, 15, 6, 9, 3, 19, 10, 5, 1, 11, 7, 2, 4, 14, 8, 17, 16, 18, 13, 12]};
+const RAW=[...Array(20).keys()];
+let smart=true, fps=12;
+const imgs={}; let ready=0;
+for(const n of ['idle','walk']){ const im=new Image(); im.onload=()=>ready++; im.src='assets/ravenprev_'+n+'1.png'; imgs[n]=im; }
+document.getElementById('bRaw').onclick=()=>{smart=false;sync()};
+document.getElementById('bSmart').onclick=()=>{smart=true;sync()};
+function sync(){ document.getElementById('bRaw').className=smart?'':'on'; document.getElementById('bSmart').className=smart?'on':''; }
+const fpsEl=document.getElementById('fps');
+fpsEl.oninput=()=>{ fps=+fpsEl.value; document.getElementById('fv').textContent=fps; };
+const cv=[document.getElementById('c0'),document.getElementById('c1')];
+let t0=performance.now();
+function loop(){
+  const t=(performance.now()-t0)/1000;
+  const names=['idle','walk'];
+  for(let k=0;k<2;k++){
+    const n=names[k], ctx=cv[k].getContext('2d');
+    ctx.clearRect(0,0,230,250);
+    if(ready>=2){
+      const seq=smart?ORD[n]:RAW;
+      const fi=seq[Math.floor(t*fps)%seq.length];
+      ctx.drawImage(imgs[n], fi*230,0,230,250, 0,0,230,250);
+      document.getElementById('f'+k).textContent='f'+fi;
+    }
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+</script></body></html>
