@@ -2,49 +2,43 @@
 <html><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Ravenbeast Preview</title>
+<title>Ravenbeast Walk v2</title>
 <style>
  body{margin:0;background:#0d0b1a;color:#eaf6ff;font-family:sans-serif;text-align:center}
  h2{font-size:15px;margin:14px 0 4px;color:#c8fb50}
- .panel{display:inline-block;margin:6px 10px}
- canvas{image-rendering:auto;background:#1a1430;border-radius:12px}
+ canvas{image-rendering:auto;background:#1a1430;border-radius:12px;max-width:92vw}
  .ctl{margin:10px}
- button{background:#2a2150;color:#eaf6ff;border:1px solid #7b5cff;border-radius:8px;padding:8px 14px;margin:0 6px;font-size:14px}
+ button{background:#2a2150;color:#eaf6ff;border:1px solid #7b5cff;border-radius:8px;padding:8px 14px;margin:4px 6px;font-size:14px}
  button.on{background:#7b5cff}
  input[type=range]{width:200px;vertical-align:middle}
 </style></head><body>
-<h2>SKELETAL RAVENBEAST — sheet test</h2>
+<h2>SKELETAL RAVENBEAST — walk sheet v2</h2>
 <div class="ctl">
-  <button id="bRaw">RAW ORDER</button><button id="bSmart" class="on">SMART ORDER</button>
-  <span style="font-size:13px">fps <input id="fps" type="range" min="4" max="30" value="12"> <span id="fv">12</span></span>
+  <button id="bAlan" class="on">ALAN 8</button><button id="bSmart">SMART 12</button><button id="bRaw">RAW 12</button>
+  <br><span style="font-size:13px">fps <input id="fps" type="range" min="4" max="30" value="10"> <span id="fv">10</span></span>
 </div>
-<div class="panel"><canvas id="c0" width="230" height="250"></canvas><div style="font-size:12px;margin-top:4px">IDLE <span id="f0"></span></div></div>
-<div class="panel"><canvas id="c1" width="230" height="250"></canvas><div style="font-size:12px;margin-top:4px">WALK <span id="f1"></span></div></div>
+<canvas id="c0" width="278" height="322"></canvas>
+<div style="font-size:13px;margin-top:6px">frame <span id="f0"></span> (1-based, matches your numbering)</div>
 <script>
-const ORD={idle:[0, 15, 10, 5, 17, 16, 8, 4, 6, 9, 14, 19, 12, 11, 18, 13, 7, 1, 2, 3],walk:[0, 15, 6, 9, 3, 19, 10, 5, 1, 11, 7, 2, 4, 14, 8, 17, 16, 18, 13, 12]};
-const RAW=[...Array(20).keys()];
-let smart=true, fps=12;
-const imgs={}; let ready=0;
-for(const n of ['idle','walk']){ const im=new Image(); im.onload=()=>ready++; im.src='assets/ravenprev_'+n+'1.png'; imgs[n]=im; }
-document.getElementById('bRaw').onclick=()=>{smart=false;sync()};
-document.getElementById('bSmart').onclick=()=>{smart=true;sync()};
-function sync(){ document.getElementById('bRaw').className=smart?'':'on'; document.getElementById('bSmart').className=smart?'on':''; }
+const SEQS={alan:[11, 0, 6, 8, 11, 4, 6, 8],smart:[0, 1, 6, 2, 11, 10, 8, 4, 7, 9, 5, 3],raw:[...Array(12).keys()]};
+let cur='alan', fps=10;
+const im=new Image(); let ready=false; im.onload=()=>ready=true; im.src='assets/ravenprev_walk2.png';
+for(const k of ['Alan','Smart','Raw']){
+  document.getElementById('b'+k).onclick=()=>{ cur=k.toLowerCase();
+    for(const k2 of ['Alan','Smart','Raw']) document.getElementById('b'+k2).className=(k===k2)?'on':''; };
+}
 const fpsEl=document.getElementById('fps');
 fpsEl.oninput=()=>{ fps=+fpsEl.value; document.getElementById('fv').textContent=fps; };
-const cv=[document.getElementById('c0'),document.getElementById('c1')];
+const ctx=document.getElementById('c0').getContext('2d');
 let t0=performance.now();
 function loop(){
   const t=(performance.now()-t0)/1000;
-  const names=['idle','walk'];
-  for(let k=0;k<2;k++){
-    const n=names[k], ctx=cv[k].getContext('2d');
-    ctx.clearRect(0,0,230,250);
-    if(ready>=2){
-      const seq=smart?ORD[n]:RAW;
-      const fi=seq[Math.floor(t*fps)%seq.length];
-      ctx.drawImage(imgs[n], fi*230,0,230,250, 0,0,230,250);
-      document.getElementById('f'+k).textContent='f'+fi;
-    }
+  ctx.clearRect(0,0,278,322);
+  if(ready){
+    const seq=SEQS[cur];
+    const fi=seq[Math.floor(t*fps)%seq.length];
+    ctx.drawImage(im, fi*278,0,278,322, 0,0,278,322);
+    document.getElementById('f0').textContent=(fi+1);
   }
   requestAnimationFrame(loop);
 }
