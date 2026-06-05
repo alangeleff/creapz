@@ -1,4 +1,4 @@
-const ASSET_VER='1780631906';
+const ASSET_VER='1780633964';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1009,7 +1009,7 @@ function drawCharSprite(ck,state,fi,cx,feetY,facing,scale,tint){
 
 let cardRects=[], dotRects=[];
 let creaperSkin='default', dingSkin='dingbat';
-const SKINC={default:'#7b5cff', green:'#3ddc5a', blue:'#2f7bff', red:'#e0504a'};
+const SKINC={default:'#7b5cff', green:'#3ddc5a', blue:'#2f7bff', red:'#e0504a', wraith:'#34343e', gilded:'#c49016', bone:'#ddd6c4', crimson:'#7a1a20'};
 const DSKINC={dingbat:'#8a5a2a', ding_onyx:'#3c3c46', ding_frost:'#8fa8c8', ding_blood:'#7a1f24'};
 const DORDER=['dingbat','ding_onyx','ding_frost','ding_blood'];
 function drawSelect(){
@@ -1038,10 +1038,10 @@ function drawSelect(){
       // color dots floating above the character
       const isC=(it.key==='creaper');
       const list=isC?ORDER:DORDER, cmap=isC?SKINC:DSKINC, cur=isC?creaperSkin:dingSkin;
-      const dn=list.length, dr2=11, dgap=34, dx0=cardX+cw/2-((dn-1)*dgap)/2, dy=cardY+34;
+      const dn=list.length, dr2=dn>6?9:11, dgap=Math.min(34,(cw-50)/Math.max(1,dn-1)), dx0=cardX+cw/2-((dn-1)*dgap)/2, dy=cardY+34;
       for (let k=0;k<dn;k++){
         const sk=list[k], dx=dx0+k*dgap;
-        dotRects.push({x:dx-15,y:dy-15,w:30,h:30,skin:sk,who:isC?'c':'d'});
+        dotRects.push({x:dx-13,y:dy-13,w:26,h:26,skin:sk,who:isC?'c':'d'});
         ctx.fillStyle=cmap[sk]||'#888';
         ctx.beginPath(); ctx.arc(dx,dy,dr2,0,7); ctx.fill();
         if (sk===cur){
