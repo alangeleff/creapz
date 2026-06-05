@@ -43,8 +43,14 @@ const EDGES=[ ['cem','w1'],['w1','w2'],['w2','witch'],['w1','crypt'],
 let hero='cem', hx=ALL.cem.x, hy=ALL.cem.y, route=[], walking=false, facing=1;
 let panel=null, toast=null, toastT=0;
 
-let HERO=null;            // Alan's pixel DINGBATZ turnaround: rows side/front/back x 4 steps, 120px cells
-(function(){ const img=new Image(); img.onload=()=>{ HERO=img; }; img.src='assets/owbat3.png'; })();
+// pixel turnaround walkers: rows side/front/back x 4 steps, 120px cells
+// mirrorFB: bat alternates legs via mirrored front/back; reaper's scythe forbids mirroring (bob cycle packed instead)
+const HEROES={
+  bat:   {src:'assets/owbat3.png',  img:null, mirrorFB:true},
+  reaper:{src:'assets/owreap1.png', img:null, mirrorFB:false},
+};
+let heroSel='bat';
+for(const k in HEROES){ const img=new Image(); img.onload=()=>{ HEROES[k].img=img; }; img.src=HEROES[k].src; }
 let lastDir={r:1,m:1};
 
 function nbrs(id){ const o=[]; for(const [a,b] of EDGES){ if(a===id)o.push(b); if(b===id)o.push(a);} return o; }
@@ -59,6 +65,7 @@ function pathTo(from,to){
 }
 cv.addEventListener('pointerdown',e=>{
   const s=vs();
+  if(e.clientX>W-120&&e.clientY<46){ heroSel=heroSel==='bat'?'reaper':'bat'; return; }
   // panel chip taps
   if(panel){
     const P=panelRect();
@@ -181,7 +188,8 @@ function loop(){
     else { hx+=dx/d*sp; hy+=dy/d*sp; if(Math.abs(dx)>2) facing=dx>=0?1:-1; }
   }
   const hop=walking?Math.abs(Math.sin(t*9))*3*s:0;
-  if(HERO){
+  const HCFG=HEROES[heroSel];
+  if(HCFG.img){
     const C=120;
     if(walking&&route.length){
       const tg2=ALL[route[0]], ddx=tg2.x-hx, ddy=tg2.y-hy;
@@ -191,13 +199,14 @@ function loop(){
     const st4=Math.floor(t*7)%4, st8=Math.floor(t*7)%8;
     let fi,mir;
     if(lastDir.r===0){ fi=st4; mir=lastDir.m<0; }
-    else { fi=st8%4; mir=st8>=4; }
+    else if(HCFG.mirrorFB){ fi=st8%4; mir=st8>=4; }
+    else { fi=st4; mir=false; }
     if(!walking){ fi=0; }
     const hsc=(46*s)/C;
     ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(vx(hx),vy(hy)+4*s,11*s,4*s,0,0,7); ctx.fill();
     ctx.save(); ctx.translate(vx(hx),vy(hy)+6*s-hop); ctx.scale(mir?-hsc:hsc,hsc);
     ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(HERO, fi*C,lastDir.r*C,C,C, -C/2,-C, C,C); ctx.restore();
+    ctx.drawImage(HCFG.img, fi*C,lastDir.r*C,C,C, -C/2,-C, C,C); ctx.restore();
   }
   // ---- act-select panel (bottom sheet) ----
   if(panel){
@@ -223,6 +232,10 @@ function loop(){
   ctx.fillStyle='rgba(20,16,36,.6)'; ctx.beginPath(); ctx.roundRect(12,12,176,30,8); ctx.fill();
   ctx.fillStyle='#9b8cff'; ctx.font='12px sans-serif'; ctx.textAlign='left';
   ctx.fillText('OVERWORLD v2 — tap a world twice', 22,31);
+  ctx.fillStyle='rgba(20,16,36,.6)'; ctx.beginPath(); ctx.roundRect(W-112,12,100,30,8); ctx.fill();
+  ctx.strokeStyle='#7b5cff'; ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle='#c8fb50'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(heroSel==='bat'?'\u2192 REAPER':'\u2192 BAT', W-62, 31);
   if(toast&&toastT>0){ toastT-=dt;
     ctx.font='bold 14px sans-serif';
     const tw=ctx.measureText(toast).width+40;
