@@ -75,14 +75,32 @@ let heroSel='bat';
 for(const k in HEROES){ const img=new Image(); img.onload=()=>{ HEROES[k].img=img; }; img.src=HEROES[k].src; }
 
 function nbrs(id){ const o=[]; for(const [a,b] of EDGES){ if(a===id)o.push(b); if(b===id)o.push(a);} return o; }
-function pathTo(from,to){
+const _elen={};
+function edgeLen(a,b){
+  const k=a<b?a+'_'+b:b+'_'+a;
+  if(_elen[k]===undefined){ const pts=edgePts(a,b); let L=0;
+    for(let i=1;i<pts.length;i++) L+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+    _elen[k]=L; }
+  return _elen[k];
+}
+function pathTo(from,to){ // Dijkstra over real road lengths (BFS hop-count took scenic detours)
   const blocked=id=>ALL[id].locked;
   if(blocked(to)) return null;
-  const q=[from],seen=new Set([from]),par={};
-  while(q.length){ const c=q.shift();
-    if(c===to){ const p=[to]; let k=to; while(k!==from){k=par[k];p.unshift(k);} return p; }
-    for(const nb of nbrs(c)){ if(!seen.has(nb)&&!blocked(nb)){ seen.add(nb); par[nb]=c; q.push(nb); } } }
-  return null;
+  const dist={}, par={}, open=new Set([from]), done=new Set();
+  dist[from]=0;
+  while(open.size){
+    let c=null,best=Infinity;
+    for(const k of open) if(dist[k]<best){ best=dist[k]; c=k; }
+    open.delete(c); done.add(c);
+    if(c===to) break;
+    for(const nb of nbrs(c)){
+      if(blocked(nb)||done.has(nb)) continue;
+      const nd=dist[c]+edgeLen(c,nb);
+      if(dist[nb]===undefined||nd<dist[nb]){ dist[nb]=nd; par[nb]=c; open.add(nb); }
+    }
+  }
+  if(dist[to]===undefined) return null;
+  const p=[to]; let k=to; while(k!==from){ k=par[k]; p.unshift(k); } return p;
 }
 function startEdge(){ // load polyline for hero->route[0]
   if(!route.length) return;
