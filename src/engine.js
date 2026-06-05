@@ -27,6 +27,14 @@ let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
 const SAVEK='creapz_saves_v2', TOTAL_ACTS=27;   // 9 zones x 3 acts (the full realm)
 const ZONE_STAGES={cem:[0,1]};                 // zone -> stage indices per act
+const RELEASED={cem:2};                        // publicly playable act count per zone (dev sees everything built)
+const DEVKEY='hellstone';
+let devMode=false;
+try{
+  const q=new URLSearchParams(location.search);
+  if(q.has('dev')){ if(q.get('dev')==='off') localStorage.removeItem('creapz_dev'); else localStorage.setItem('creapz_dev', q.get('dev')); }
+  devMode = localStorage.getItem('creapz_dev')===DEVKEY;
+}catch(e){}
 const STAGE_ZONE=['cem','cem'];                // stageIdx -> zone
 const STAGE_ACT=['cem1','cem2'];               // stageIdx -> act record id
 let saves={slots:[null,null,null]}, slotIdx=-1;
@@ -81,8 +89,10 @@ function installApp(){
 }
 function getActs(zone){
   const sl=ZONE_STAGES[zone]||[];
+  const pub=devMode?sl.length:Math.min(sl.length,RELEASED[zone]||0);
   return [0,1,2].map(i=>{
     if(i>=sl.length) return sl.length?'soon':'locked';
+    if(i>=pub) return 'soon';
     const rec=prog.acts[zone+(i+1)];
     if(rec&&rec.done) return 'done';
     if(i===0) return 'open';
@@ -90,11 +100,12 @@ function getActs(zone){
     return (prev&&prev.done)?'open':'locked';
   });
 }
+function zoneOpen(z){ return !!(ZONE_STAGES[z]&&ZONE_STAGES[z].length&&(devMode||(RELEASED[z]||0)>0)); }
 function enterWorld(fromAct){
   paused=false; tally=null; fading=0; fadeIn=0.5; panelSel=0;
   if(fromAct){ prog.heroAt=STAGE_ZONE[stageIdx]||prog.heroAt; saveProg(); }
   mode='world';
-  WORLDMODE.enter({ctx,W,H,keys,isDing:isDing(chosen),getActs,playSfx,
+  WORLDMODE.enter({ctx,W,H,keys,isDing:isDing(chosen),getActs,zoneOpen,dev:devMode,playSfx,
     launch:(zone,ai)=>{ const si=(ZONE_STAGES[zone]||[])[ai]; if(si===undefined) return;
       prog.heroAt=zone; saveProg(); banked=0; mode='play'; loadStage(si); },
     exit:()=>{ playSfx('sfx_msel'); mode='title'; menuShown=true; },
