@@ -2,10 +2,10 @@
 <html><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Realm of cReapZ — Overworld Template v3</title>
+<title>Realm of cReapZ — Overworld</title>
 <style>
   @font-face{font-family:'Creepster';src:url('assets/fonts/Creepster.woff2') format('woff2')}
-  html,body{margin:0;padding:0;background:#0d0b1a;overflow:hidden;height:100%;font-family:sans-serif}
+  html,body{margin:0;padding:0;background:#06040e;overflow:hidden;height:100%;font-family:sans-serif}
   canvas{display:block;width:100vw;height:100vh;touch-action:none}
 </style>
 </head><body>
@@ -15,39 +15,48 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let W=0,H=0;
 function fit(){ const d=Math.min(2,window.devicePixelRatio||1); W=window.innerWidth; H=window.innerHeight; cv.width=W*d; cv.height=H*d; ctx.setTransform(d,0,0,d,0,0); }
 fit(); addEventListener('resize',fit);
-const VW=1672,VH=941;   // = painted plate pixel space (graded medium)
-function vs(){ return Math.min(W/VW,H/VH); }
-function vx(x){ return W/2+(x-VW/2)*vs(); }
-function vy(y){ return H/2+(y-VH/2)*vs(); }
-function rnd(i){ const x=Math.sin(i*127.1)*43758.5453; return x-Math.floor(x); }
+const VW=1672,VH=941, ZOOM=1.45;
+function vs(){ return Math.max(W/VW,H/VH)*ZOOM; }
+let camX=220,camY=590;
+function clampCam(){
+  const s=vs();
+  const hw=W/(2*s), hh=H/(2*s);
+  camX=Math.max(hw,Math.min(VW-hw,camX));
+  camY=Math.max(hh,Math.min(VH-hh,camY));
+}
+function vx(x){ return (x-camX)*vs()+W/2; }
+function vy(y){ return (y-camY)*vs()+H/2; }
+function wx(px){ return (px-W/2)/vs()+camX; }
+function wy(py){ return (py-H/2)/vs()+camY; }
 
-// painted plate (Alan's generated realm art, medium grade) — game layer on top
 const MAPIMG=new Image(); let MAPok=false;
 MAPIMG.onload=()=>{ MAPok=true; }; MAPIMG.src='assets/owmap2.png';
-// ---- THE REALM OF CREAPZ: 9 zones aligned to painted landmarks ----
+
 const WORLDS=[
- {id:'cem',    x:220,y:590, name:'cReapY Cemetery',  col:'#a98aff', acts:['done','done','open']},   // Amethyst
- {id:'witch',  x:425,y:350, name:'Witchwood',        col:'#3ddc5a', acts:['done','open','locked']}, // Emerald
- {id:'crypt',  x:515,y:735, name:'Crypt Depths',     col:'#e0a93c', acts:['open','locked','locked']},// Topaz
- {id:'harbor', x:835,y:800, name:'Drowned Harbor',   col:'#41c8ff', acts:['open','locked','locked']},// Sapphire
- {id:'spire',  x:710,y:160, name:'Bell Spire',       col:'#8f86b8', acts:['open','locked','locked']},// Obsidian
- {id:'plains', x:830,y:400, name:'Ethereal Plains',  col:'#7df3e1', acts:['open','locked','locked']},// Fluorite
- {id:'charnel',x:1170,y:510,name:'Charnel Peak',     col:'#ff5c4a', acts:['open','locked','locked']},// Ruby
- {id:'rift',   x:1130,y:160,name:'The Rift',         col:'#d36cff', acts:['open','locked','locked']},// Chaos
+ {id:'cem',    x:220,y:590, name:'cReapY Cemetery',  col:'#a98aff', acts:['done','done','open']},
+ {id:'witch',  x:425,y:350, name:'Witchwood',        col:'#3ddc5a', acts:['done','open','locked']},
+ {id:'crypt',  x:515,y:735, name:'Crypt Depths',     col:'#e0a93c', acts:['open','locked','locked']},
+ {id:'harbor', x:835,y:800, name:'Drowned Harbor',   col:'#41c8ff', acts:['open','locked','locked']},
+ {id:'spire',  x:710,y:160, name:'Bell Spire',       col:'#8f86b8', acts:['open','locked','locked']},
+ {id:'plains', x:830,y:400, name:'Ethereal Plains',  col:'#7df3e1', acts:['open','locked','locked']},
+ {id:'charnel',x:1170,y:510,name:'Charnel Peak',     col:'#ff5c4a', acts:['open','locked','locked']},
+ {id:'rift',   x:1130,y:160,name:'The Rift',         col:'#d36cff', acts:['open','locked','locked']},
  {id:'castle', x:1500,y:360,name:'Blood Moon Castle',col:'#e0506a', acts:['locked','locked','locked'], locked:true},
 ];
-const WAYPTS=[
- {id:'j1',x:460,y:515},{id:'j2',x:780,y:460},{id:'j3',x:700,y:305},
- {id:'j4',x:700,y:765},{id:'j5',x:1030,y:740},{id:'j6',x:1310,y:475},
- {id:'j7',x:1310,y:265},{id:'j8',x:975,y:335},{id:'j9',x:975,y:555},
-];
-const ALL={}; for(const n of [...WORLDS,...WAYPTS]) ALL[n.id]=n;
-const EDGES=[ ['cem','j1'],['j1','witch'],['j1','crypt'],['witch','j3'],['j3','spire'],
- ['witch','j2'],['j2','plains'],['j3','plains'],['plains','j8'],['j8','rift'],
- ['crypt','j4'],['j4','harbor'],['harbor','j5'],['j5','charnel'],['plains','j9'],['j9','charnel'],
- ['charnel','j6'],['j6','castle'],['rift','j7'],['j7','castle'] ];
+const ALL={}; for(const n of WORLDS) ALL[n.id]=n;
+const EDGES=[['cem','witch'],['cem','crypt'],['witch','spire'],['witch','plains'],
+ ['crypt','harbor'],['harbor','plains'],['spire','plains'],['plains','rift'],
+ ['harbor','charnel'],['plains','charnel'],['charnel','castle'],['rift','castle']];
+// polylines auto-traced along the painted footpaths (A* over trail-color cost field)
+const EDGEPATHS={"cem_witch": [[220, 589], [256, 595], [292, 583], [328, 550], [364, 532], [400, 526], [433, 493], [457, 457], [493, 427], [514, 391], [499, 358], [463, 355], [427, 346], [424, 349]], "cem_crypt": [[220, 589], [256, 619], [292, 646], [328, 664], [364, 673], [400, 679], [436, 688], [472, 706], [508, 733], [514, 736]], "witch_spire": [[424, 349], [460, 355], [496, 355], [532, 355], [568, 322], [604, 298], [640, 268], [676, 238], [712, 217], [730, 190], [709, 160]], "witch_plains": [[424, 349], [460, 355], [496, 358], [532, 382], [568, 394], [604, 400], [640, 400], [676, 397], [712, 385], [748, 382], [784, 403], [820, 397], [829, 400]], "crypt_harbor": [[514, 736], [547, 751], [580, 775], [616, 775], [652, 760], [688, 754], [724, 766], [757, 799], [790, 814], [826, 799], [835, 799]], "harbor_plains": [[835, 799], [850, 763], [838, 727], [829, 691], [829, 655], [832, 619], [829, 583], [805, 547], [811, 511], [835, 475], [829, 439], [829, 403], [829, 400]], "spire_plains": [[709, 160], [736, 196], [772, 226], [808, 262], [829, 298], [835, 334], [829, 370], [829, 400]], "plains_rift": [[829, 400], [865, 370], [895, 334], [931, 307], [967, 304], [1003, 304], [1039, 289], [1075, 271], [1096, 235], [1108, 199], [1129, 163], [1129, 160]], "harbor_charnel": [[835, 799], [871, 763], [901, 727], [937, 697], [973, 670], [1009, 640], [1045, 625], [1081, 604], [1117, 571], [1135, 535], [1165, 511], [1171, 511]], "plains_charnel": [[829, 400], [859, 436], [895, 442], [931, 469], [967, 493], [1003, 502], [1039, 496], [1075, 502], [1111, 511], [1147, 496], [1171, 511]], "charnel_castle": [[1171, 511], [1207, 514], [1243, 541], [1279, 574], [1315, 562], [1351, 541], [1387, 520], [1423, 496], [1453, 466], [1474, 430], [1495, 397], [1498, 361], [1501, 361]], "rift_castle": [[1129, 160], [1153, 196], [1153, 232], [1177, 265], [1213, 298], [1249, 313], [1285, 334], [1321, 352], [1357, 370], [1393, 388], [1429, 385], [1465, 373], [1498, 361], [1501, 361]]};
+function edgePts(a,b){
+  const k1=a+'_'+b, k2=b+'_'+a;
+  if(EDGEPATHS[k1]) return EDGEPATHS[k1];
+  if(EDGEPATHS[k2]) return EDGEPATHS[k2].slice().reverse();
+  return [[ALL[a].x,ALL[a].y],[ALL[b].x,ALL[b].y]];
+}
 
-let hero='cem', hx=ALL.cem.x, hy=ALL.cem.y, route=[], walking=false;
+let hero='cem', hx=ALL.cem.x, hy=ALL.cem.y, route=[], ptQ=[], walking=false;
 let panel=null, toast=null, toastT=0, lastDir={r:1,m:1};
 const HEROES={
   bat:   {src:'assets/owbat3.png',  img:null, mirrorFB:true},
@@ -65,6 +74,10 @@ function pathTo(from,to){
     if(c===to){ const p=[to]; let k=to; while(k!==from){k=par[k];p.unshift(k);} return p; }
     for(const nb of nbrs(c)){ if(!seen.has(nb)&&!blocked(nb)){ seen.add(nb); par[nb]=c; q.push(nb); } } }
   return null;
+}
+function startEdge(){ // load polyline for hero->route[0]
+  if(!route.length) return;
+  ptQ=edgePts(hero,route[0]).slice(1).map(p=>({x:p[0],y:p[1]}));
 }
 function panelRect(){ const w=Math.min(W-24,420), h=128; return {x:W/2-w/2,y:H-h-14,w,h}; }
 function chipRect(P,i){ const cw=(P.w-56)/3; return {x:P.x+16+i*(cw+12), y:P.y+58, w:cw, h:52}; }
@@ -89,13 +102,20 @@ cv.addEventListener('pointerdown',e=>{
     panel=null;
   }
   for(const n of WORLDS){
-    const dx=e.clientX-vx(n.x), dy=e.clientY-vy(n.y), r=(30*s+14);
+    const dx=e.clientX-vx(n.x), dy=e.clientY-vy(n.y), r=(26*s+14);
     if(dx*dx+dy*dy<r*r){
       if(n.locked){ toast='Sealed by the usurper\'s power...'; toastT=2.2; return; }
       if(hero===n.id&&!walking){ panel=n.id; return; }
-      const anchor=(walking&&route.length)?route[0]:hero;
-      const p=pathTo(anchor,n.id);
-      if(p){ route=(walking&&route.length)?p:p.slice(1); walking=true; panel=null; }
+      // on-rails redirect: finish current edge, then re-path
+      if(walking&&route.length){
+        const anchor=route[0];
+        const p=pathTo(anchor,n.id);
+        if(p){ route=p; } // ptQ continues to anchor=route[0]; arrival logic shifts route
+        else { toast='No open path there'; toastT=2; }
+      } else {
+        const p=pathTo(hero,n.id);
+        if(p){ route=p.slice(1); walking=true; panel=null; startEdge(); }
+      }
       return;
     }
   }
@@ -105,151 +125,91 @@ let t0=performance.now(),last=t0;
 function loop(){
   const now=performance.now(), t=(now-t0)/1000, dt=Math.min(0.05,(now-last)/1000); last=now;
   const s=vs();
-  // ---- painted plate background (procedural = loading fallback) ----
+  // camera follows hero
+  camX+=(hx-camX)*Math.min(1,dt*3.2);
+  camY+=(hy-camY)*Math.min(1,dt*3.2);
+  clampCam();
   ctx.fillStyle='#06040e'; ctx.fillRect(0,0,W,H);
-  if(MAPok){ ctx.imageSmoothingEnabled=false; ctx.drawImage(MAPIMG, vx(0),vy(0), VW*s,VH*s); }
-  else {
-
-    ctx.fillStyle='#171226'; ctx.fillRect(0,0,W,H);
-    for(let i=0;i<55;i++){
-      const x=rnd(i)*VW, y=rnd(i+200)*VH, r=18+rnd(i+400)*36;
-      ctx.fillStyle=i%3?'rgba(34,26,56,0.5)':'rgba(24,30,24,0.45)';
-      ctx.beginPath(); ctx.ellipse(vx(x),vy(y),r*s,r*0.7*s,0,0,7); ctx.fill();
-    }
-    // blood moon (over castle corner)
-    ctx.fillStyle='#c0506a'; ctx.beginPath(); ctx.arc(vx(945),vy(60),26*s,0,7); ctx.fill();
-    ctx.fillStyle='#a83e56'; ctx.beginPath(); ctx.arc(vx(953),vy(52),6*s,0,7); ctx.arc(vx(936),vy(68),4*s,0,7); ctx.fill();
-    // CEMETERY: tombstones (around 60-200, 370-500)
-    for(let i=0;i<12;i++){ const x=45+rnd(i+50)*160, y=370+rnd(i+60)*125;
-      if(Math.hypot(x-110,y-430)<34) continue;
-      ctx.fillStyle='#3a3354'; ctx.fillRect(vx(x),vy(y),6*s,10*s);
-      ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(vx(x),vy(y+10),7*s,2.5*s); }
-    // WITCHWOOD: pines (180-360, 180-330)
-    for(let i=0;i<20;i++){ const x=175+rnd(i+10)*185, y=185+rnd(i+30)*140;
-      if(Math.hypot(x-265,y-255)<32) continue;
-      ctx.fillStyle='#15301f'; ctx.beginPath(); ctx.arc(vx(x),vy(y),(8+rnd(i)*7)*s,0,7); ctx.fill();
-      ctx.fillStyle='#1d4029'; ctx.beginPath(); ctx.arc(vx(x-2),vy(y-2),(5+rnd(i)*5)*s,0,7); ctx.fill(); }
-    // CRYPT: cave stones (270-400, 440-540)
-    for(let i=0;i<9;i++){ const x=265+rnd(i+140)*135, y=445+rnd(i+150)*85;
-      if(Math.hypot(x-330,y-485)<32) continue;
-      ctx.fillStyle='#2e2a40'; ctx.beginPath(); ctx.arc(vx(x),vy(y),(4+rnd(i+3)*4)*s,0,7); ctx.fill(); }
-    // HARBOR: water pool + dock strokes (440-620, 470-560)
-    ctx.fillStyle='#16243c'; ctx.beginPath(); ctx.ellipse(vx(540),vy(540),130*s,55*s,-0.1,0,7); ctx.fill();
-    for(let i=0;i<6;i++){ ctx.strokeStyle='rgba(80,140,200,'+(0.25+0.15*Math.sin(t*1.5+i))+')'; ctx.lineWidth=1.5*s;
-      ctx.beginPath(); const wx2=460+rnd(i+60)*150, wy=515+rnd(i+90)*35;
-      ctx.moveTo(vx(wx2),vy(wy)); ctx.quadraticCurveTo(vx(wx2+16),vy(wy-4),vx(wx2+32),vy(wy)); ctx.stroke(); }
-    ctx.strokeStyle='#4a3b28'; ctx.lineWidth=3*s;
-    ctx.beginPath(); ctx.moveTo(vx(505),vy(495)); ctx.lineTo(vx(540),vy(525)); ctx.stroke();
-    // BELL SPIRE: mountains + tower (380-540, 50-180)
-    for(let i=0;i<7;i++){ const x=380+rnd(i+170)*150, y=75+rnd(i+180)*95;
-      if(Math.hypot(x-455,y-120)<34) continue;
-      ctx.fillStyle='#272036';
-      ctx.beginPath(); ctx.moveTo(vx(x-13),vy(y+11)); ctx.lineTo(vx(x),vy(y-15)); ctx.lineTo(vx(x+13),vy(y+11)); ctx.closePath(); ctx.fill(); }
-    // ETHEREAL PLAINS: pale drifting mist (490-650, 240-330)
-    for(let i=0;i<8;i++){ const x=495+rnd(i+210)*145, y=245+rnd(i+220)*80;
-      ctx.globalAlpha=0.10+0.06*Math.sin(t*0.8+i*1.7);
-      ctx.fillStyle='#bdfcf2'; ctx.beginPath(); ctx.ellipse(vx(x)+Math.sin(t*0.5+i)*6*s,vy(y),(28+rnd(i)*18)*s,(9+rnd(i+5)*5)*s,0,0,7); ctx.fill(); }
-    ctx.globalAlpha=1;
-    // CHARNEL PEAK: dark-red ridge + lava cracks (640-780, 360-470)
-    for(let i=0;i<6;i++){ const x=645+rnd(i+250)*125, y=380+rnd(i+260)*75;
-      if(Math.hypot(x-705,y-415)<34) continue;
-      ctx.fillStyle='#33202a';
-      ctx.beginPath(); ctx.moveTo(vx(x-14),vy(y+12)); ctx.lineTo(vx(x),vy(y-16)); ctx.lineTo(vx(x+14),vy(y+12)); ctx.closePath(); ctx.fill(); }
-    for(let i=0;i<5;i++){ ctx.strokeStyle='rgba(255,110,40,'+(0.4+0.25*Math.sin(t*2.4+i*2))+')'; ctx.lineWidth=1.6*s;
-      const x=655+rnd(i+280)*100, y=395+rnd(i+290)*60;
-      ctx.beginPath(); ctx.moveTo(vx(x),vy(y)); ctx.lineTo(vx(x+10),vy(y+12)); ctx.lineTo(vx(x+6),vy(y+24)); ctx.stroke(); }
-    // BURNING CRATER: the secret underworld door (landmark — paint it innocently glowing)
-    const bcx=758,bcy=487;
-    ctx.fillStyle='#1c1018'; ctx.beginPath(); ctx.ellipse(vx(bcx),vy(bcy),26*s,12*s,0,0,7); ctx.fill();
-    ctx.strokeStyle='#3c2030'; ctx.lineWidth=2.5*s; ctx.stroke();
-    const emb=0.5+0.5*Math.sin(t*2.1);
-    ctx.fillStyle='rgba(255,120,40,'+(0.22+0.18*emb)+')';
-    ctx.beginPath(); ctx.ellipse(vx(bcx),vy(bcy),(15+3*emb)*s,(6+1.5*emb)*s,0,0,7); ctx.fill();
-    ctx.fillStyle='rgba(255,190,80,'+(0.5+0.3*emb)+')'; ctx.font=(10*s)+'px sans-serif'; ctx.textAlign='center';
-    ctx.fillText('Burning Crater', vx(bcx), vy(bcy)+24*s);
-    // THE RIFT: glitch shards (650-770, 110-215)
-    for(let i=0;i<10;i++){ const x=650+rnd(i+310)*115, y=112+rnd(i+320)*95;
-      if(Math.hypot(x-705,y-165)<30) continue;
-      const gl=Math.sin(t*3+i*2.3)>0.3;
-      ctx.fillStyle=gl?(i%2?'rgba(211,108,255,0.5)':'rgba(125,243,225,0.45)'):'rgba(60,40,90,0.4)';
-      ctx.fillRect(vx(x),vy(y),(3+rnd(i)*9)*s,(2+rnd(i+7)*4)*s); }
-    // CASTLE: island + moat (845-950, 240-350)
-    ctx.fillStyle='#16243c'; ctx.beginPath(); ctx.ellipse(vx(897),vy(300),62*s,40*s,0,0,7); ctx.fill();
-    ctx.fillStyle='#2a1620'; ctx.beginPath(); ctx.ellipse(vx(896),vy(296),44*s,28*s,0,0,7); ctx.fill();
-
-  }
-  // ---- path web: THICK ribbons + glowing dots ----
+  if(MAPok){ ctx.imageSmoothingEnabled=true; ctx.drawImage(MAPIMG, vx(0),vy(0), VW*s,VH*s); }
+  // glow dots along traced footpaths
   for(const [a,b] of EDGES){
-    const A=ALL[a],B=ALL[b];
-    const lit=!(A.locked||B.locked);
-    ctx.strokeStyle=lit?'rgba(120,100,180,0.16)':'rgba(40,36,58,0.22)';
-    ctx.lineWidth=7*s; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(vx(A.x),vy(A.y)); ctx.lineTo(vx(B.x),vy(B.y)); ctx.stroke();
-  }
-  for(const [a,b] of EDGES){
-    const A=ALL[a],B=ALL[b];
-    const lit=!(A.locked||B.locked);
-    const dx=B.x-A.x,dy=B.y-A.y,len=Math.hypot(dx,dy),n=Math.floor(len/24);
-    for(let i=1;i<n;i++){
-      const px=A.x+dx*i/n, py=A.y+dy*i/n;
-      ctx.globalAlpha=lit?(0.45+0.3*Math.sin(t*3-i)):0.15;
-      ctx.fillStyle=lit?'#b9a6ff':'#5a5470';
-      ctx.beginPath(); ctx.arc(vx(px),vy(py),2.6*s,0,7); ctx.fill();
+    const lit=!(ALL[a].locked||ALL[b].locked);
+    const pts=edgePts(a,b);
+    let acc=0;
+    for(let i=1;i<pts.length;i++){
+      const x0=pts[i-1][0],y0=pts[i-1][1],x1=pts[i][0],y1=pts[i][1];
+      const seg=Math.hypot(x1-x0,y1-y0); const n=Math.max(1,Math.floor(seg/26));
+      for(let k2=0;k2<n;k2++){
+        acc++;
+        const px=x0+(x1-x0)*k2/n, py=y0+(y1-y0)*k2/n;
+        if(vx(px)<-20||vx(px)>W+20||vy(py)<-20||vy(py)>H+20) continue;
+        ctx.globalAlpha=lit?(0.4+0.3*Math.sin(t*3-acc*0.7)):0.14;
+        ctx.fillStyle=lit?'#b9a6ff':'#5a5470';
+        ctx.beginPath(); ctx.arc(vx(px),vy(py),2.4*s,0,7); ctx.fill();
+      }
     }
   }
   ctx.globalAlpha=1;
-  // ---- world nodes with act trackers ----
+  // nodes
   for(const n of WORLDS){
-    const R=24*s, done=n.acts.filter(a=>a==='done').length;
+    if(vx(n.x)<-120||vx(n.x)>W+120||vy(n.y)<-120||vy(n.y)>H+120) continue;
+    const R=22*s, done=n.acts.filter(a=>a==='done').length;
     const pulse=(!n.locked&&n.acts.includes('open'))?1+0.06*Math.sin(t*4):1;
-    if(!n.locked){ const gr=ctx.createRadialGradient(vx(n.x),vy(n.y),0,vx(n.x),vy(n.y),R*2.6);
-      gr.addColorStop(0,n.col+'66'); gr.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=gr; ctx.fillRect(vx(n.x)-R*2.6,vy(n.y)-R*2.6,R*5.2,R*5.2); }
-    ctx.fillStyle=n.locked?'#2b2640':'#221a44';
+    if(!n.locked){ const gr=ctx.createRadialGradient(vx(n.x),vy(n.y),0,vx(n.x),vy(n.y),R*2.4);
+      gr.addColorStop(0,n.col+'55'); gr.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=gr; ctx.fillRect(vx(n.x)-R*2.4,vy(n.y)-R*2.4,R*4.8,R*4.8); }
+    ctx.fillStyle=n.locked?'rgba(43,38,64,0.88)':'rgba(34,26,68,0.88)';
     ctx.strokeStyle=n.locked?'#4c4566':n.col; ctx.lineWidth=3*s;
     ctx.beginPath(); ctx.arc(vx(n.x),vy(n.y),R*pulse,0,7); ctx.fill(); ctx.stroke();
     if(done===3){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2.5*s; ctx.beginPath(); ctx.arc(vx(n.x),vy(n.y),R*0.55,0,7); ctx.stroke(); }
-    if(n.locked){ ctx.fillStyle='#6e6886'; ctx.font='bold '+(15*s)+'px sans-serif'; ctx.textAlign='center'; ctx.fillText('🔒',vx(n.x),vy(n.y)+5*s); }
+    if(n.locked){ ctx.fillStyle='#8a82a6'; ctx.font='bold '+(14*s)+'px sans-serif'; ctx.textAlign='center'; ctx.fillText('🔒',vx(n.x),vy(n.y)+5*s); }
     for(let i=0;i<3;i++){
-      const ax=vx(n.x)+(i-1)*12*s, ay=vy(n.y)+R+12*s, st=n.acts[i];
-      ctx.beginPath(); ctx.arc(ax,ay,4.2*s,0,7);
+      const ax=vx(n.x)+(i-1)*11*s, ay=vy(n.y)+R+11*s, st=n.acts[i];
+      ctx.beginPath(); ctx.arc(ax,ay,3.8*s,0,7);
       if(st==='done'){ ctx.fillStyle='#c8fb50'; ctx.fill(); }
-      else { ctx.strokeStyle=st==='open'?'#b9a6ff':'#55506e'; ctx.lineWidth=1.8*s; ctx.stroke();
+      else { ctx.strokeStyle=st==='open'?'#b9a6ff':'#55506e'; ctx.lineWidth=1.7*s; ctx.stroke();
         if(st==='open'){ ctx.fillStyle='rgba(185,166,255,'+(0.3+0.3*Math.sin(t*4))+')'; ctx.fill(); } }
     }
-    ctx.fillStyle=n.locked?'#6e6886':'#e6e0fa';
-    ctx.font=(15*s)+'px Creepster, cursive'; ctx.textAlign='center';
-    ctx.fillText(n.name, vx(n.x), vy(n.y)-R-10*s);
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=6*s;
+    ctx.fillStyle=n.locked?'#8a82a6':'#efe9ff';
+    ctx.font=(14*s)+'px Creepster, cursive'; ctx.textAlign='center';
+    ctx.fillText(n.name, vx(n.x), vy(n.y)-R-9*s);
+    ctx.restore();
   }
-  // ---- hero ----
-  if(walking&&route.length){
-    const tgt=ALL[route[0]];
-    const dx=tgt.x-hx, dy=tgt.y-hy, d=Math.hypot(dx,dy), sp=150*dt;
-    if(d<sp){ hx=tgt.x; hy=tgt.y; hero=tgt.id; route.shift(); if(!route.length) walking=false; }
-    else { hx+=dx/d*sp; hy+=dy/d*sp; }
+  // hero movement along traced polyline
+  if(walking){
+    if(!ptQ.length&&route.length) startEdge();
+    if(ptQ.length){
+      const tgt=ptQ[0];
+      const dx=tgt.x-hx, dy=tgt.y-hy, d=Math.hypot(dx,dy), sp=170*dt;
+      if(d<sp){
+        hx=tgt.x; hy=tgt.y; ptQ.shift();
+        if(!ptQ.length){ hero=route.shift(); if(!route.length) walking=false; else startEdge(); }
+      } else {
+        hx+=dx/d*sp; hy+=dy/d*sp;
+        if(Math.abs(dx)>Math.abs(dy)) lastDir={r:0,m:dx>=0?1:-1};
+        else if(Math.abs(dy)>2) lastDir={r:dy>=0?1:2,m:1};
+      }
+    } else walking=false;
   }
   const hop=walking?Math.abs(Math.sin(t*9))*3*s:0;
   const HCFG=HEROES[heroSel];
   if(HCFG.img){
     const C=120;
-    if(walking&&route.length){
-      const tg2=ALL[route[0]], ddx=tg2.x-hx, ddy=tg2.y-hy;
-      if(Math.abs(ddx)>Math.abs(ddy)) lastDir={r:0,m:ddx>=0?1:-1};
-      else lastDir={r:ddy>=0?1:2,m:1};
-    }
     const st4=Math.floor(t*7)%4, st8=Math.floor(t*7)%8;
     let fi,mir;
     if(lastDir.r===0){ fi=st4; mir=lastDir.m<0; }
     else if(HCFG.mirrorFB){ fi=st8%4; mir=st8>=4; }
     else { fi=st4; mir=false; }
     if(!walking){ fi=0; }
-    const hsc=(46*s)/C;
-    ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(vx(hx),vy(hy)+4*s,11*s,4*s,0,0,7); ctx.fill();
-    ctx.save(); ctx.translate(vx(hx),vy(hy)+6*s-hop); ctx.scale(mir?-hsc:hsc,hsc);
+    const hsc=(40*s)/C;
+    ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(vx(hx),vy(hy)+4*s,10*s,3.6*s,0,0,7); ctx.fill();
+    ctx.save(); ctx.translate(vx(hx),vy(hy)+5*s-hop); ctx.scale(mir?-hsc:hsc,hsc);
     ctx.imageSmoothingEnabled=false;
     ctx.drawImage(HCFG.img, fi*C,lastDir.r*C,C,C, -C/2,-C, C,C); ctx.restore();
   }
-  // ---- act-select panel ----
+  // act panel
   if(panel){
     const wld=ALL[panel], P=panelRect();
     ctx.fillStyle='rgba(18,14,36,0.95)'; ctx.strokeStyle=wld.col; ctx.lineWidth=2;
@@ -269,10 +229,10 @@ function loop(){
       ctx.fillText(st==='done'?'★ replay':st==='open'?'play':'🔒 locked', c.x+c.w/2, c.y+40);
     }
   }
-  // HUD + toggle + toast
-  ctx.fillStyle='rgba(20,16,36,.6)'; ctx.beginPath(); ctx.roundRect(12,12,250,30,8); ctx.fill();
+  // HUD
+  ctx.fillStyle='rgba(20,16,36,.6)'; ctx.beginPath(); ctx.roundRect(12,12,236,30,8); ctx.fill();
   ctx.fillStyle='#9b8cff'; ctx.font='12px sans-serif'; ctx.textAlign='left';
-  ctx.fillText('REALM OF CREAPZ — overworld (art v1, medium grade)', 22,31);
+  ctx.fillText('REALM OF CREAPZ — scrolling overworld', 22,31);
   ctx.fillStyle='rgba(20,16,36,.6)'; ctx.beginPath(); ctx.roundRect(W-112,12,100,30,8); ctx.fill();
   ctx.strokeStyle='#7b5cff'; ctx.lineWidth=1; ctx.stroke();
   ctx.fillStyle='#c8fb50'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
