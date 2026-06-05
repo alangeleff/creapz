@@ -1196,10 +1196,11 @@ function drawGround(){
       for (let gx=-goff; gx<W+gr.w; gx+=gr.w) ctx.drawImage(gr.img, gx, gy, gr.w, gr.h);
       ctx.restore();
     }
-    if (crypt){ // embedded amber crystals glowing on the terrace face (clearly deco, nothing spike-like)
-      for (let cx2=Math.max(x0,-10)+22; cx2<Math.min(x1,W+10)-14; cx2+=74){
-        const cy3=sgy+34+((cx2*13)%52), r3=3+((cx2*7)%3);
-        const a3=0.45+0.25*Math.sin(gt*2.2+cx2*0.13);
+    if (crypt){ // embedded amber crystals glowing on the terrace face — WORLD-anchored
+      for (let wx2=s[0]+22; wx2<s[1]-14; wx2+=74){
+        const cx2=pxf(wx2,1); if(cx2<-30||cx2>W+30) continue;
+        const cy3=sgy+34+((wx2*13)%52), r3=3+((wx2*7)%3);
+        const a3=0.45+0.25*Math.sin(gt*2.2+wx2*0.13);
         const gr3=ctx.createRadialGradient(cx2,cy3,0.5,cx2,cy3,r3*3.4);
         gr3.addColorStop(0,'rgba(248,206,98,'+a3.toFixed(2)+')');
         gr3.addColorStop(0.45,'rgba(224,169,60,'+(a3*0.5).toFixed(2)+')');
@@ -1262,8 +1263,9 @@ function caveBG(){
   const g=ctx.createLinearGradient(0,0,0,H);
   g.addColorStop(0,'#160f26'); g.addColorStop(1,'#0a0712');
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-  for(let i=0;i<26;i++){ // amber torch-glow motes drifting in the dark, deep parallax
-    const wx=((i*397)%(W+200))-100+Math.sin(gt*0.5+i)*8;
+  for(let i=0;i<26;i++){ // amber torch-glow motes drifting in the dark, deep parallax both axes
+    const span=W+260;
+    const wx=((((i*397)%span)-130+Math.sin(gt*0.5+i)*8-camX*0.35)%span+span)%span-130;
     const wy=((i*263)%Math.max(H,WORLDH));
     const sy2=wy-camY*0.85;
     if(sy2<-50||sy2>H+50) continue;
