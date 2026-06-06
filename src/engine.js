@@ -1,4 +1,4 @@
-const ASSET_VER='1780694556';
+const ASSET_VER='1780704878';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -21,7 +21,7 @@ const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
 const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
 const BASH_VX = 11.4, BASH_VY = 12.6;   // Scythe Bash (cReaper) — snappier than the dive per Alan
 const OBJ = SPRITES.obst;
-let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS;
+let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[];
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
@@ -124,6 +124,7 @@ function loadStage(i){
   OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h}));
   SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:GROUND-o.h}));
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
+  HAZ = (ST.hazards||[]).map(h=>({t:h.t, x:h.x, w:h.w, y:h.y, cd:0}));
   STARS = Array.from({length:Math.ceil(WORLD/120)},()=>[Math.random()*WORLD,Math.random()*GROUND*0.8,Math.random()*1.6+0.6]);
   TREES = Array.from({length:Math.ceil(WORLD/180)},(_,k)=>({x:80+k*180+((k*53)%50), big:(k%4===0)}));
   GRAVES_BG = Array.from({length:Math.ceil(WORLD/150)},(_,k)=>[80+k*150+((k*53)%40),0.7+((k*29)%4)*0.1,(k%4===0)]);
@@ -673,8 +674,10 @@ function reset(keep){
   const bspawn=ST.bats;
   bats = bspawn.map((b,i)=>({x:b[0], y:b[3], y0:b[3], t:Math.random()*3, ph:i*1.7, facing:-1, dir:i%2?1:-1,
     min:b[1], max:b[2], dead:false, dieT:0, yD:b[3], state:'idle', bt:0, biteCd:0}));
+  hazReset();
 }
 function onReset(){ if (p && p.dead && !p.won) reset(true); else reset(); }
+function hazReset(){ rocks=[]; for(const h of HAZ) h.cd=0; }
 let zbits=[];
 const ZBIT_COLS=['#4a5d3a','#6b7d52','#8a8f96','#5d6168','#9aa4ab','#3a4030','#b9c0c6'];
 function zbitsBurst(z,n){
@@ -873,9 +876,10 @@ function update(dt){
   if (!kneeling){ if (keys['ArrowLeft']) dir=-1; else if (keys['ArrowRight']) dir=1; }
   const dc=dir<0?'ArrowLeft':'ArrowRight';
   const running=(dir!==0&&runHeld[dc])||keys['ShiftLeft']||keys['ShiftRight'];
-  const speed=running?RUN:WALK;
+  let inTar=false; for(const h of HAZ){ if(h.t==='tar' && p.onGround && p.x>=h.x && p.x<=h.x+h.w && Math.abs(p.y-h.y)<8){ inTar=true; break; } }
+  const speed=(running?RUN:WALK)*(inTar?0.4:1);
   if (p.diveT<=0 && p.diveRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
-  if (!kneeling && p.diveRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP; p.onGround=false; playSfx('sfx_jump',0.55); }
+  if (!kneeling && p.diveRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
   if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.onGround&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
     playSfx(isDing(chosen)?'sfx_wing':'sfx_slash');
@@ -1076,11 +1080,77 @@ function update(dt){
   }
   chkFx=chkFx.filter(fx=>fx.t<1.1);
   bolts=bolts.filter(bo=>!bo.dead||bo.t<1.2);
+  updateHazards(dt);
   updateZbits(dt);
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
   const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
   camY+=(_cty-camY)*Math.min(1,dt*7);
   if (Math.abs(_cty-camY)<0.4) camY=_cty;
+}
+function updateHazards(dt){
+  const pb={x:p.x-22,y:p.y-82,w:44,h:82};
+  for(const h of HAZ){
+    if(h.cd>0) h.cd-=dt;
+    if(h.t==='spike'){
+      const sb={x:h.x,y:h.y-20,w:h.w,h:24};
+      if(p.inv<=0 && !p.dead && !p.winning && overlap(pb,sb)) hurtPlayer(p.x);
+    } else if(h.t==='rock'){
+      // triggered when player passes under the span, below the ceiling
+      if(h.cd<=0 && !p.dead && !p.winning && p.x>=h.x && p.x<=h.x+h.w && p.y>h.y+30){
+        rocks.push({x:p.x, y:h.y, vy:0, dead:false, dt2:0}); h.cd=2.2; playSfx('sfx_zswing',0.5);
+      }
+    }
+  }
+  for(const r of rocks){
+    if(r.dead){ r.dt2+=dt; continue; }
+    r.vy=Math.min(15, r.vy+0.85); r.y+=r.vy;
+    const rb={x:r.x-20,y:r.y-20,w:40,h:40};
+    if(p.inv<=0 && !p.dead && !p.winning && overlap(pb,rb)){ r.dead=true; r.dt2=0; hurtPlayer(r.x); playSfx('sfx_meleehit',0.7); rockBits(r); continue; }
+    // land on the first floor beneath
+    const floors=segFloorsAt(r.x); let land=null;
+    for(const fy of floors){ if(fy>=r.y-22 && (land===null||fy<land)) land=fy; }
+    if(land!==null && r.y>=land-10){ r.y=land-6; r.dead=true; r.dt2=0; playSfx('sfx_meleehit',0.45); rockBits(r); }
+    else if(r.y>WORLDH+80){ r.dead=true; r.dt2=99; }
+  }
+  rocks=rocks.filter(r=>!r.dead||r.dt2<0.5);
+}
+function rockBits(r){
+  for(let i=0;i<10;i++) zbits.push({x:r.x,y:r.y,vx:(Math.random()-0.5)*150,vy:-40-Math.random()*90,
+    sz:2.5+Math.random()*3.5,life:0.4+Math.random()*0.4,t:0,c:['#6b6470','#8a828f','#54505c','#9a93a0'][(Math.random()*4)|0]});
+}
+function drawHazards(){
+  for(const h of HAZ){
+    const x0=h.x-camX, x1=h.x+h.w-camX; if(x1<-30||x0>W+30) continue;
+    if(h.t==='spike'){
+      for(let cx2=h.x; cx2<h.x+h.w-6; cx2+=18){
+        const sx2=cx2-camX, hgt=20+((cx2*7)%10);
+        ctx.fillStyle=((cx2/18|0)%2)?'#e8e4d6':'#cfc8b6';
+        ctx.beginPath(); ctx.moveTo(sx2,h.y); ctx.lineTo(sx2+8,h.y-hgt); ctx.lineTo(sx2+16,h.y); ctx.fill();
+        ctx.fillStyle='rgba(60,50,40,.35)'; ctx.beginPath(); ctx.moveTo(sx2+8,h.y-hgt); ctx.lineTo(sx2+16,h.y); ctx.lineTo(sx2+11,h.y); ctx.fill();
+      }
+    } else if(h.t==='tar'){
+      ctx.save(); ctx.beginPath(); ctx.rect(h.x-camX,h.y-10,h.w,22); ctx.clip();
+      const g2=ctx.createLinearGradient(0,h.y-10,0,h.y+12); g2.addColorStop(0,'#241a2e'); g2.addColorStop(1,'#0c0712');
+      ctx.fillStyle=g2; ctx.fillRect(h.x-camX,h.y-10,h.w,24);
+      for(let i=0;i<h.w/40;i++){ const bx=h.x+20+i*40, ph=((gt*0.6+i*0.37)%1);
+        const by=h.y+2-ph*9, r=2.5+2.5*Math.sin(gt*2+i);
+        ctx.fillStyle='rgba(80,64,96,'+(0.5*(1-ph)).toFixed(2)+')'; ctx.beginPath(); ctx.arc(bx-camX,by,Math.max(1,r),0,7); ctx.fill(); }
+      ctx.fillStyle='rgba(150,130,170,.18)'; ctx.fillRect(h.x-camX,h.y-9,h.w,2);
+      ctx.restore();
+    } else if(h.t==='rock'){
+      // cracked stone overhang at the ceiling
+      ctx.fillStyle='#3a3340'; ctx.fillRect(h.x-camX,h.y-14,h.w,14);
+      ctx.fillStyle='#2a2430'; for(let cx2=h.x;cx2<h.x+h.w-6;cx2+=22){ const sx2=cx2-camX; ctx.beginPath(); ctx.moveTo(sx2,h.y); ctx.lineTo(sx2+6,h.y+9); ctx.lineTo(sx2+12,h.y); ctx.fill(); }
+      ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(h.x-camX+h.w*0.3,h.y-12); ctx.lineTo(h.x-camX+h.w*0.45,h.y); ctx.stroke();
+    }
+  }
+  for(const r of rocks){
+    const sx2=r.x-camX; if(sx2<-40||sx2>W+40) continue;
+    if(r.dead) continue;
+    ctx.fillStyle='#6b6470'; ctx.beginPath(); ctx.ellipse(sx2,r.y,18,16,0,0,7); ctx.fill();
+    ctx.fillStyle='#8a828f'; ctx.beginPath(); ctx.ellipse(sx2-4,r.y-4,7,5,0,0,7); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(sx2+5,r.y+5,8,6,0,0,7); ctx.fill();
+  }
 }
 function hurtPlayer(srcX,dmg){
   if (p.diveT>0||p.diveRec>0) return;   // Power Dive i-frames (until normal stance resumes)
@@ -1713,6 +1783,7 @@ function draw(){
   drawGround();
   drawChecks();
   drawPlats();
+  drawHazards();
   for (const o of OBST) drawObstacle(o);
   for (const z of zombies) drawZombie(z);
   for (const b of bats) drawBat(b);
