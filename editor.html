@@ -24,7 +24,8 @@
  .litem.ghead{background:#1a2336;outline:1px solid #3b5a8c;margin-top:4px}
  .litem.member{margin-left:14px;font-size:11px}
  .lck{width:16px;height:16px;border:1px solid #6a6088;border-radius:3px;flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:#c8fb50}
- #grpbtn{width:100%;margin:4px 0 6px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:7px;cursor:pointer;font-size:12px}
+ #grpbtn,#addgrpbtn{width:100%;margin:4px 0 6px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:7px;cursor:pointer;font-size:12px}
+ #addgrpbtn{background:#16301d;border-color:#3fbf6a;color:#a8f0c0}
  .tool{display:flex;align-items:center;gap:8px;padding:9px 10px;margin:4px 0;border-radius:8px;background:#1d1838;border:1px solid transparent;cursor:grab;font-size:13px;touch-action:none}
  .tool:active{cursor:grabbing}
  .tool.on{border-color:var(--lime);background:#242a16}
@@ -166,6 +167,10 @@ function reorderUnit(idx,dir){ const u=orderedUnits(); const j=dir==='up'? idx+1
   let k=1; for(const un of u){ if(un.group){ for(const m of un.members) m.setZ((k++)*10); } else un.item.setZ((k++)*10); } }
 const msel=new Set(), collapsed=new Set();
 function groupSelected(){ if(!msel.size) return; const name=prompt('Group name:', 'Cluster '+(new Set([...allProps().map(p=>getG(p.raw)).filter(Boolean)]).size+1)); if(!name) return;
+  histPush(); for(const raw of msel) setG(raw,name); msel.clear(); renumberZ(); persist(); draw(); }
+function addToFolder(){ const gn=[...new Set(allProps().map(p=>getG(p.raw)).filter(Boolean))]; if(!gn.length||!msel.size) return;
+  let name=(sel&&sel.type==='group')? sel.name : prompt('Add '+msel.size+' to which folder?\n\u2022 '+gn.join('\n\u2022 '), gn[gn.length-1]);
+  if(!name) return; if(!gn.includes(name)){ alert('No folder named "'+name+'"'); return; }
   histPush(); for(const raw of msel) setG(raw,name); msel.clear(); renumberZ(); persist(); draw(); }
 function ungroup(name){ histPush(); for(const p of allProps()) if(getG(p.raw)===name) setG(p.raw,null); if(sel&&sel.type==='group'&&sel.name===name){sel=null;showSel();} renumberZ(); persist(); draw(); }
 function renameGroup(name){ const nn=prompt('Rename group:',name); if(!nn||nn===name)return; histPush(); for(const p of allProps()) if(getG(p.raw)===name) setG(p.raw,nn); if(sel&&sel.type==='group'&&sel.name===name)sel.name=nn; persist(); draw(); }
@@ -503,7 +508,12 @@ function buildLayers(){
  const host=document.getElementById('layers'); if(!host) return;
  const units=orderedUnits().reverse();   // top of stack first
  let html='<h3>Layers — top \u2192 bottom</h3>';
- if(msel.size) html+=`<button id="grpbtn">Group ${msel.size} selected \u2192</button>`;
+ if(msel.size){ html+=`<button id="grpbtn">Group ${msel.size} selected \u2192</button>`;
+   const _gn=[...new Set(allProps().map(p=>getG(p.raw)).filter(Boolean))];
+   if(_gn.length) html+=`<button id="addgrpbtn">${(sel&&sel.type==='group')?('Add '+msel.size+' to “'+sel.name+'”'):('Add '+msel.size+' to folder…')}</button>`;
+ }
+ if((M.bg||[]).length){ html+='<div class="cat">Background</div>';
+   M.bg.forEach((b,k)=>{ const isSel=sel&&sel.raw===b; html+=`<div class="litem${isSel?' sel':''}" data-bg="${k}"><span class="lc" style="background:#3a4a5a"></span><span class="nm">${BG_LABEL[b.t]||b.t} · par ${b.par??0.3}</span></div>`; }); }
  const rowProp=(pr,member)=>{ const isSel=sel&&sel.raw===pr.raw, lk=locked.has(pr.raw), ck=msel.has(pr.raw);
    return `<div class="litem${isSel?' sel':''}${lk?' lock':''}${member?' member':''}" data-z="${pr.z}">`
      +`<span class="lck" data-ck="${pr.z}">${ck?'\u2713':''}</span>`
@@ -528,11 +538,10 @@ function buildLayers(){
        +`<button class="lb" data-act="lock">${lk?'\ud83d\udd12':'\ud83d\udd13'}</button></div>`; });
    if(sec==='Functions'&&soulN) html+=`<div class="litem" style="opacity:.7;cursor:default"><span class="lc" style="background:#7fe0ff"></span><span class="nm">Souls \u00d7${soulN}</span></div>`;
  }
- if((M.bg||[]).length){ html+='<div class="cat">Background</div>';
-   M.bg.forEach((b,k)=>{ const isSel=sel&&sel.raw===b; html+=`<div class="litem${isSel?' sel':''}" data-bg="${k}"><span class="lc" style="background:#3a4a5a"></span><span class="nm">${BG_LABEL[b.t]||b.t} · par ${b.par??0.3}</span></div>`; }); }
  host.innerHTML=html;
  const byZ=z=>allProps().find(p=>p.z===+z);
  const gb=document.getElementById('grpbtn'); if(gb) gb.onclick=groupSelected;
+ const ag=document.getElementById('addgrpbtn'); if(ag) ag.onclick=addToFolder;
  host.querySelectorAll('.litem[data-z]').forEach(row=>{ const pr=byZ(row.dataset.z); if(!pr)return;
    row.querySelector('.lck').onclick=ev=>{ ev.stopPropagation(); if(msel.has(pr.raw))msel.delete(pr.raw); else msel.add(pr.raw); buildLayers(); };
    row.querySelectorAll('.lb').forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
