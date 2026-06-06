@@ -1,4 +1,4 @@
-const ASSET_VER='1780716303';
+const ASSET_VER='1780717248';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -123,11 +123,11 @@ function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
-  OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h, gy:(o.gy!==undefined?o.gy:GROUND)}));
+  OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z}));
   SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:o.gy-o.h}));
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
   HAZ = (ST.hazards||[]).map(h=>{
-    const o={t:h.t, x:h.x, w:h.w, y:h.y, cd:0};
+    const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0};
     if(h.t==='rock'){ const n=Math.max(1,Math.round(h.w/160)); const step=h.w/n; o.spawns=[]; for(let i=0;i<n;i++) o.spawns.push(Math.round(h.x+step*(i+0.5))); o.cds=o.spawns.map(()=>0); }
     return o;
   });
@@ -669,7 +669,7 @@ function reset(keep){
     soulCount=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],got:false,pop:0,ph:i*0.31}));
   }
-  plats = PLAT_DEF.map(q=>({x:q.x!==undefined?q.x:q.x0, x0:q.x0, y:q.y, w:q.w, t:q.t,
+  plats = PLAT_DEF.map(q=>({x:q.x!==undefined?q.x:q.x0, x0:q.x0, y:q.y, w:q.w, t:q.t, z:q.z,
     range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0,
     ct:0, falling:false, gone:false, dy:0, fv:0, rt:0}));
   const zspawn=ST.enemies;
@@ -1128,9 +1128,9 @@ function rockBits(r){
   for(let i=0;i<10;i++) zbits.push({x:r.x,y:r.y,vx:(Math.random()-0.5)*150,vy:-40-Math.random()*90,
     sz:2.5+Math.random()*3.5,life:0.4+Math.random()*0.4,t:0,c:['#6b6470','#8a828f','#54505c','#9a93a0'][(Math.random()*4)|0]});
 }
-function drawHazards(){
-  for(const h of HAZ){
-    const x0=h.x-camX, x1=h.x+h.w-camX; if(x1<-30||x0>W+30) continue;
+function drawOneHaz(h){
+  {
+    const x0=h.x-camX, x1=h.x+h.w-camX; if(x1<-30||x0>W+30) return;
     if(h.t==='spike'){
       if(SPIKE_IMG.complete && SPIKE_IMG.naturalWidth){
         const th=72, tw=th*SPIKE_IMG.naturalWidth/SPIKE_IMG.naturalHeight;
@@ -1154,6 +1154,8 @@ function drawHazards(){
     }
     // rock spawn point: invisible during gameplay (Alan) — nothing drawn
   }
+}
+function drawRocks(){
   for(const r of rocks){
     const sx2=r.x-camX; if(sx2<-50||sx2>W+50) continue;
     if(r.dead) continue;
@@ -1163,6 +1165,18 @@ function drawHazards(){
       ctx.fillStyle='#6b6470'; ctx.beginPath(); ctx.ellipse(sx2,r.y,18,16,0,0,7); ctx.fill();
     }
   }
+}
+// shared z layering for the 4 visual prop types (default keeps legacy order)
+const ZBASE={terrace:0,plat:100000,haz:200000,obst:300000};
+function zEff(kind,z,idx){ return (z!==undefined&&z!==null)?z:(ZBASE[kind]+idx); }
+function drawWorldProps(){
+  const props=[];
+  SEG.forEach((s,i)=>props.push({z:zEff('terrace',s[4],i),f:()=>drawOneTerrace(s)}));
+  plats.forEach((q,i)=>props.push({z:zEff('plat',q.z,i),f:()=>drawOnePlat(q)}));
+  HAZ.forEach((h,i)=>props.push({z:zEff('haz',h.z,i),f:()=>drawOneHaz(h)}));
+  OBST.forEach((o,i)=>props.push({z:zEff('obst',o.z,i),f:()=>drawObstacle(o)}));
+  props.sort((a,b)=>a.z-b.z);
+  for(const p of props) p.f();
 }
 function hurtPlayer(srcX,dmg){
   if (p.diveT>0||p.diveRec>0) return;   // Power Dive i-frames (until normal stance resumes)
@@ -1217,11 +1231,11 @@ function drawSpikes(){
     }
   }
 }
-function drawPlats(){
+function drawOnePlat(q){
   const d=SPR.dirt, gr=SPR.grass, TH=26;
-  for (const q of plats){
-    if (q.gone && q.dy>340) continue;
-    const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) continue;
+  {
+    if (q.gone && q.dy>340) return;
+    const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) return;
     let jx=0, jy=0;
     if (q.t==='c' && q.ct>0 && !q.falling){ jx=(Math.random()-0.5)*3; jy=(Math.random()-0.5)*2; }
     ctx.save(); ctx.translate(jx,jy);
@@ -1274,13 +1288,13 @@ function drawChecks(){
     }
   }
 }
-function drawGround(){
+function drawOneTerrace(s){
   const crypt=(ST.theme==='crypt');
-  for (const s of SEG){
-    const x0=pxf(s[0],1),x1=pxf(s[1],1); if(x1<-20||x0>W+20) continue;
+  {
+    const x0=pxf(s[0],1),x1=pxf(s[1],1); if(x1<-20||x0>W+20) return;
     const sgy=s.length>2?s[2]:GROUND;
     const bot=s.length>2?sgy+(s[3]||130):H;
-    if (sgy-camY>H+40 || bot-camY<-40) continue;
+    if (sgy-camY>H+40 || bot-camY<-40) return;
     ctx.save(); ctx.beginPath(); ctx.rect(x0,sgy,x1-x0,bot-sgy); ctx.clip();
     tileDirt(x0,x1,sgy,0,undefined,bot-sgy);
     if (crypt){ ctx.fillStyle='rgba(34,22,52,0.55)'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy);
@@ -1792,11 +1806,9 @@ function draw(){
   vignette();
   ctx.save(); ctx.translate(0,-camY);
   drawSpikes();
-  drawGround();
+  drawWorldProps();
   drawChecks();
-  drawPlats();
-  drawHazards();
-  for (const o of OBST) drawObstacle(o);
+  drawRocks();
   for (const z of zombies) drawZombie(z);
   for (const b of bats) drawBat(b);
   drawZbits();
