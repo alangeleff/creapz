@@ -1,7 +1,7 @@
 window.STAGES=window.STAGES||[];window.STAGES[3]={
  "name": "Crypt Depths",
  "act": "II",
- "music": "act2",
+ "music": "crypt2",
  "theme": "crypt",
  "world": 3200,
  "h": 2900,
