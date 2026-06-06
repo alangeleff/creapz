@@ -131,7 +131,7 @@ document.getElementById('mErase').onclick=function(){ eraseMode=!eraseMode; this
 // ---- selection / edit panel ----
 let sel=null;
 const selBox=document.getElementById('sel');
-const SEL_FIELDS={terrace:['x0','x1','gy'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w'],obst:['x','gy']};
+const SEL_FIELDS={terrace:['x0','x1','gy','depth'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w','d'],obst:['x','gy']};
 function showSel(){
  if(!sel){ selBox.style.display='none'; return; }
  selBox.style.display='block';
@@ -162,19 +162,19 @@ function hit(wxp,wyp){
  for(const e of M.enemies){ const ey=(e[4]??M.goalY); if(!locked.has(e)&&Math.abs(wxp-e[0])<32&&wyp<ey+8&&wyp>ey-50) return wrap('enemy',e,['x','min','max','gy'],[0,1,2,4],e[3]); }
  for(const h of (M.hazards||[])){ const top=h.t==='rock'?h.y-16:h.y-24; if(!locked.has(h)&&wxp>=h.x-6&&wxp<=h.x+h.w+6&&wyp>=top&&wyp<=h.y+14) return {type:'haz',kind:'haz_'+h.t,obj:h,raw:h,sync(){}}; }
  for(const p of M.plats){ const x=p.x??p.x0; if(!locked.has(p)&&wxp>=x-8&&wxp<=x+p.w+8&&Math.abs(wyp-p.y)<24) return {type:'plat',kind:'plat_'+p.t,obj:p,raw:p,sync(){}}; }
- for(const s of M.seg){ if(!locked.has(s)&&wxp>=s[0]&&wxp<=s[1]&&wyp>=s[2]-4&&wyp<=s[2]+TERRACE_DROP) return wrap('terrace',s,['x0','x1','gy'],[0,1,2]); }
+ for(const s of M.seg){ if(!locked.has(s)&&wxp>=s[0]&&wxp<=s[1]&&wyp>=s[2]-4&&wyp<=s[2]+TERRACE_DROP) return wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
  return null;
 }
 function selGoal(){ return {type:'goal',kind:'goal',obj:{x:M.goal,gy:M.goalY},raw:'goal',sync(){M.goal=this.obj.x;M.goalY=this.obj.gy;}}; }
 function wrap(type,raw,names,idx,kind){ const o={}; names.forEach((n,i)=>o[n]=raw[idx[i]]);
- return {type,kind:kind||type,obj:o,raw,sync(){names.forEach((n,i)=>raw[idx[i]]=o[n]);}}; }
+ return {type,kind:kind||type,obj:o,raw,sync(){names.forEach((n,i)=>{ if(o[n]!==undefined) raw[idx[i]]=o[n]; });}}; }
 
 // ---- handles for selected terrace/platform (resize) ----
 function handles(s){
  if(!s) return [];
- if(s.type==='terrace') return [{id:'x0',x:s.obj.x0,y:s.obj.gy},{id:'x1',x:s.obj.x1,y:s.obj.gy}];
+ if(s.type==='terrace'){ const dep=s.obj.depth||TERRACE_DROP; return [{id:'x0',x:s.obj.x0,y:s.obj.gy},{id:'x1',x:s.obj.x1,y:s.obj.gy},{id:'depth',x:(s.obj.x0+s.obj.x1)/2,y:s.obj.gy+dep}]; }
  if(s.type==='plat'){ const x=s.obj.x??s.obj.x0; return [{id:'w',x:x+s.obj.w,y:s.obj.y}]; }
- if(s.type==='haz'){ return [{id:'hx',x:s.obj.x,y:s.obj.y},{id:'hw',x:s.obj.x+s.obj.w,y:s.obj.y}]; }
+ if(s.type==='haz'){ const hd=[{id:'hx',x:s.obj.x,y:s.obj.y},{id:'hw',x:s.obj.x+s.obj.w,y:s.obj.y}]; if(s.obj.t==='tar') hd.push({id:'td',x:s.obj.x+s.obj.w/2,y:s.obj.y+(s.obj.d||22)}); return hd; }
  if(s.type==='enemy'||s.type==='bat'){ const yy=s.type==='bat'?s.obj.y:s.obj.gy; return [{id:'min',x:s.obj.min,y:yy},{id:'max',x:s.obj.max,y:yy}]; }
  return [];
 }
@@ -201,7 +201,7 @@ addEventListener('pointerup',e=>{ if(carry){ ghost.style.display='none';
 
 function placeAt(kind,gx,gy){
  histPush();
- if(kind==='terrace'){ const s=[gx,gx+DEF_TERR,gy]; M.seg.push(s); M.seg.sort((a,b)=>a[2]-b[2]); sel=wrap('terrace',s,['x0','x1','gy'],[0,1,2]); }
+ if(kind==='terrace'){ const s=[gx,gx+DEF_TERR,gy]; M.seg.push(s); M.seg.sort((a,b)=>a[2]-b[2]); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
  else if(kind.startsWith('plat_')){ const t=kind.split('_')[1]; const p={x:gx,y:gy,w:120,t}; if(t==='m'){p.x0=gx;p.range=180;p.spd=0.3;} M.plats.push(p); sel={type:'plat',kind,obj:p,raw:p,sync(){}}; }
  else if(kind==='chk'){ const c=[gx,gy]; M.chk.push(c); sel=wrap('chk',c,['x','gy'],[0,1]); }
  else if(kind==='goal'){ M.goal=gx; M.goalY=gy; sel=null; }
@@ -254,6 +254,8 @@ function resizeH(h,start,gx,gy){
  const o=sel.obj;
  if(h.id==='x0'){ o.x0=Math.min(gx,o.x1-GRID); }
  else if(h.id==='x1'){ o.x1=Math.max(gx,o.x0+GRID); }
+ else if(h.id==='depth'){ o.depth=Math.max(GRID,gy-o.gy); }
+ else if(h.id==='td'){ o.d=Math.max(GRID,gy-o.y); }
  else if(h.id==='w'){ const bx=o.x??o.x0; o.w=Math.max(GRID,gx-bx); }
  else if(h.id==='hw'){ o.w=Math.max(GRID,gx-o.x); }
  else if(h.id==='hx'){ const r=o.x+o.w; o.x=Math.min(gx,r-GRID); o.w=r-o.x; }
@@ -274,16 +276,16 @@ function draw(){
  for(let x=0;x<=M.world;x+=g){ ctx.moveTo(sx(x),sy(0)); ctx.lineTo(sx(x),sy(M.h)); }
  for(let y=0;y<=M.h;y+=g){ ctx.moveTo(sx(0),sy(y)); ctx.lineTo(sx(M.world),sy(y)); }
  ctx.stroke();
- for(const s of M.seg){ ctx.fillStyle=M.theme==='crypt'?'#241834':'#3a2a1a'; ctx.fillRect(sx(s[0]),sy(s[2]),(s[1]-s[0])*zoom,TERRACE_DROP*zoom);
+ for(const s of M.seg){ const dep=(s[3]||TERRACE_DROP); ctx.fillStyle=M.theme==='crypt'?'#241834':'#3a2a1a'; ctx.fillRect(sx(s[0]),sy(s[2]),(s[1]-s[0])*zoom,dep*zoom);
    ctx.fillStyle=M.theme==='crypt'?'#e0a93c':'#5a8a3a'; ctx.fillRect(sx(s[0]),sy(s[2]),(s[1]-s[0])*zoom,4);
-   if(sel&&sel.raw===s){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(sx(s[0])-2,sy(s[2])-2,(s[1]-s[0])*zoom+4,TERRACE_DROP*zoom+4); } }
+   if(sel&&sel.raw===s){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(sx(s[0])-2,sy(s[2])-2,(s[1]-s[0])*zoom+4,dep*zoom+4); } }
  for(const p of M.plats){ const x=p.x??p.x0; ctx.fillStyle=p.t==='m'?'#6ad0ff':p.t==='c'?'#e0843c':'#caa46a';
    ctx.fillRect(sx(x),sy(p.y),p.w*zoom,Math.max(5,10*zoom));
    if(p.t==='m'){ ctx.strokeStyle='#6ad0ff55'; ctx.beginPath(); ctx.moveTo(sx(x),sy(p.y+5)); ctx.lineTo(sx(x+(p.range||0)),sy(p.y+5)); ctx.stroke(); }
    if(sel&&sel.obj===p){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(sx(x)-2,sy(p.y)-2,p.w*zoom+4,Math.max(5,10*zoom)+4); } }
  for(const h of (M.hazards||[])){ const X=sx(h.x),Y=sy(h.y),Wd=h.w*zoom;
    if(h.t==='spike'){ ctx.fillStyle='#d9d2c0'; for(let cx2=h.x;cx2<h.x+h.w-6;cx2+=18){ const px=sx(cx2),hh=18*zoom; ctx.beginPath(); ctx.moveTo(px,Y); ctx.lineTo(px+8*zoom,Y-hh); ctx.lineTo(px+16*zoom,Y); ctx.fill(); } }
-   else if(h.t==='tar'){ ctx.fillStyle='#2a1f30'; ctx.fillRect(X,Y-8*zoom,Wd,16*zoom); ctx.fillStyle='rgba(150,130,170,.3)'; ctx.fillRect(X,Y-8*zoom,Wd,2); }
+   else if(h.t==='tar'){ const td=(h.d||22); ctx.fillStyle='#2a1f30'; ctx.fillRect(X,Y-8*zoom,Wd,(td+8)*zoom); ctx.fillStyle='rgba(150,130,170,.3)'; ctx.fillRect(X,Y-8*zoom,Wd,2); }
    else if(h.t==='rock'){ ctx.fillStyle='#3a3340'; ctx.fillRect(X,Y-12*zoom,Wd,12*zoom);
      ctx.strokeStyle='rgba(122,114,128,.5)'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+Wd,Y); ctx.stroke(); ctx.setLineDash([]);
      const n=Math.max(1,Math.round(h.w/160)), step=h.w/n;   // matches engine spawn-point spacing
@@ -326,7 +328,7 @@ function loadFields(){ document.getElementById('fName').value=M.name; document.g
 const locked=new Set();
 function itemList(){
  const out=[];
- M.seg.forEach((sg,i)=>out.push({cat:'Ground',label:'Terrace',color:'#7a5a36',raw:sg,arr:M.seg,idx:i,mk:()=>wrap('terrace',sg,['x0','x1','gy'],[0,1,2]),cx:(sg[0]+sg[1])/2,cy:sg[2]}));
+ M.seg.forEach((sg,i)=>out.push({cat:'Ground',label:'Terrace',color:'#7a5a36',raw:sg,arr:M.seg,idx:i,mk:()=>wrap('terrace',sg,['x0','x1','gy','depth'],[0,1,2,3]),cx:(sg[0]+sg[1])/2,cy:sg[2]}));
  M.plats.forEach((p,i)=>out.push({cat:'Ground',label:'Platform '+p.t,color:p.t==='m'?'#6ad0ff':p.t==='c'?'#e0843c':'#caa46a',raw:p,arr:M.plats,idx:i,mk:()=>({type:'plat',kind:'plat_'+p.t,obj:p,raw:p,sync(){}}),cx:(p.x??p.x0)+p.w/2,cy:p.y}));
  (M.hazards||[]).forEach((h,i)=>out.push({cat:'Hazards',label:HAZ_LABEL[h.t]||h.t,color:HAZ_COLS[h.t],raw:h,arr:M.hazards,idx:i,mk:()=>({type:'haz',kind:'haz_'+h.t,obj:h,raw:h,sync(){}}),cx:h.x+h.w/2,cy:h.y}));
  M.enemies.forEach((e,i)=>out.push({cat:'Enemies',label:(LABELOF[e[3]]||e[3]),color:ENEMY_COLS[e[3]]||'#aaa',raw:e,arr:M.enemies,idx:i,mk:()=>wrap('enemy',e,['x','min','max','gy'],[0,1,2,4],e[3]),cx:e[0],cy:e[4]??M.goalY}));

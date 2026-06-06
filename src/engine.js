@@ -1,4 +1,4 @@
-const ASSET_VER='1780710640';
+const ASSET_VER='1780716303';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1142,9 +1142,10 @@ function drawHazards(){
           ctx.fillStyle='#cfc8b6'; ctx.beginPath(); ctx.moveTo(sx2,h.y); ctx.lineTo(sx2+8,h.y-hgt); ctx.lineTo(sx2+16,h.y); ctx.fill(); }
       }
     } else if(h.t==='tar'){
-      ctx.save(); ctx.beginPath(); ctx.rect(h.x-camX,h.y-10,h.w,22); ctx.clip();
-      const g2=ctx.createLinearGradient(0,h.y-10,0,h.y+12); g2.addColorStop(0,'#241a2e'); g2.addColorStop(1,'#0c0712');
-      ctx.fillStyle=g2; ctx.fillRect(h.x-camX,h.y-10,h.w,24);
+      const td=(h.d||22), top=h.y-8, H2=td+8;
+      ctx.save(); ctx.beginPath(); ctx.rect(h.x-camX,top,h.w,H2); ctx.clip();
+      const g2=ctx.createLinearGradient(0,top,0,top+H2); g2.addColorStop(0,'#241a2e'); g2.addColorStop(1,'#0c0712');
+      ctx.fillStyle=g2; ctx.fillRect(h.x-camX,top,h.w,H2);
       for(let i=0;i<h.w/40;i++){ const bx=h.x+20+i*40, ph=((gt*0.6+i*0.37)%1);
         const by=h.y+2-ph*9, r=2.5+2.5*Math.sin(gt*2+i);
         ctx.fillStyle='rgba(80,64,96,'+(0.5*(1-ph)).toFixed(2)+')'; ctx.beginPath(); ctx.arc(bx-camX,by,Math.max(1,r),0,7); ctx.fill(); }
@@ -1278,7 +1279,7 @@ function drawGround(){
   for (const s of SEG){
     const x0=pxf(s[0],1),x1=pxf(s[1],1); if(x1<-20||x0>W+20) continue;
     const sgy=s.length>2?s[2]:GROUND;
-    const bot=s.length>2?sgy+130:H;
+    const bot=s.length>2?sgy+(s[3]||130):H;
     if (sgy-camY>H+40 || bot-camY<-40) continue;
     ctx.save(); ctx.beginPath(); ctx.rect(x0,sgy,x1-x0,bot-sgy); ctx.clip();
     tileDirt(x0,x1,sgy,0,undefined,bot-sgy);
