@@ -1,4 +1,4 @@
-const ASSET_VER='1780717248';
+const ASSET_VER='1780720387';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -23,7 +23,9 @@ const BASH_VX = 11.4, BASH_VY = 12.6;   // Scythe Bash (cReaper) — snappier th
 const OBJ = SPRITES.obst;
 const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VER;
 const ROCK_IMG=new Image(); ROCK_IMG.src='./assets/haz_rock2.png?v='+ASSET_VER;
-let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[];
+const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.src='./assets/caveplat1.png?v='+ASSET_VER;
+const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil1.png?v='+ASSET_VER;
+let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], TEX=[];
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
@@ -126,6 +128,7 @@ function loadStage(i){
   OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z}));
   SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:o.gy-o.h}));
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
+  TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z}));
   HAZ = (ST.hazards||[]).map(h=>{
     const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0};
     if(h.t==='rock'){ const n=Math.max(1,Math.round(h.w/160)); const step=h.w/n; o.spawns=[]; for(let i=0;i<n;i++) o.spawns.push(Math.round(h.x+step*(i+0.5))); o.cds=o.spawns.map(()=>0); }
@@ -1105,7 +1108,7 @@ function updateHazards(dt){
       for(let i=0;i<h.spawns.length;i++){
         if(h.cds[i]>0){ h.cds[i]-=dt; continue; }
         if(!p.dead && !p.winning && Math.abs(p.x-h.spawns[i])<58 && p.y>h.y+30){
-          rocks.push({x:h.spawns[i], y:h.y, vy:0, ang:Math.random()*6.28, spin:(Math.random()<0.5?-1:1)*(2.2+Math.random()*2), dead:false, dt2:0});
+          rocks.push({x:h.spawns[i], y:h.y, vy:0, delay:0.55, ang:Math.random()*6.28, spin:(Math.random()<0.5?-1:1)*(2.2+Math.random()*2), dead:false, dt2:0});
           h.cds[i]=2.2; playSfx('sfx_zswing',0.5);
         }
       }
@@ -1113,6 +1116,7 @@ function updateHazards(dt){
   }
   for(const r of rocks){
     if(r.dead){ r.dt2+=dt; continue; }
+    if(r.delay>0){ r.delay-=dt; r.ang=(r.ang||0)+dt*1.5; continue; }   // telegraph: hover+shake at the ceiling before dropping
     r.vy=Math.min(15, r.vy+0.85); r.y+=r.vy; r.ang=(r.ang||0)+(r.spin||3)*dt+r.vy*0.012;
     const rb={x:r.x-20,y:r.y-20,w:40,h:40};
     if(p.inv<=0 && !p.dead && !p.winning && overlap(pb,rb)){ r.dead=true; r.dt2=0; hurtPlayer(r.x); playSfx('sfx_meleehit',0.7); rockBits(r); continue; }
@@ -1157,21 +1161,30 @@ function drawOneHaz(h){
 }
 function drawRocks(){
   for(const r of rocks){
-    const sx2=r.x-camX; if(sx2<-50||sx2>W+50) continue;
+    let sx2=r.x-camX; if(sx2<-50||sx2>W+50) continue;
     if(r.dead) continue;
+    const wob = r.delay>0 ? (Math.random()-0.5)*4 : 0;   // shaking telegraph
+    if(r.delay>0){ // dust trickle warning below the loosening rock
+      ctx.fillStyle='rgba(180,160,140,'+(0.25+0.2*Math.sin(gt*20)).toFixed(2)+')';
+      for(let d=0;d<3;d++){ ctx.fillRect(sx2-6+d*6+(Math.random()-0.5)*3, r.y+14+((gt*120+d*9)%26), 2, 4); }
+    }
     if(ROCK_IMG.complete && ROCK_IMG.naturalWidth){
-      const rs=46; ctx.save(); ctx.translate(sx2,r.y); ctx.rotate(r.ang||0); ctx.drawImage(ROCK_IMG,-rs/2,-rs/2,rs,rs); ctx.restore();
+      const rs=46; ctx.save(); ctx.translate(sx2+wob,r.y); ctx.rotate(r.ang||0); ctx.drawImage(ROCK_IMG,-rs/2,-rs/2,rs,rs); ctx.restore();
     } else {
-      ctx.fillStyle='#6b6470'; ctx.beginPath(); ctx.ellipse(sx2,r.y,18,16,0,0,7); ctx.fill();
+      ctx.fillStyle='#6b6470'; ctx.beginPath(); ctx.ellipse(sx2+wob,r.y,18,16,0,0,7); ctx.fill();
     }
   }
 }
-// shared z layering for the 4 visual prop types (default keeps legacy order)
-const ZBASE={terrace:0,plat:100000,haz:200000,obst:300000};
+function drawOneTex(t){ if(t.t!=='ceiling') return; const x0=t.x-camX; if(x0+t.w<-30||x0>W+30) return;
+  if(CAVECEIL_IMG.complete && CAVECEIL_IMG.naturalWidth){ const dh=t.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth;
+    ctx.imageSmoothingEnabled=true; ctx.drawImage(CAVECEIL_IMG, x0, t.y, t.w, dh); } }
+// shared z layering for the visual prop types (default keeps legacy order)
+const ZBASE={terrace:0,tex:50000,plat:100000,haz:200000,obst:300000};
 function zEff(kind,z,idx){ return (z!==undefined&&z!==null)?z:(ZBASE[kind]+idx); }
 function drawWorldProps(){
   const props=[];
   SEG.forEach((s,i)=>props.push({z:zEff('terrace',s[4],i),f:()=>drawOneTerrace(s)}));
+  TEX.forEach((t,i)=>props.push({z:zEff('tex',t.z,i),f:()=>drawOneTex(t)}));
   plats.forEach((q,i)=>props.push({z:zEff('plat',q.z,i),f:()=>drawOnePlat(q)}));
   HAZ.forEach((h,i)=>props.push({z:zEff('haz',h.z,i),f:()=>drawOneHaz(h)}));
   OBST.forEach((o,i)=>props.push({z:zEff('obst',o.z,i),f:()=>drawObstacle(o)}));
@@ -1233,6 +1246,9 @@ function drawSpikes(){
 }
 function drawOnePlat(q){
   const d=SPR.dirt, gr=SPR.grass, TH=26;
+  if (q.t==='k'){ if (q.gone && q.dy>340) return; const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) return;
+    if (CAVEPLAT_IMG.complete && CAVEPLAT_IMG.naturalWidth){ const dh=q.w*CAVEPLAT_IMG.naturalHeight/CAVEPLAT_IMG.naturalWidth;
+      ctx.imageSmoothingEnabled=true; ctx.drawImage(CAVEPLAT_IMG, x0, y-dh*0.46, q.w, dh); return; } }
   {
     if (q.gone && q.dy>340) return;
     const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) return;
