@@ -265,8 +265,12 @@ function draw(){
  for(const h of (M.hazards||[])){ const X=sx(h.x),Y=sy(h.y),Wd=h.w*zoom;
    if(h.t==='spike'){ ctx.fillStyle='#d9d2c0'; for(let cx2=h.x;cx2<h.x+h.w-6;cx2+=18){ const px=sx(cx2),hh=18*zoom; ctx.beginPath(); ctx.moveTo(px,Y); ctx.lineTo(px+8*zoom,Y-hh); ctx.lineTo(px+16*zoom,Y); ctx.fill(); } }
    else if(h.t==='tar'){ ctx.fillStyle='#2a1f30'; ctx.fillRect(X,Y-8*zoom,Wd,16*zoom); ctx.fillStyle='rgba(150,130,170,.3)'; ctx.fillRect(X,Y-8*zoom,Wd,2); }
-   else if(h.t==='rock'){ ctx.fillStyle='#3a3340'; ctx.fillRect(X,Y-12*zoom,Wd,12*zoom); ctx.fillStyle='#7a7280'; for(let cx2=h.x;cx2<h.x+h.w-6;cx2+=22){ const px=sx(cx2); ctx.beginPath(); ctx.moveTo(px,Y); ctx.lineTo(px+6*zoom,Y+8*zoom); ctx.lineTo(px+12*zoom,Y); ctx.fill(); }
-     ctx.fillStyle='rgba(255,80,80,.5)'; ctx.font='9px sans-serif'; ctx.fillText('\u25bc DROP', X+2, Y-15*zoom); }
+   else if(h.t==='rock'){ ctx.fillStyle='#3a3340'; ctx.fillRect(X,Y-12*zoom,Wd,12*zoom);
+     ctx.strokeStyle='rgba(122,114,128,.5)'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+Wd,Y); ctx.stroke(); ctx.setLineDash([]);
+     const n=Math.max(1,Math.round(h.w/160)), step=h.w/n;   // matches engine spawn-point spacing
+     for(let i=0;i<n;i++){ const spx=sx(h.x+step*(i+0.5)); ctx.fillStyle='#ff5050'; ctx.beginPath(); ctx.moveTo(spx-5,Y-2); ctx.lineTo(spx+5,Y-2); ctx.lineTo(spx,Y+8*zoom); ctx.fill();
+       ctx.fillStyle='#7a7280'; ctx.beginPath(); ctx.arc(spx,Y-6*zoom,3,0,7); ctx.fill(); }
+     ctx.fillStyle='rgba(255,120,120,.7)'; ctx.font='9px sans-serif'; ctx.fillText('\u25bc x'+n+' drop', X+2, Y-15*zoom); }
    if(sel&&sel.raw===h){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-(h.t==='rock'?14:24)*zoom-2,Wd+4,(h.t==='rock'?16:38)*zoom+4); }
  }
  for(const s of M.souls){ ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(sx(s[0]),sy(s[1]),Math.max(3,6*zoom),0,7); ctx.fill(); }
