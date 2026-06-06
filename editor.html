@@ -51,6 +51,15 @@
  #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:#15112af2;border:1px solid #7b5cff;border-radius:8px;padding:9px 16px;font-size:13px;display:none}
  #zoomb{position:absolute;left:10px;top:10px;display:flex;gap:6px}
  #zoomb button{width:38px;height:38px;border-radius:9px;background:#15112af2;border:1px solid var(--line);color:var(--ink);font-size:18px;cursor:pointer}
+ #savesP{position:absolute;left:50%;top:54px;transform:translateX(-50%);width:300px;max-height:74%;overflow:auto;background:#15112af6;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;display:none;z-index:30}
+ #savesP h4{margin:0 0 8px;color:var(--lime);font-size:14px}
+ #savesP .srow{display:flex;align-items:center;gap:6px;padding:7px;border-radius:7px;background:#1d1838;margin:5px 0}
+ #savesP .srow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25}
+ #savesP .sb{border:none;border-radius:6px;padding:8px 11px;font-size:12px;cursor:pointer;flex:none}
+ #savesP .sb.load{background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff}
+ #savesP .sb.del{background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a}
+ #savesP .savebtn{width:100%;background:#16301d;border:1px solid #3fbf6a;color:#a8f0c0;border-radius:8px;padding:11px;cursor:pointer;font-size:13px;margin-bottom:8px}
+ #savesP .closebtn{width:100%;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:8px;padding:9px;cursor:pointer;margin-top:6px}
  /* Larger touch targets on tablets / iPads (coarse pointer + roomy screen) */
  @media (pointer: coarse) and (min-width: 700px){
   #pal{width:272px}
@@ -77,6 +86,9 @@
   #zoomb button{width:54px;height:54px;font-size:25px;border-radius:12px}
   #hint{font-size:14px}
   #ghost{font-size:14px;padding:5px 10px}
+  #savesP{width:340px;font-size:14px}
+  #savesP .sb{padding:11px 14px;font-size:13px}
+  #savesP .savebtn,#savesP .closebtn{padding:13px;font-size:14px}
  }
 </style>
 </head><body>
@@ -97,6 +109,7 @@
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
    <select class="btn" id="bLoad" title="Load an existing level to edit"><option value="">Load level…</option><option value="stage1.js|0">Cemetery · Act I</option><option value="stage2.js|1">Cemetery · Act II</option><option value="crypt1.js|2">Crypt Depths · Act I</option><option value="crypt2.js|3">Crypt Depths · Act II</option></select>
+   <button class="btn" id="bSaves" title="Named local saves">💾 Saves</button>
    <button class="btn warn" id="bClear">Clear</button>
   </div>
   <div id="cvWrap">
@@ -104,6 +117,7 @@
    <div id="zoomb"><button id="zin">+</button><button id="zout">−</button></div>
    <div id="hint"></div>
    <div id="sel"></div>
+   <div id="savesP"></div>
    <div id="toast"></div>
   </div>
  </div>
@@ -716,6 +730,34 @@ document.getElementById('bLoad').onchange=function(){ const v=this.value; this.s
   fetch('./levels/'+file+'?'+Date.now()).then(r=>r.text()).then(tx=>{ try{ const i=tx.indexOf('={');
     histPush(); M=Object.assign(blankLevel(),JSON.parse(tx.slice(i+1,tx.lastIndexOf('}')+1))); M.theme=M.theme||''; loadFields(); const fi=document.getElementById('fIdx'); if(fi)fi.value=idx; sel=null; showSel(); persist(); draw(); toast('loaded '+file); }catch(err){ toast('load failed: '+err.message); } }); };
 document.getElementById('bClear').onclick=()=>{ if(confirm('Clear the whole level?')){ histPush(); M=blankLevel(); loadFields(); sel=null; showSel(); persist(); draw(); } };
+// ---- named local saves ----
+const escH=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function getSaves(){ try{ return JSON.parse(localStorage.getItem('creapz_saves')||'{}'); }catch(e){ return {}; } }
+function setSaves(o){ try{ localStorage.setItem('creapz_saves',JSON.stringify(o)); return true; }catch(e){ toast('save failed - storage full'); return false; } }
+function saveCurrentAs(){ const def=(M.name||'Level')+(M.act?' '+M.act:''); const name=(prompt('Save current level as:', def)||'').trim(); if(!name)return;
+  const o=getSaves(); if(o[name] && !confirm('A save named "'+name+'" exists. Overwrite it?'))return;
+  o[name]={data:cleanLevel(), ts:Date.now()}; if(setSaves(o)){ toast('saved "'+name+'"'); renderSaves(); } }
+function loadSave(name){ const o=getSaves(); if(!o[name])return; if(!confirm('Load "'+name+'"? This replaces the current editor contents.'))return;
+  histPush(); M=Object.assign(blankLevel(),o[name].data); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('loaded "'+name+'"'); closeSaves(); }
+function deleteSave(name){ if(!confirm('Delete saved level "'+name+'"? This cannot be undone.'))return; const o=getSaves(); delete o[name]; setSaves(o); renderSaves(); }
+function renderSaves(){ const p=document.getElementById('savesP'); const o=getSaves(); const names=Object.keys(o).sort((a,b)=>(o[b].ts||0)-(o[a].ts||0));
+  let h='<h4>Local Saves</h4><button class="savebtn" id="svSave">+  Save current level…</button>';
+  if(!names.length) h+='<div style="opacity:.6;padding:8px 4px;line-height:1.4">No saved levels yet. Save your current work here so it survives loading other levels or closing the tab.</div>';
+  names.forEach(n=>{ const d=new Date(o[n].ts||0), ds=isNaN(d.getTime())?'':d.toLocaleString();
+    h+='<div class="srow"><span class="nm" title="'+escH(n)+'">'+escH(n)+'<br><span style="font-size:10px;opacity:.5">'+ds+'</span></span>'
+      +'<button class="sb load" data-l="'+encodeURIComponent(n)+'">Load</button>'
+      +'<button class="sb del" data-d="'+encodeURIComponent(n)+'">✕</button></div>'; });
+  h+='<button class="closebtn" id="svClose">Close</button>';
+  p.innerHTML=h;
+  p.querySelector('#svSave').onclick=saveCurrentAs;
+  p.querySelector('#svClose').onclick=closeSaves;
+  p.querySelectorAll('.sb.load').forEach(b=>b.onclick=()=>loadSave(decodeURIComponent(b.dataset.l)));
+  p.querySelectorAll('.sb.del').forEach(b=>b.onclick=()=>deleteSave(decodeURIComponent(b.dataset.d)));
+}
+function openSaves(){ document.getElementById('savesP').style.display='block'; renderSaves(); }
+function closeSaves(){ document.getElementById('savesP').style.display='none'; }
+document.getElementById('bSaves').onclick=()=>{ const p=document.getElementById('savesP'); if(p.style.display==='block')closeSaves(); else openSaves(); };
+
 document.getElementById('bPlay').onclick=()=>{ try{ localStorage.setItem('creapz_testlevel',JSON.stringify(cleanLevel())); }catch(e){} location.href='./?test=1'; };
 
 // ---- boot ----
