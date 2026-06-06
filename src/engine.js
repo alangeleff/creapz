@@ -1,4 +1,4 @@
-const ASSET_VER='1780723463';
+const ASSET_VER='1780726003';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -25,6 +25,9 @@ const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VE
 const ROCK_IMG=new Image(); ROCK_IMG.src='./assets/haz_rock2.png?v='+ASSET_VER;
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.src='./assets/caveplat1.png?v='+ASSET_VER;
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
+const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
+const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='+ASSET_VER;
+const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png?v='+ASSET_VER;
 const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+ASSET_VER;
 const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='+ASSET_VER; return i;})(), cavebg2:(()=>{const i=new Image(); i.src='./assets/cavebg2.png?v='+ASSET_VER; return i;})()};
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], TEX=[], BG=[];
@@ -1178,9 +1181,9 @@ function drawRocks(){
     }
   }
 }
-function drawOneTex(t){ if(t.t!=='ceiling') return; const x0=t.x-camX; if(x0+t.w<-30||x0>W+30) return;
-  if(CAVECEIL_IMG.complete && CAVECEIL_IMG.naturalWidth){ const dh=t.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth;
-    ctx.imageSmoothingEnabled=true; ctx.drawImage(CAVECEIL_IMG, x0, t.y, t.w, dh); } }
+function drawOneTex(t){ const x0=t.x-camX; if(x0+t.w<-30||x0>W+30) return; ctx.imageSmoothingEnabled=true;
+  if(t.t==='ceiling'){ if(CAVECEIL_IMG.complete && CAVECEIL_IMG.naturalWidth){ const dh=t.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth; ctx.drawImage(CAVECEIL_IMG, x0, t.y, t.w, dh); } return; }
+  if(t.t==='rockpile'){ if(ROCKPILE_IMG.complete && ROCKPILE_IMG.naturalWidth){ const dh=t.w*ROCKPILE_IMG.naturalHeight/ROCKPILE_IMG.naturalWidth; ctx.drawImage(ROCKPILE_IMG, x0, t.y-dh, t.w, dh); } return; } }
 // shared z layering for the visual prop types (default keeps legacy order)
 const ZBASE={terrace:0,tex:50000,plat:100000,haz:200000,obst:300000};
 function zEff(kind,z,idx){ return (z!==undefined&&z!==null)?z:(ZBASE[kind]+idx); }
@@ -1223,6 +1226,20 @@ function tileDirt(x0,x1,topY,darken,f,hgt){
   for(let y=topY; y<topY+th; y+=ty)
     for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(di, x, y, tw, ty);
   if(darken>0){ ctx.fillStyle='rgba(6,4,12,'+darken+')'; ctx.fillRect(x0,topY,x1-x0,th); }
+}
+function tileImage(img, topY, hgt, fac){
+  if(!img||!img.complete||!img.naturalWidth||hgt<=0) return;
+  const TILE=84, tw=img.naturalWidth*TILE/img.naturalHeight, ty=TILE;
+  const fc=(fac===undefined)?1:fac, off=(((camX*fc)%tw)+tw)%tw;
+  for(let y=topY; y<topY+hgt; y+=ty) for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(img,x,y,tw,ty);
+}
+function drawCaveTopper(x0,x1,sgy){
+  const img=CAVETOP_IMG; if(!img.complete||!img.naturalWidth) return;
+  const TH=104, tw=TH*img.naturalWidth/img.naturalHeight, topY=sgy-0.40*TH;
+  ctx.save(); ctx.beginPath(); ctx.rect(x0,topY,x1-x0,TH); ctx.clip(); ctx.imageSmoothingEnabled=true;
+  const off=((camX%tw)+tw)%tw;
+  for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(img,x,topY,tw,TH);
+  ctx.restore();
 }
 function drawTreeImg(x,type){ const t=SPR.trees[type]; if(!t) return; ctx.drawImage(t.img, x-t.w/2, GROUND+10-t.h, t.w, t.h); }
 function drawGraveBg(x,base,sc,cross){
@@ -1310,25 +1327,31 @@ function drawChecks(){
   }
 }
 function drawOneTerrace(s){
-  const crypt=(ST.theme==='crypt');
+  const crypt=(ST.theme==='crypt'), kind=(s[6]||'cemetery');
   {
     const x0=pxf(s[0],1),x1=pxf(s[1],1); if(x1<-20||x0>W+20) return;
     const sgy=s.length>2?s[2]:GROUND;
     const bot=s.length>2?sgy+(s[3]||130):H;
     if (sgy-camY>H+40 || bot-camY<-40) return;
     ctx.save(); ctx.beginPath(); ctx.rect(x0,sgy,x1-x0,bot-sgy); ctx.clip();
-    tileDirt(x0,x1,sgy,0,undefined,bot-sgy);
-    if (crypt){ ctx.fillStyle='rgba(34,22,52,0.55)'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy);
-      ctx.fillStyle='rgba(224,169,60,0.10)'; ctx.fillRect(x0,sgy,x1-x0,10); }
+    if (kind==='cave' && CAVEGND_IMG.complete && CAVEGND_IMG.naturalWidth){
+      tileImage(CAVEGND_IMG, sgy, bot-sgy, 1);
+      ctx.fillStyle='rgba(8,5,16,0.16)'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy);
+    } else {
+      tileDirt(x0,x1,sgy,0,undefined,bot-sgy);
+      if (crypt){ ctx.fillStyle='rgba(34,22,52,0.55)'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy);
+        ctx.fillStyle='rgba(224,169,60,0.10)'; ctx.fillRect(x0,sgy,x1-x0,10); }
+    }
     ctx.restore();
-    if (SPR.grass && !crypt){
+    if (kind==='cave') drawCaveTopper(x0,x1,sgy);
+    if (SPR.grass && !crypt && kind!=='cave'){
       const gr=SPR.grass, gy=sgy-Math.round(gr.h*0.55);
       ctx.save(); ctx.beginPath(); ctx.rect(x0,gy,x1-x0,gr.h); ctx.clip();
       const goff=((camX%gr.w)+gr.w)%gr.w;
       for (let gx=-goff; gx<W+gr.w; gx+=gr.w) ctx.drawImage(gr.img, gx, gy, gr.w, gr.h);
       ctx.restore();
     }
-    if (crypt){ // embedded amber crystals glowing on the terrace face — WORLD-anchored
+    if (crypt && kind!=='cave'){ // embedded amber crystals glowing on the terrace face — WORLD-anchored
       for (let wx2=s[0]+22; wx2<s[1]-14; wx2+=74){
         const cx2=pxf(wx2,1); if(cx2<-30||cx2>W+30) continue;
         const cy3=sgy+34+((wx2*13)%52), r3=3+((wx2*7)%3);
