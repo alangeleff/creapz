@@ -1213,10 +1213,11 @@ function tileDirt(x0,x1,topY,darken,f,hgt){
   const dt=SPR.dirt; if(!dt) return;
   const th=(hgt!==undefined)?hgt:(H-topY);
   if(th<=0) return;   // strips below the flat-world horizon: explicit height required (negative th = infinite tiling loop)
-  const tw=dt.w*th/dt.h;
+  const TILE=84, tw=dt.w*TILE/dt.h, ty=TILE;   // fixed tile -> repeats the pattern both axes (no stretch); caller clips
   const fac=(f===undefined)?1:f;
   const off=(((camX*fac)%tw)+tw)%tw;
-  for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(dt.img, x, topY, tw, th);
+  for(let y=topY; y<topY+th; y+=ty)
+    for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(dt.img, x, y, tw, ty);
   if(darken>0){ ctx.fillStyle='rgba(6,4,12,'+darken+')'; ctx.fillRect(x0,topY,x1-x0,th); }
 }
 function drawTreeImg(x,type){ const t=SPR.trees[type]; if(!t) return; ctx.drawImage(t.img, x-t.w/2, GROUND+10-t.h, t.w, t.h); }
