@@ -48,6 +48,8 @@
    <label>W</label><input id="fW" size="5" value="3200">
    <label>H</label><input id="fH" size="5" value="2900">
    <label>idx</label><input id="fIdx" size="2" value="2">
+   <button class="btn" id="bUndo" title="Undo (Ctrl+Z)">↶</button>
+   <button class="btn" id="bRedo" title="Redo (Ctrl+Y)">↷</button>
    <button class="btn go" id="bPlay">▶ Play</button>
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
@@ -122,8 +124,8 @@ function showSel(){
  for(const f of (SEL_FIELDS[sel.type]||[])){ if(o[f]===undefined)continue; html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; }
  html+='<button class="del">Delete</button>';
  selBox.innerHTML=html;
- selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ o[inp.dataset.f]=v; syncBack(sel); persist(); draw(); } });
- selBox.querySelector('.del').onclick=()=>{ delObj(sel); sel=null; showSel(); persist(); draw(); };
+ selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ histPush(); o[inp.dataset.f]=v; syncBack(sel); persist(); draw(); } });
+ selBox.querySelector('.del').onclick=()=>{ histPush(); delObj(sel); sel=null; showSel(); persist(); draw(); };
 }
 function syncBack(s){ if(s.sync) s.sync(); }
 function delObj(s){
@@ -180,6 +182,7 @@ addEventListener('pointerup',e=>{ if(carry){ ghost.style.display='none';
    carry=null; } });
 
 function placeAt(kind,gx,gy){
+ histPush();
  if(kind==='terrace'){ const s=[gx,gx+DEF_TERR,gy]; M.seg.push(s); M.seg.sort((a,b)=>a[2]-b[2]); sel=wrap('terrace',s,['x0','x1','gy'],[0,1,2]); }
  else if(kind.startsWith('plat_')){ const t=kind.split('_')[1]; const p={x:gx,y:gy,w:120,t}; if(t==='m'){p.x0=gx;p.range=180;p.spd=0.3;} M.plats.push(p); sel={type:'plat',kind,obj:p,raw:p,sync(){}}; }
  else if(kind==='chk'){ const c=[gx,gy]; M.chk.push(c); sel=wrap('chk',c,['x','gy'],[0,1]); }
@@ -195,11 +198,11 @@ cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.s
  if(ptrs.size===2){ const p=[...ptrs.values()]; pinch={d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),z:zoom,
    mx:(p[0].x+p[1].x)/2,my:(p[0].y+p[1].y)/2, bx:wx((p[0].x+p[1].x)/2),by:wy((p[0].y+p[1].y)/2)}; act=null; return; }
  const c=cvxy(e), wxp=wx(c.x),wyp=wy(c.y);
- if(eraseMode){ const h=hit(wxp,wyp); if(h){ delObj(h); persist(); draw(); } return; }
+ if(eraseMode){ const h=hit(wxp,wyp); if(h){ histPush(); delObj(h); persist(); draw(); } return; }
  const hh=hitHandle(wxp,wyp);
- if(hh){ act={mode:'handle',h:hh,start:JSON.parse(JSON.stringify(sel.obj))}; return; }
+ if(hh){ act={mode:'handle',h:hh,start:JSON.parse(JSON.stringify(sel.obj)),pre:snapM(),moved:false}; return; }
  const h=hit(wxp,wyp);
- if(h){ sel=h; showSel(); act={mode:'move',h,px:c.x,py:c.y,start:JSON.parse(JSON.stringify(h.obj)),moved:false}; }
+ if(h){ sel=h; showSel(); act={mode:'move',h,px:c.x,py:c.y,start:JSON.parse(JSON.stringify(h.obj)),pre:snapM(),moved:false}; }
  else { sel=null; showSel(); act={mode:'pan',px:c.x,py:c.y,cx:camx,cy:camy}; }
  draw();
 });
@@ -212,9 +215,10 @@ cv.addEventListener('pointermove',e=>{
  if(!act) return;
  if(act.mode==='pan'){ camx=act.cx-(c.x-act.px)/zoom; camy=act.cy-(c.y-act.py)/zoom; draw(); return; }
  if(act.mode==='move'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); moveObj(act.h,act.start,dx,dy); act.moved=true; syncBack(act.h); persist(); showSel(); draw(); return; }
- if(act.mode==='handle'){ resizeH(act.h,act.start, snap(wx(c.x)), snap(wy(c.y))); syncBack(sel); persist(); showSel(); draw(); return; }
+ if(act.mode==='handle'){ resizeH(act.h,act.start, snap(wx(c.x)), snap(wy(c.y))); act.moved=true; syncBack(sel); persist(); showSel(); draw(); return; }
 });
-function endPtr(e){ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null; if(ptrs.size===0) act=null; }
+function endPtr(e){ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null;
+ if(ptrs.size===0){ if(act&&(act.mode==='move'||act.mode==='handle')&&act.moved&&act.pre){ undoStack.push(act.pre); if(undoStack.length>80)undoStack.shift(); redoStack.length=0; updHist(); } act=null; } }
 cv.addEventListener('pointerup',endPtr); cv.addEventListener('pointercancel',endPtr);
 
 function moveObj(h,start,dx,dy){
@@ -292,6 +296,20 @@ function loadFields(){ document.getElementById('fName').value=M.name; document.g
 
 // ---- persist / io / play ----
 function persist(){ syncFields(); try{ localStorage.setItem('creapz_editdraft',JSON.stringify(M)); }catch(e){} }
+// ---- undo / redo (state snapshots) ----
+let undoStack=[], redoStack=[];
+function snapM(){ syncFields(); return JSON.stringify(M); }
+function histPush(){ undoStack.push(snapM()); if(undoStack.length>80) undoStack.shift(); redoStack.length=0; updHist(); }
+function restoreM(js){ M=Object.assign(blankLevel(),JSON.parse(js)); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); }
+function undo(){ if(!undoStack.length) return; redoStack.push(snapM()); restoreM(undoStack.pop()); updHist(); }
+function redo(){ if(!redoStack.length) return; undoStack.push(snapM()); restoreM(redoStack.pop()); updHist(); }
+function updHist(){ const u=document.getElementById('bUndo'),r=document.getElementById('bRedo');
+  if(u){ u.style.opacity=undoStack.length?1:0.35; } if(r){ r.style.opacity=redoStack.length?1:0.35; } }
+document.getElementById('bUndo').onclick=undo;
+document.getElementById('bRedo').onclick=redo;
+addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z';
+  if(z){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); }
+  else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); } });
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
  o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[]; return o; }
@@ -301,14 +319,14 @@ document.getElementById('bExport').onclick=()=>{ const idx=+v('fIdx')||2; const 
  a.download='level-'+(o.name.toLowerCase().replace(/[^a-z0-9]+/g,'')||'stage')+'-act'+o.act+'.js'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('exported - send to Claude to commit'); };
 document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='.js,.json';
  inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{ let j=tx.trim(); const i=j.indexOf('={'); if(i>=0)j=j.slice(i+1,j.lastIndexOf('}')+1);
-   M=Object.assign(blankLevel(),JSON.parse(j)); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
+   histPush(); M=Object.assign(blankLevel(),JSON.parse(j)); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
 document.getElementById('bLoadCrypt').onclick=()=>{ fetch('./levels/crypt1.js?'+Date.now()).then(r=>r.text()).then(tx=>{ try{ const i=tx.indexOf('={');
-   M=Object.assign(blankLevel(),JSON.parse(tx.slice(i+1,tx.lastIndexOf('}')+1))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('loaded current Crypt Act I'); }catch(err){ toast('load failed: '+err.message); } }); };
-document.getElementById('bClear').onclick=()=>{ if(confirm('Clear the whole level?')){ M=blankLevel(); loadFields(); sel=null; showSel(); persist(); draw(); } };
+   histPush(); M=Object.assign(blankLevel(),JSON.parse(tx.slice(i+1,tx.lastIndexOf('}')+1))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('loaded current Crypt Act I'); }catch(err){ toast('load failed: '+err.message); } }); };
+document.getElementById('bClear').onclick=()=>{ if(confirm('Clear the whole level?')){ histPush(); M=blankLevel(); loadFields(); sel=null; showSel(); persist(); draw(); } };
 document.getElementById('bPlay').onclick=()=>{ try{ localStorage.setItem('creapz_testlevel',JSON.stringify(cleanLevel())); }catch(e){} location.href='./?test=1'; };
 
 // ---- boot ----
 try{ const d=localStorage.getItem('creapz_editdraft'); if(d){ M=Object.assign(blankLevel(),JSON.parse(d)); } }catch(e){}
-loadFields(); fit();
+loadFields(); fit(); updHist();
 </script>
 </body></html>
