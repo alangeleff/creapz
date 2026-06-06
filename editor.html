@@ -139,6 +139,33 @@ const BG_LABEL={cavebg:'Cave Background (far)', cavebg2:'Cave Midground (near)'}
 const TEX_COLS={ceiling:'#7a5a36',rockpile:'#8a6a3a'}, TEX_LABEL={ceiling:'Cave Ceiling',rockpile:'Rock Pile'};
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.onload=()=>draw(); CAVEPLAT_IMG.src='./assets/caveplat1.png';
 const CHEST_E=new Image(); CHEST_E.onload=()=>draw(); CHEST_E.src='./assets/chest_closed1.png';
+const TREEBIG_E=new Image(); TREEBIG_E.onload=()=>draw(); TREEBIG_E.src='./assets/sprites/trees_big.png';
+const TREESM_E=new Image(); TREESM_E.onload=()=>draw(); TREESM_E.src='./assets/sprites/trees_small.png';
+const GATE_E=new Image(); GATE_E.onload=()=>draw(); GATE_E.src='./assets/sprites/gate.png';
+const CLOUD_E=new Image(); CLOUD_E.onload=()=>draw(); CLOUD_E.src='./assets/sprites/cloud.png';
+let _cemBG=null;
+function cemBG(){ const G=360, world=M.world; if(_cemBG&&_cemBG.world===world) return _cemBG;
+  const stars=[],trees=[],graves=[],clouds=[];
+  for(let k=0,n=Math.ceil(world/120);k<n;k++) stars.push([(k*149+(k*k*13)%100)%world, (k*71)%Math.floor(G*0.8), 0.6+((k*7)%16)/10]);
+  for(let k=0,n=Math.ceil(world/180);k<n;k++) trees.push({x:80+k*180+((k*53)%50), big:(k%4===0)});
+  for(let k=0,n=Math.ceil(world/150);k<n;k++) graves.push([80+k*150+((k*53)%40), 0.7+((k*29)%4)*0.1, (k%4===0)]);
+  for(let k=0,n=Math.ceil(world/900)+1;k<n;k++) clouds.push({x:120+k*900+((k*131)%300), y:20+((k*61)%130), s:0.6+((k*29)%50)/100});
+  _cemBG={world,stars,trees,graves,clouds}; return _cemBG; }
+function dGraveBg(wx,sc,cross){ const x=sx(wx), base=sy(364), z=zoom; ctx.fillStyle='#211d33';
+  if(cross){ const w=8*sc*z,ah=40*sc*z,aw=26*sc*z; ctx.fillRect(x-w/2,base-ah,w,ah); ctx.fillRect(x-aw/2,base-ah*0.72,aw,w); }
+  else { const w=30*sc*z,hh=42*sc*z; ctx.beginPath(); ctx.moveTo(x-w/2,base); ctx.lineTo(x-w/2,base-hh+w/2); ctx.arc(x,base-hh+w/2,w/2,Math.PI,0); ctx.lineTo(x+w/2,base); ctx.closePath(); ctx.fill(); } }
+function drawCemeteryBackdrop(){ const G=360, X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd=M.h*zoom, z=zoom;
+  ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Hd); ctx.clip();
+  const grad=ctx.createLinearGradient(0,Y,0,Y+Hd); grad.addColorStop(0,'#0d0a22'); grad.addColorStop(.55,'#241844'); grad.addColorStop(1,'#3a2152'); ctx.fillStyle=grad; ctx.fillRect(X,Y,Wd,Hd);
+  const bg=cemBG();
+  ctx.fillStyle='rgba(255,255,255,.6)'; for(const st of bg.stars){ ctx.fillRect(sx(st[0]),sy(st[1]),Math.max(1,st[2]*z),Math.max(1,st[2]*z)); }
+  const mx=sx(740),my=sy(96); const gg=ctx.createRadialGradient(mx,my,4*z,mx,my,120*z); gg.addColorStop(0,'rgba(220,225,255,.35)'); gg.addColorStop(1,'rgba(220,225,255,0)'); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(mx,my,120*z,0,7); ctx.fill(); ctx.fillStyle='#eef0ff'; ctx.beginPath(); ctx.arc(mx,my,40*z,0,7); ctx.fill();
+  if(CLOUD_E.naturalWidth){ ctx.globalAlpha=.30; for(const cl of bg.clouds){ ctx.drawImage(CLOUD_E, sx(cl.x), sy(cl.y), 215*cl.s*z, 96*cl.s*z); } ctx.globalAlpha=1; }
+  ctx.fillStyle='#1a1233'; for(let i=0,n=Math.ceil(M.world/620)+1;i<n;i++){ ctx.beginPath(); ctx.ellipse(sx(i*620+200), sy(G+40), 300*z,150*z,0,Math.PI,0); ctx.fill(); }
+  for(const t of bg.trees){ const img=t.big?TREEBIG_E:TREESM_E, w=(t.big?165:80), h=(t.big?172:122); if(img.naturalWidth){ ctx.imageSmoothingEnabled=true; ctx.drawImage(img, sx(t.x)-w*z/2, sy(G+10)-h*z, w*z, h*z); } }
+  for(const gr of bg.graves) dGraveBg(gr[0],gr[1],gr[2]);
+  if(GATE_E.naturalWidth){ const gw=161,gh=90; for(let wx=0;wx<M.world;wx+=gw) ctx.drawImage(GATE_E, sx(wx), sy(G+6)-gh*z, gw*z, gh*z); }
+  ctx.restore(); }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.onload=()=>draw(); CAVECEIL_IMG.src='./assets/caveceil2.png';
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.onload=()=>draw(); CAVEGND_IMG.src='./assets/caveground_dirt1.png';
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.onload=()=>draw(); CAVETOP_IMG.src='./assets/caveground_top1.png';
@@ -580,7 +607,7 @@ function dObst(o){ const X=sx(o.x),Y=sy(o.gy||0);
 function draw(){
  syncFields(); ctx.clearRect(0,0,CW,CH);
  if(M.theme==='crypt'){ ctx.fillStyle='#0a0712'; ctx.fillRect(0,0,CW,CH); }
- else { const sky=ctx.createLinearGradient(0,0,0,CH); sky.addColorStop(0,'#0b1026'); sky.addColorStop(0.6,'#172041'); sky.addColorStop(1,'#2a2150'); ctx.fillStyle=sky; ctx.fillRect(0,0,CW,CH); }
+ else { ctx.fillStyle='#0c0a16'; ctx.fillRect(0,0,CW,CH); drawCemeteryBackdrop(); }
  for(const b of (M.bg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue; const X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd=M.h*zoom;
    const sc=Math.max(Wd/img.naturalWidth,Hd/img.naturalHeight); const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc;
    ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Hd); ctx.clip(); ctx.globalAlpha=b.t==='cavebg2'?1:0.9;
