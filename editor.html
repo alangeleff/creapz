@@ -21,6 +21,10 @@
  .litem .lb{background:#241d44;border:none;color:#cdbbe6;border-radius:5px;font-size:14px;line-height:1;padding:5px 8px;cursor:pointer;min-width:26px;text-align:center}
  .litem .lb:hover{background:#352a5c}
  .litem.lock{opacity:.5}
+ .litem.ghead{background:#1a2336;outline:1px solid #3b5a8c;margin-top:4px}
+ .litem.member{margin-left:14px;font-size:11px}
+ .lck{width:16px;height:16px;border:1px solid #6a6088;border-radius:3px;flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:#c8fb50}
+ #grpbtn{width:100%;margin:4px 0 6px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:7px;cursor:pointer;font-size:12px}
  .tool{display:flex;align-items:center;gap:8px;padding:9px 10px;margin:4px 0;border-radius:8px;background:#1d1838;border:1px solid transparent;cursor:grab;font-size:13px;touch-action:none}
  .tool:active{cursor:grabbing}
  .tool.on{border-color:var(--lime);background:#242a16}
@@ -124,6 +128,24 @@ function topZ(){ const ps=allProps(); return ps.length?Math.max(...ps.map(p=>p.z
 function reorderProp(raw,dir){ const ps=allProps().sort((a,b)=>a.z-b.z); const i=ps.findIndex(p=>p.raw===raw); if(i<0)return;
   const j= dir==='front'? i+1 : i-1; if(j<0||j>=ps.length) return; const t=ps[i]; ps[i]=ps[j]; ps[j]=t;
   ps.forEach((p,k)=>p.setZ((k+1)*10)); }
+// ---- groups: group name stored on each prop (terrace=seg[5], objects=.g) ----
+function getG(raw){ return Array.isArray(raw)? raw[5] : raw.g; }
+function setG(raw,g){ if(Array.isArray(raw)){ if(raw[3]===undefined)raw[3]=TERRACE_DROP; if(raw[4]===undefined)raw[4]=0; if(g)raw[5]=g; else raw.length=5; } else { if(g)raw.g=g; else delete raw.g; } }
+function orderedUnits(){ const ps=allProps().sort((a,b)=>a.z-b.z); const seen=new Set(); const units=[];
+  for(const p of ps){ const g=getG(p.raw); if(g){ if(seen.has(g))continue; seen.add(g); units.push({group:g,members:ps.filter(q=>getG(q.raw)===g)}); } else units.push({item:p}); }
+  return units; }
+function renumberZ(){ let k=1; for(const u of orderedUnits()){ if(u.group){ for(const m of u.members) m.setZ((k++)*10); } else u.item.setZ((k++)*10); } }
+function reorderUnit(idx,dir){ const u=orderedUnits(); const j=dir==='up'? idx+1 : idx-1; if(j<0||j>=u.length)return; const t=u[idx]; u[idx]=u[j]; u[j]=t;
+  let k=1; for(const un of u){ if(un.group){ for(const m of un.members) m.setZ((k++)*10); } else un.item.setZ((k++)*10); } }
+const msel=new Set(), collapsed=new Set();
+function groupSelected(){ if(!msel.size) return; const name=prompt('Group name:', 'Cluster '+(new Set([...allProps().map(p=>getG(p.raw)).filter(Boolean)]).size+1)); if(!name) return;
+  histPush(); for(const raw of msel) setG(raw,name); msel.clear(); renumberZ(); persist(); draw(); }
+function ungroup(name){ histPush(); for(const p of allProps()) if(getG(p.raw)===name) setG(p.raw,null); if(sel&&sel.type==='group'&&sel.name===name){sel=null;showSel();} renumberZ(); persist(); draw(); }
+function renameGroup(name){ const nn=prompt('Rename group:',name); if(!nn||nn===name)return; histPush(); for(const p of allProps()) if(getG(p.raw)===name) setG(p.raw,nn); if(sel&&sel.type==='group'&&sel.name===name)sel.name=nn; persist(); draw(); }
+function selectGroup(name){ const members=allProps().filter(p=>getG(p.raw)===name).map(p=>p.raw); sel={type:'group',name,members,obj:{}}; showSel();
+  if(members.length){ let mx=0,my=0; members.forEach(r=>{ const pr={raw:r,kind:Array.isArray(r)?'terrace':(r.t? (HAZ_COLS[r.t]?'haz':'tex') : (r.type?'obst':'plat'))}; const c=propCenterRaw(r); mx+=c[0]; my+=c[1]; }); centerOn(mx/members.length,my/members.length); } draw(); }
+function propCenterRaw(r){ if(Array.isArray(r)) return [(r[0]+r[1])/2,r[2]]; if(r.type) return [r.x,r.gy||0]; if(r.t&&!HAZ_COLS[r.t]) return [r.x+r.w/2,r.y]; if(r.t) return [r.x+r.w/2,r.y]; return [(r.x??r.x0)+r.w/2,r.y]; }
+function moveMemberBy(r,dx,dy){ if(Array.isArray(r)){ r[0]+=dx; r[1]+=dx; r[2]+=dy; } else if(r.type){ r.x+=dx; r.gy=(r.gy||0)+dy; } else { if(r.x0!==undefined)r.x0+=dx; r.x+=dx; r.y+=dy; } }
 let eraseMode=false;
 let M=blankLevel();
 function blankLevel(){ return {name:'Crypt Depths',act:'I',music:'act2',theme:'crypt',world:3200,h:2900,
@@ -154,6 +176,13 @@ const selBox=document.getElementById('sel');
 const SEL_FIELDS={terrace:['x0','x1','gy','depth'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w','d'],obst:['x','gy'],tex:['x','y','w']};
 function showSel(){
  if(!sel){ selBox.style.display='none'; return; }
+ if(sel.type==='group'){ selBox.style.display='block';
+   selBox.innerHTML='<h4>Group: '+sel.name+'</h4><div style=\"font-size:11px;color:#9b8cff;margin-bottom:6px\">'+sel.members.length+' items · drag canvas to move all</div>'
+     +'<button class=\"grn\" style=\"width:100%;margin-bottom:6px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:7px;cursor:pointer\">Rename</button>'
+     +'<button class=\"gug\" style=\"width:100%;background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a;border-radius:6px;padding:7px;cursor:pointer\">Ungroup</button>';
+   selBox.querySelector('.grn').onclick=()=>renameGroup(sel.name);
+   selBox.querySelector('.gug').onclick=()=>ungroup(sel.name);
+   return; }
  selBox.style.display='block';
  const o=sel.obj; let html='<h4>'+(LABELOF[sel.kind]||sel.type)+'</h4>';
  for(const f of (SEL_FIELDS[sel.type]||[])){ if(o[f]===undefined)continue; html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; }
@@ -266,7 +295,8 @@ cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.s
  const hh=hitHandle(wxp,wyp);
  if(hh){ act={mode:'handle',h:hh,start:JSON.parse(JSON.stringify(sel.obj)),pre:snapM(),moved:false}; return; }
  const h=hit(wxp,wyp);
- if(h){ sel=h; showSel(); act={mode:'move',h,px:c.x,py:c.y,start:JSON.parse(JSON.stringify(h.obj)),pre:snapM(),moved:false}; }
+ if(sel&&sel.type==='group' && !h){ act={mode:'gmove',px:c.x,py:c.y,pre:snapM(),moved:false,gstart:sel.members.map(r=>JSON.stringify(Array.isArray(r)?r:r))}; }
+ else if(h){ sel=h; showSel(); act={mode:'move',h,px:c.x,py:c.y,start:JSON.parse(JSON.stringify(h.obj)),pre:snapM(),moved:false}; }
  else { sel=null; showSel(); act={mode:'pan',px:c.x,py:c.y,cx:camx,cy:camy}; }
  draw();
 });
@@ -278,11 +308,13 @@ cv.addEventListener('pointermove',e=>{
    zoom=Math.max(0.12,Math.min(1.6,pinch.z*d/pinch.d)); camx=pinch.bx-pinch.mx/zoom; camy=pinch.by-pinch.my/zoom; draw(); return; }
  if(!act) return;
  if(act.mode==='pan'){ camx=act.cx-(c.x-act.px)/zoom; camy=act.cy-(c.y-act.py)/zoom; draw(); return; }
+ if(act.mode==='gmove'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); if(!act.last)act.last={dx:0,dy:0};
+   const sdx=dx-act.last.dx, sdy=dy-act.last.dy; if(sdx||sdy){ for(const r of sel.members) moveMemberBy(r,sdx,sdy); act.last={dx,dy}; act.moved=true; persist(); draw(); } return; }
  if(act.mode==='move'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); moveObj(act.h,act.start,dx,dy); act.moved=true; syncBack(act.h); persist(); showSel(); draw(); return; }
  if(act.mode==='handle'){ resizeH(act.h,act.start, snap(wx(c.x)), snap(wy(c.y))); act.moved=true; syncBack(sel); persist(); showSel(); draw(); return; }
 });
 function endPtr(e){ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null;
- if(ptrs.size===0){ if(act&&(act.mode==='move'||act.mode==='handle')&&act.moved&&act.pre){ undoStack.push(act.pre); if(undoStack.length>80)undoStack.shift(); redoStack.length=0; updHist(); } act=null; } }
+ if(ptrs.size===0){ if(act&&(act.mode==='move'||act.mode==='handle'||act.mode==='gmove')&&act.moved&&act.pre){ undoStack.push(act.pre); if(undoStack.length>80)undoStack.shift(); redoStack.length=0; updHist(); } act=null; } }
 cv.addEventListener('pointerup',endPtr); cv.addEventListener('pointercancel',endPtr);
 
 function moveObj(h,start,dx,dy){
@@ -423,14 +455,23 @@ function actorList(){ const out=[];
  return out; }
 function buildLayers(){
  const host=document.getElementById('layers'); if(!host) return;
- const stack=allProps().sort((a,b)=>b.z-a.z);   // top of visual stack first
+ const units=orderedUnits().reverse();   // top of stack first
  let html='<h3>Layers — top \u2192 bottom</h3>';
- stack.forEach((pr,k)=>{ const isSel=sel&&sel.raw===pr.raw; const lk=locked.has(pr.raw);
-   html+=`<div class="litem${isSel?' sel':''}${lk?' lock':''}" data-stack="${k}">`
+ if(msel.size) html+=`<button id="grpbtn">Group ${msel.size} selected \u2192</button>`;
+ const rowProp=(pr,member)=>{ const isSel=sel&&sel.raw===pr.raw, lk=locked.has(pr.raw), ck=msel.has(pr.raw);
+   return `<div class="litem${isSel?' sel':''}${lk?' lock':''}${member?' member':''}" data-z="${pr.z}">`
+     +`<span class="lck" data-ck="${pr.z}">${ck?'\u2713':''}</span>`
      +`<span class="lc" style="background:${propColor(pr)}"></span><span class="nm">${propLabel(pr)}</span>`
-     +`<button class="lb" data-act="up" title="bring forward">\u25b2</button>`
-     +`<button class="lb" data-act="down" title="send back">\u25bc</button>`
-     +`<button class="lb" data-act="lock">${lk?'\ud83d\udd12':'\ud83d\udd13'}</button></div>`;
+     +`<button class="lb" data-up="${pr.z}">\u25b2</button><button class="lb" data-down="${pr.z}">\u25bc</button>`
+     +`<button class="lb" data-lockz="${pr.z}">${lk?'\ud83d\udd12':'\ud83d\udd13'}</button></div>`; };
+ units.forEach((u,ui)=>{ const uidx=units.length-1-ui;   // index in non-reversed order for reorderUnit
+   if(u.group){ const col=collapsed.has(u.group), gs=sel&&sel.type==='group'&&sel.name===u.group;
+     html+=`<div class="litem ghead${gs?' sel':''}" data-grp="${u.group}">`
+       +`<span class="lb" data-col="${u.group}">${col?'\u25b8':'\u25be'}</span>`
+       +`<span class="nm" style="font-weight:700">\ud83d\udcc1 ${u.group}</span>`
+       +`<button class="lb" data-gup="${uidx}">\u25b2</button><button class="lb" data-gdown="${uidx}">\u25bc</button></div>`;
+     if(!col) u.members.slice().reverse().forEach(m=>html+=rowProp(m,true));
+   } else html+=rowProp(u.item,false);
  });
  const acts=actorList(); const soulN=M.souls.length;
  for(const sec of ['Enemies','Functions']){ const list=acts.filter(a=>a.sec===sec); if(!list.length && !(sec==='Functions'&&soulN)) continue;
@@ -442,11 +483,20 @@ function buildLayers(){
    if(sec==='Functions'&&soulN) html+=`<div class="litem" style="opacity:.7;cursor:default"><span class="lc" style="background:#7fe0ff"></span><span class="nm">Souls \u00d7${soulN}</span></div>`;
  }
  host.innerHTML=html;
- host.querySelectorAll('.litem[data-stack]').forEach(row=>{ const pr=stack[+row.dataset.stack];
-   row.querySelectorAll('.lb').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); const a=b.dataset.act;
-     if(a==='lock'){ if(locked.has(pr.raw))locked.delete(pr.raw); else locked.add(pr.raw); buildLayers(); return; }
-     histPush(); reorderProp(pr.raw, a==='up'?'front':'back'); persist(); draw(); });
+ const byZ=z=>allProps().find(p=>p.z===+z);
+ const gb=document.getElementById('grpbtn'); if(gb) gb.onclick=groupSelected;
+ host.querySelectorAll('.litem[data-z]').forEach(row=>{ const pr=byZ(row.dataset.z); if(!pr)return;
+   row.querySelector('.lck').onclick=ev=>{ ev.stopPropagation(); if(msel.has(pr.raw))msel.delete(pr.raw); else msel.add(pr.raw); buildLayers(); };
+   row.querySelectorAll('.lb').forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
+     if(b.dataset.lockz!==undefined){ if(locked.has(pr.raw))locked.delete(pr.raw); else locked.add(pr.raw); buildLayers(); return; }
+     histPush(); reorderProp(pr.raw, b.dataset.up!==undefined?'front':'back'); persist(); draw(); });
    row.onclick=()=>{ sel=propSel(pr); const c=propCenter(pr); centerOn(c[0],c[1]); showSel(); draw(); };
+ });
+ host.querySelectorAll('.litem.ghead').forEach(row=>{ const name=row.dataset.grp;
+   row.querySelectorAll('.lb').forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
+     if(b.dataset.col!==undefined){ if(collapsed.has(name))collapsed.delete(name); else collapsed.add(name); buildLayers(); return; }
+     histPush(); reorderUnit(+(b.dataset.gup!==undefined?b.dataset.gup:b.dataset.gdown), b.dataset.gup!==undefined?'up':'down'); persist(); draw(); });
+   row.onclick=()=>selectGroup(name);
  });
  host.querySelectorAll('.litem[data-sec]').forEach(row=>{ const sec=row.dataset.sec,k=+row.dataset.i; const it=acts.filter(a=>a.sec===sec)[k];
    row.querySelectorAll('.lb').forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
