@@ -129,7 +129,9 @@ const ENEMY_COLS={zombie:'#6b7d52',zgen:'#3ad07a',gob:'#c8a24a',bd:'#9a6cff'};
 const HAZ_COLS={spike:'#d9d2c0',rock:'#7a7280',tar:'#2a1f30',spikeshot:'#cfc8b6'};
 const HAZ_LABEL={spike:'Bone Spike Pit',rock:'Rock Drop',tar:'Tar Pit',spikeshot:'Spike Cannon'};
 const OBST_COLS={grave:'#8a82a6',crate:'#b6884a',chest:'#caa05a'};
+const LOOTS=[['gold','Gold'],['soul','Soul'],['heart','Heart'],['stone_amethyst','Amethyst Stone'],['stone_chaos','Chaos Stone'],['stone_emerald','Emerald Stone'],['stone_fluorite','Fluorite Stone'],['stone_holy','Holy Stone'],['stone_onyx','Onyx Stone'],['stone_ruby','Ruby Stone'],['stone_sapphire','Sapphire Stone'],['stone_topaz','Topaz Stone'],['stone_master','Master Stone']];
 const CATS=['Background','Ground','Hazards','Enemies','Functions','Objects','Textures'];
+const ASSET_PV=Date.now();
 const BGE_IMG={cavebg:new Image(), cavebg2:new Image()};
 BGE_IMG.cavebg.onload=()=>draw(); BGE_IMG.cavebg.src='./assets/cavebg1.png';
 BGE_IMG.cavebg2.onload=()=>draw(); BGE_IMG.cavebg2.src='./assets/cavebg2.png';
@@ -257,6 +259,16 @@ let eraseMode=false, bulkArm=false;
 let M=blankLevel();
 function blankLevel(){ return {name:'Crypt Depths',act:'I',music:'act2',theme:'crypt',world:3200,h:2900,
   goal:3000,goalY:2480, seg:[], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[], bg:[]}; }
+// upgrade legacy/flat levels (e.g. old Cemetery acts) to the current editor format so they render + edit
+function migrateLevel(d){ const G=360, FH=440, DEP=FH-G;
+  if(Array.isArray(d.seg)) d.seg=d.seg.map((sg,i)=>{ if(Array.isArray(sg)&&sg.length<=2) return [sg[0],sg[1],G,DEP,(i+1)*10]; return sg; });
+  if(Array.isArray(d.chk)) d.chk=d.chk.map(c=>Array.isArray(c)?c:[c,G]);
+  if(Array.isArray(d.obst)) d.obst.forEach(o=>{ if(o.gy===undefined)o.gy=G; });
+  if(Array.isArray(d.enemies)) d.enemies=d.enemies.map(e=>{ if(!Array.isArray(e))return e; return [e[0],e[1],e[2],e[3]||'zombie',(e[4]!==undefined?e[4]:G)]; });
+  if(d.goalY===undefined) d.goalY=G;
+  if(!d.h) d.h=FH;
+  if(d.theme===undefined) d.theme='';
+  return d; }
 
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let camx=-40,camy=-40,zoom=0.42, CW=0,CH=0;
@@ -306,8 +318,10 @@ function showSel(){
  const o=sel.obj; const _ak=assetKey(sel); let html='<h4>'+(LABELOF[_ak]||LABELOF[sel.kind]||sel.type)+'</h4>';
  const _flds=(sel.type==='haz'&&o.t==='spikeshot')?['x','y','dir','tx','ty','tw','th']:(SEL_FIELDS[sel.type]||[]);
  for(const f of _flds){ if(o[f]===undefined)continue; html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; }
- if(sel.type==='obst' && o.type==='chest'){ const cur=o.loot||'gold'; const opts=['gold','soul','heart','stone'].map(v=>'<option'+(v===cur?' selected':'')+'>'+v+'</option>').join('');
-   html+='<div class="row"><span>loot</span><select data-loot style="flex:1;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px;font-size:13px">'+opts+'</select></div>'; }
+ if(sel.type==='obst' && o.type==='chest'){ const cur=o.loot||'gold';
+   const opts=LOOTS.map(L=>'<option value="'+L[0]+'"'+(L[0]===cur?' selected':'')+'>'+L[1]+'</option>').join('');
+   html+='<div class="row"><span>loot</span><select data-loot style="flex:1;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px;font-size:13px">'+opts+'</select></div>';
+   if(cur.indexOf('stone_')===0) html+='<div style="text-align:center;margin:6px 0 2px"><img src="./assets/'+cur+'.png?'+ASSET_PV+'" style="height:66px;filter:drop-shadow(0 0 7px #ffffffaa)"><div style="font-size:10px;color:#9b8cff;margin-top:2px">floats out of the chest with a glowing aura</div></div>'; }
  const _grp=swapGroupOf(_ak);
  if(_grp){ const _others=_grp.members.filter(m=>m[0]!==_ak);
    if(_others.length){ html+='<div style="margin-top:10px;font-size:11px;color:#9bd0ff">Swap to ('+_grp.label+')</div>';
@@ -316,7 +330,7 @@ function showSel(){
  html+='<button class="del">Delete</button>';
  selBox.innerHTML=html;
  selBox.querySelectorAll('.swapb').forEach(b=>b.onclick=()=>{ histPush(); applySwap(sel.raw,b.dataset.k); persist(); sel=reselect(sel); showSel(); draw(); });
- const _ls=selBox.querySelector('[data-loot]'); if(_ls) _ls.onchange=()=>{ histPush(); o.loot=_ls.value; persist(); draw(); };
+ const _ls=selBox.querySelector('[data-loot]'); if(_ls) _ls.onchange=()=>{ histPush(); o.loot=_ls.value; persist(); showSel(); draw(); };
  selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ histPush(); o[inp.dataset.f]=v; syncBack(sel); persist(); draw(); } });
  selBox.querySelector('.dup').onclick=()=>dupSel();
  selBox.querySelector('.del').onclick=()=>{ histPush(); delObj(sel); sel=null; showSel(); persist(); draw(); };
@@ -562,7 +576,8 @@ function dObst(o){ const X=sx(o.x),Y=sy(o.gy||0);
  if(sel&&sel.raw===o){ const e=EDSPR[o.type], h=e?e.m.h*zoom:50*zoom, w=e?e.m.w*zoom:40*zoom; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-w/2-2,Y-h-2,w+4,h+4); } }
 function draw(){
  syncFields(); ctx.clearRect(0,0,CW,CH);
- ctx.fillStyle=M.theme==='crypt'?'#0a0712':'#0e1326'; ctx.fillRect(0,0,CW,CH);
+ if(M.theme==='crypt'){ ctx.fillStyle='#0a0712'; ctx.fillRect(0,0,CW,CH); }
+ else { const sky=ctx.createLinearGradient(0,0,0,CH); sky.addColorStop(0,'#0b1026'); sky.addColorStop(0.6,'#172041'); sky.addColorStop(1,'#2a2150'); ctx.fillStyle=sky; ctx.fillRect(0,0,CW,CH); }
  for(const b of (M.bg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue; const X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd=M.h*zoom;
    const sc=Math.max(Wd/img.naturalWidth,Hd/img.naturalHeight); const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc;
    ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Hd); ctx.clip(); ctx.globalAlpha=b.t==='cavebg2'?1:0.9;
@@ -724,11 +739,11 @@ document.getElementById('bExport').onclick=()=>{ const idx=+v('fIdx')||2; const 
  a.download='level-'+(o.name.toLowerCase().replace(/[^a-z0-9]+/g,'')||'stage')+'-act'+o.act+'.js'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('exported - send to Claude to commit'); };
 document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file';
  inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{ let j=tx.trim(); const i=j.indexOf('={'); if(i>=0)j=j.slice(i+1,j.lastIndexOf('}')+1);
-   histPush(); M=Object.assign(blankLevel(),JSON.parse(j)); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
+   histPush(); M=Object.assign(blankLevel(),migrateLevel(JSON.parse(j))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
 document.getElementById('bLoad').onchange=function(){ const v=this.value; this.selectedIndex=0; if(!v)return; const parts=v.split('|'), file=parts[0], idx=parts[1];
   if(!confirm('Load this level into the editor? Your current unsaved work will be replaced.')) return;
   fetch('./levels/'+file+'?'+Date.now()).then(r=>r.text()).then(tx=>{ try{ const i=tx.indexOf('={');
-    histPush(); M=Object.assign(blankLevel(),JSON.parse(tx.slice(i+1,tx.lastIndexOf('}')+1))); M.theme=M.theme||''; loadFields(); const fi=document.getElementById('fIdx'); if(fi)fi.value=idx; sel=null; showSel(); persist(); draw(); toast('loaded '+file); }catch(err){ toast('load failed: '+err.message); } }); };
+    histPush(); M=Object.assign(blankLevel(),migrateLevel(JSON.parse(tx.slice(i+1,tx.lastIndexOf('}')+1)))); M.theme=M.theme||''; loadFields(); const fi=document.getElementById('fIdx'); if(fi)fi.value=idx; sel=null; showSel(); persist(); draw(); toast('loaded '+file); }catch(err){ toast('load failed: '+err.message); } }); };
 document.getElementById('bClear').onclick=()=>{ if(confirm('Clear the whole level?')){ histPush(); M=blankLevel(); loadFields(); sel=null; showSel(); persist(); draw(); } };
 // ---- named local saves ----
 const escH=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -738,7 +753,7 @@ function saveCurrentAs(){ const def=(M.name||'Level')+(M.act?' '+M.act:''); cons
   const o=getSaves(); if(o[name] && !confirm('A save named "'+name+'" exists. Overwrite it?'))return;
   o[name]={data:cleanLevel(), ts:Date.now()}; if(setSaves(o)){ toast('saved "'+name+'"'); renderSaves(); } }
 function loadSave(name){ const o=getSaves(); if(!o[name])return; if(!confirm('Load "'+name+'"? This replaces the current editor contents.'))return;
-  histPush(); M=Object.assign(blankLevel(),o[name].data); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('loaded "'+name+'"'); closeSaves(); }
+  histPush(); M=Object.assign(blankLevel(),migrateLevel(o[name].data)); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('loaded "'+name+'"'); closeSaves(); }
 function deleteSave(name){ if(!confirm('Delete saved level "'+name+'"? This cannot be undone.'))return; const o=getSaves(); delete o[name]; setSaves(o); renderSaves(); }
 function renderSaves(){ const p=document.getElementById('savesP'); const o=getSaves(); const names=Object.keys(o).sort((a,b)=>(o[b].ts||0)-(o[a].ts||0));
   let h='<h4>Local Saves</h4><button class="savebtn" id="svSave">+  Save current level…</button>';
@@ -761,7 +776,7 @@ document.getElementById('bSaves').onclick=()=>{ const p=document.getElementById(
 document.getElementById('bPlay').onclick=()=>{ try{ localStorage.setItem('creapz_testlevel',JSON.stringify(cleanLevel())); }catch(e){} location.href='./?test=1'; };
 
 // ---- boot ----
-try{ const d=localStorage.getItem('creapz_editdraft'); if(d){ M=Object.assign(blankLevel(),JSON.parse(d)); } }catch(e){}
+try{ const d=localStorage.getItem('creapz_editdraft'); if(d){ M=Object.assign(blankLevel(),migrateLevel(JSON.parse(d))); } }catch(e){}
 loadFields(); fit(); updHist();
 </script>
 </body></html>

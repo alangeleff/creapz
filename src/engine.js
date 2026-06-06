@@ -1,4 +1,4 @@
-const ASSET_VER='1780733139';
+const ASSET_VER='1780753584';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -27,6 +27,8 @@ const ROCK_IMG=new Image(); ROCK_IMG.src='./assets/haz_rock2.png?v='+ASSET_VER;
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.src='./assets/caveplat1.png?v='+ASSET_VER;
 const CHEST_CLOSED_IMG=new Image(); CHEST_CLOSED_IMG.src='./assets/chest_closed1.png?v='+ASSET_VER;
 const CHEST_OPEN_IMG=new Image(); CHEST_OPEN_IMG.src='./assets/chest_open1.png?v='+ASSET_VER;
+const STONE_DEFS={amethyst:'#b24dff',chaos:'#e24dff',emerald:'#2fe06a',fluorite:'#5fe0c0',holy:'#fff0a0',onyx:'#9a8cd0',ruby:'#ff3d5a',sapphire:'#4d8cff',topaz:'#ffc23c',master:'#ff7a2c'};
+const STONE_IMGS={}; for(const _k in STONE_DEFS){ const _i=new Image(); _i.src='./assets/stone_'+_k+'.png?v='+ASSET_VER; STONE_IMGS[_k]=_i; }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='+ASSET_VER;
@@ -1438,14 +1440,30 @@ function terrWallX(nx, px, y, hw){
   }
   return nx;
 }
-function spawnLoot(o){ loots.push({x:o.x, y:o.gy-o.h+12, restY:o.gy-o.h-56, t:0, type:o.loot||'gold', collected:false, fade:0}); }
+function spawnLoot(o){ const lt=o.loot||'gold'; const rise=lt.indexOf('stone_')===0?90:56; loots.push({x:o.x, y:o.gy-o.h+12, restY:o.gy-o.h-rise, t:0, type:lt, collected:false, fade:0}); }
 function collectLoot(L){
+  if (L.type.indexOf('stone_')===0){ const key=L.type.slice(6), col=STONE_DEFS[key]||'#ffcf3c';
+    addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85);
+    const cy=L.restY!==undefined?L.restY:L.y;
+    for(let i=0;i<18;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*230, vy:-30-Math.random()*180, sz:2.5+Math.random()*3.5, life:0.5+Math.random()*0.5, t:0, c:col});
+    return; }
   if (L.type==='heart'){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup'); }
   else if (L.type==='soul'){ soulCount++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
   else if (L.type==='stone'){ addScore(2000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.7); }
   else { addScore(500); playSfx('sfx_soul',0.8); }
 }
 function drawTreasure(x,y,type,sc,al){
+  if (type.indexOf('stone_')===0){ const key=type.slice(6), img=STONE_IMGS[key], col=STONE_DEFS[key]||'#ffcf3c';
+    ctx.save(); ctx.globalAlpha=al;
+    const pulse=0.78+0.22*Math.sin(gt*4.2), R=40*sc*pulse;
+    const g0=ctx.createRadialGradient(x,y,2,x,y,R); g0.addColorStop(0,col); g0.addColorStop(0.45,col+'66'); g0.addColorStop(1,col+'00');
+    ctx.fillStyle=g0; ctx.beginPath(); ctx.arc(x,y,R,0,7); ctx.fill();
+    for(let k=0;k<6;k++){ const a2=gt*1.7+k*1.0472, rr=28*sc; ctx.globalAlpha=al*(0.35+0.4*Math.sin(gt*5+k)); ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x+Math.cos(a2)*rr, y+Math.sin(a2)*rr, 2.4*sc,0,7); ctx.fill(); }
+    ctx.globalAlpha=al;
+    if (img && img.complete && img.naturalWidth){ const hh=36*sc, ww=hh*img.naturalWidth/img.naturalHeight; ctx.imageSmoothingEnabled=true; ctx.drawImage(img, x-ww/2, y-hh/2, ww, hh); }
+    else { ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,12*sc,0,7); ctx.fill(); }
+    ctx.restore(); return;
+  }
   ctx.save(); ctx.globalAlpha=al;
   const col={heart:'#ff4d6d',soul:'#7fe0ff',gold:'#ffcf3c',stone:'#46e0c0'}[type]||'#ffcf3c';
   const g=ctx.createRadialGradient(x,y,1,x,y,26*sc); g.addColorStop(0,col); g.addColorStop(0.5,col+'66'); g.addColorStop(1,col+'00');
