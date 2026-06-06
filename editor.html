@@ -103,6 +103,7 @@ const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.onload=()=>draw(); ROCKPILE_IMG.src
 const DIRT_SEAM=new Image(); DIRT_SEAM.onload=()=>draw(); DIRT_SEAM.src='./assets/dirt_seam1.png';
 const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./assets/sprites/grass.png';
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
+const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
 fetch('./assets/sprites.json').then(r=>r.json()).then(S=>{
   const ass=p=> p.startsWith('data:')?p:('./assets/'+p);
@@ -483,7 +484,9 @@ function dHaz(h){ const X=sx(h.x),Y=sy(h.y),Wd=h.w*zoom;
    ctx.fillStyle='rgba(95,180,255,.10)'; ctx.fillRect(tX,tY,tW,tH);
    ctx.strokeStyle='#5fb4ff'; ctx.lineWidth=1.5; ctx.setLineDash([7,5]); ctx.strokeRect(tX,tY,tW,tH); ctx.setLineDash([]);
    ctx.fillStyle='#5fb4ff'; ctx.font=Math.round(11*Math.min(1.5,zoom))+'px sans-serif'; ctx.fillText('TRIGGER ZONE',tX+5,tY+15);
-   for(let k=-1;k<=1;k++){ const yy=Y+k*40*zoom; ctx.fillStyle='#cfc8b6'; ctx.strokeStyle='#6b6457'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(X+dir*16*zoom,yy); ctx.lineTo(X-dir*12*zoom,yy-9*zoom); ctx.lineTo(X-dir*12*zoom,yy+9*zoom); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+   for(let k=-1;k<=1;k++){ const yy=Y+k*40*zoom;
+     if(SPIKESHOT_E.naturalWidth){ const hh=34*zoom, ww=hh*SPIKESHOT_E.naturalWidth/SPIKESHOT_E.naturalHeight; ctx.save(); ctx.translate(X,yy); ctx.scale(-dir,1); ctx.imageSmoothingEnabled=true; ctx.drawImage(SPIKESHOT_E,-ww/2,-hh/2,ww,hh); ctx.restore(); }
+     else { ctx.fillStyle='#cfc8b6'; ctx.strokeStyle='#6b6457'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(X+dir*16*zoom,yy); ctx.lineTo(X-dir*12*zoom,yy-9*zoom); ctx.lineTo(X-dir*12*zoom,yy+9*zoom); ctx.closePath(); ctx.fill(); ctx.stroke(); } }
    ctx.strokeStyle='#e0506a'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+dir*64*zoom,Y); ctx.stroke();
    ctx.beginPath(); ctx.moveTo(X+dir*64*zoom,Y); ctx.lineTo(X+dir*50*zoom,Y-6*zoom); ctx.lineTo(X+dir*50*zoom,Y+6*zoom); ctx.closePath(); ctx.fillStyle='#e0506a'; ctx.fill();
    if(sel&&sel.raw===h){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-22*zoom,Y-58*zoom,44*zoom,116*zoom); }
