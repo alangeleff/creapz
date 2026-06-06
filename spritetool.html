@@ -1,0 +1,164 @@
+<!doctype html><html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>cReapZ — Sprite Forge</title>
+<style>
+ :root{--bg:#0c0a16;--panel:#15112a;--ink:#e8e6f5;--mut:#9b8cff;--lime:#c8fb50;--line:#2a2150;--blue:#5fb4ff}
+ *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+ body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;padding:14px;max-width:760px;margin:0 auto}
+ h1{font-size:20px;margin:4px 0 2px;color:var(--lime)} .sub{color:var(--mut);font-size:12px;margin-bottom:14px}
+ .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+ label{font-size:12px;color:var(--mut);display:block;margin:10px 0 4px}
+ input[type=range]{width:100%} input[type=text]{width:100%;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:15px}
+ .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+ .btn{background:#1d2a3a;border:1px solid var(--blue);color:#bfe4ff;border-radius:10px;padding:12px 16px;font-size:15px;cursor:pointer}
+ .btn.go{background:#16301d;border-color:#3fbf6a;color:#a8f0c0}
+ .btn.lime{background:#242a16;border-color:var(--lime);color:var(--lime)}
+ #drop{border:2px dashed #5b9cff;border-radius:12px;padding:22px;text-align:center;color:#9bd0ff;cursor:pointer}
+ #frames{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+ .fr{position:relative;width:74px;height:74px;border:1px solid var(--line);border-radius:8px;background:#0e0b1d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='8' height='8' fill='%23222'/%3E%3Crect x='8' y='8' width='8' height='8' fill='%23222'/%3E%3C/svg%3E");display:flex;align-items:center;justify-content:center;overflow:hidden}
+ .fr canvas{max-width:100%;max-height:100%}
+ .fr .x{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a;font-size:13px;line-height:20px;text-align:center;cursor:pointer}
+ .fr .mv{position:absolute;bottom:2px;font-size:11px;color:#cdbbe6;background:#000a;border-radius:4px;padding:0 4px;cursor:pointer}
+ .fr .l{left:2px}.fr .r{right:2px}
+ #preview{display:block;margin:0 auto;border-radius:10px;image-rendering:auto}
+ .pvwrap{text-align:center}
+ .val{color:var(--lime);font-weight:700}
+ .hint{font-size:11px;color:#7a7298;margin-top:4px}
+</style></head><body>
+<h1>cReapZ · Sprite Forge</h1>
+<div class="sub">Drop AI-generated frames (any solid background) → cleaned, size-locked, feet-aligned, animatable, packed. Generate on a flat magenta bg for best keying.</div>
+
+<div class="card">
+ <div id="drop">Tap to add frames &nbsp;·&nbsp; or drop images here<input id="file" type="file" accept="image/*" multiple style="display:none"></div>
+ <div id="frames"></div>
+</div>
+
+<div class="card">
+ <label>Frame name (for sprites.json) </label><input id="nm" type="text" value="reaperbat_walk">
+ <label>Character height: <span class="val" id="thv">128</span> px</label><input id="th" type="range" min="48" max="220" value="128">
+ <label>Background removal strength: <span class="val" id="tov">70</span></label><input id="to" type="range" min="20" max="160" value="70">
+ <div class="hint">Higher = removes more of the background (raise it if a colored halo remains; lower it if edges of the character vanish).</div>
+ <div class="row" style="margin-top:12px">
+  <label style="margin:0"><input type="checkbox" id="mir"> Mirror to face right (engine default)</label>
+ </div>
+</div>
+
+<div class="card">
+ <div class="row" style="justify-content:space-between">
+  <div><label style="margin:0">Animation preview — <span class="val" id="fpsv">8</span> fps</label></div>
+  <div class="row">
+   <button class="btn" id="bgtog">BG: dark</button>
+   <button class="btn" id="playtog">⏸ pause</button>
+  </div>
+ </div>
+ <input id="fps" type="range" min="1" max="24" value="8" style="margin:8px 0">
+ <div class="pvwrap"><canvas id="preview" width="220" height="190"></canvas></div>
+ <div class="hint" style="text-align:center" id="status">Add frames to begin.</div>
+</div>
+
+<div class="card row" style="justify-content:center">
+ <button class="btn lime" id="dlsheet">⭳ Download sheet PNG</button>
+ <button class="btn go" id="dljson">⭳ Download sprites.json</button>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let frames=[]; // {img, cell:canvas, w,h}
+let TH=128, TOL=70, MIR=false, FPS=8, dark=true, playing=true;
+let cellW=160, cellH=160, baseY=0;
+
+function colorDist(r,g,b, c){ return Math.abs(r-c[0])+Math.abs(g-c[1])+Math.abs(b-c[2]); }
+
+function processImg(img){
+  const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+  const x=c.getContext('2d'); x.drawImage(img,0,0);
+  const W=c.width,H=c.height, id=x.getImageData(0,0,W,H), d=id.data;
+  // bg color = median-ish of 4 corners
+  const corners=[[0,0],[W-1,0],[0,H-1],[W-1,H-1]].map(([px,py])=>{const i=(py*W+px)*4; return [d[i],d[i+1],d[i+2]];});
+  const bg=[0,1,2].map(k=>Math.round(corners.reduce((s,c)=>s+c[k],0)/4));
+  // flood fill bg from borders
+  const vis=new Uint8Array(W*H); const st=[];
+  const isBg=p=>{const i=p*4; return d[i+3]>8 && colorDist(d[i],d[i+1],d[i+2],bg)<TOL;};
+  for(let xx=0;xx<W;xx++){ for(const py of [0,H-1]){const p=py*W+xx; if(!vis[p]&&isBg(p)){vis[p]=1;st.push(p);}} }
+  for(let yy=0;yy<H;yy++){ for(const px of [0,W-1]){const p=yy*W+px; if(!vis[p]&&isBg(p)){vis[p]=1;st.push(p);}} }
+  while(st.length){ const p=st.pop(); const px=p%W, py=(p/W)|0;
+    const nb=[p-1,p+1,p-W,p+W];
+    if(px===0)nb[0]=-1; if(px===W-1)nb[1]=-1; if(py===0)nb[2]=-1; if(py===H-1)nb[3]=-1;
+    for(const q of nb){ if(q>=0&&!vis[q]&&isBg(q)){vis[q]=1;st.push(q);} } }
+  for(let p=0;p<W*H;p++){ if(vis[p]) d[p*4+3]=0; }
+  // keep largest opaque component (drops sparkles / strays)
+  const lab=new Int32Array(W*H); let cur=0, best=0, bestSz=0;
+  for(let p=0;p<W*H;p++){ if(d[p*4+3]>30 && !lab[p]){ cur++; let sz=0; const s2=[p]; lab[p]=cur;
+    while(s2.length){ const q=s2.pop(); sz++; const qx=q%W,qy=(q/W)|0; const nb=[q-1,q+1,q-W,q+W];
+      if(qx===0)nb[0]=-1; if(qx===W-1)nb[1]=-1; if(qy===0)nb[2]=-1; if(qy===H-1)nb[3]=-1;
+      for(const r of nb){ if(r>=0 && d[r*4+3]>30 && !lab[r]){ lab[r]=cur; s2.push(r);} } }
+    if(sz>bestSz){bestSz=sz;best=cur;} } }
+  for(let p=0;p<W*H;p++){ if(lab[p]&&lab[p]!==best) d[p*4+3]=0; }
+  x.putImageData(id,0,0);
+  // bbox of opaque
+  let x0=W,y0=H,x1=0,y1=0;
+  for(let py=0;py<H;py++)for(let pxx=0;pxx<W;pxx++){ if(d[(py*W+pxx)*4+3]>20){ if(pxx<x0)x0=pxx; if(pxx>x1)x1=pxx; if(py<y0)y0=py; if(py>y1)y1=py; } }
+  if(x1<x0) return null;
+  const cw=x1-x0+1, ch=y1-y0+1;
+  return {canvas:c, x0,y0,cw,ch};
+}
+
+function buildCells(){
+  // first pass: process + measure scaled widths
+  let maxW=0;
+  const tmp=[];
+  for(const f of frames){ const pr=processImg(f.img); if(!pr){tmp.push(null);continue;} const sc=TH/pr.ch; const w=Math.max(1,Math.round(pr.cw*sc)); maxW=Math.max(maxW,w); tmp.push({pr,sc,w}); }
+  cellW=maxW+16; cellH=TH+22; baseY=cellH-8;
+  frames.forEach((f,i)=>{
+    const t=tmp[i]; const cell=document.createElement('canvas'); cell.width=cellW; cell.height=cellH; const cx=cell.getContext('2d');
+    if(t){ cx.imageSmoothingEnabled=true; cx.save();
+      const dw=t.w, dh=TH, dx=(cellW-dw)/2, dy=baseY-dh;
+      if(MIR){ cx.translate(cellW,0); cx.scale(-1,1); }
+      cx.drawImage(t.pr.canvas, t.pr.x0,t.pr.y0,t.pr.cw,t.pr.ch, MIR?(cellW-dx-dw):dx, dy, dw, dh);
+      cx.restore();
+    }
+    f.cell=cell;
+  });
+  renderThumbs(); fitPreview();
+  $('status').textContent = frames.length? (frames.length+' frame'+(frames.length>1?'s':'')+' · '+cellW+'×'+cellH+' cells · char '+TH+'px') : 'Add frames to begin.';
+}
+
+function renderThumbs(){
+  const host=$('frames'); host.innerHTML='';
+  frames.forEach((f,i)=>{ const d=document.createElement('div'); d.className='fr';
+    const cv=document.createElement('canvas'); cv.width=f.cell.width; cv.height=f.cell.height; cv.getContext('2d').drawImage(f.cell,0,0); d.appendChild(cv);
+    const x=document.createElement('div'); x.className='x'; x.textContent='×'; x.onclick=()=>{frames.splice(i,1);buildCells();}; d.appendChild(x);
+    if(i>0){const l=document.createElement('div');l.className='mv l';l.textContent='‹';l.onclick=()=>{[frames[i-1],frames[i]]=[frames[i],frames[i-1]];buildCells();};d.appendChild(l);}
+    if(i<frames.length-1){const r=document.createElement('div');r.className='mv r';r.textContent='›';r.onclick=()=>{[frames[i+1],frames[i]]=[frames[i],frames[i+1]];buildCells();};d.appendChild(r);}
+    host.appendChild(d); });
+}
+
+function fitPreview(){ const pv=$('preview'); pv.width=Math.min(300,cellW+20); pv.height=Math.min(260,cellH+20); }
+
+let pidx=0,pacc=0,plast=0;
+function loop(t){ const pv=$('preview'), c=pv.getContext('2d'); c.clearRect(0,0,pv.width,pv.height);
+  c.fillStyle=dark?'#12101e':'#cfd0e8'; c.fillRect(0,0,pv.width,pv.height);
+  if(frames.length){ if(playing){ pacc+=(t-plast)/1000; if(pacc>=1/FPS){ pacc=0; pidx=(pidx+1)%frames.length; } }
+    const cell=frames[pidx%frames.length].cell; c.drawImage(cell,(pv.width-cell.width)/2,(pv.height-cell.height)/2); }
+  plast=t; requestAnimationFrame(loop); }
+requestAnimationFrame(t=>{plast=t;loop(t);});
+
+function addFiles(files){ let pend=0; for(const file of files){ if(!file.type.startsWith('image'))continue; pend++; const img=new Image(); img.onload=()=>{ frames.push({img}); if(--pend===0) buildCells(); }; img.src=URL.createObjectURL(file); } if(pend===0) buildCells(); }
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>addFiles(e.target.files);
+$('drop').ondragover=e=>{e.preventDefault();}; $('drop').ondrop=e=>{e.preventDefault();addFiles(e.dataTransfer.files);};
+$('th').oninput=e=>{TH=+e.target.value;$('thv').textContent=TH;buildCells();};
+$('to').oninput=e=>{TOL=+e.target.value;$('tov').textContent=TOL;buildCells();};
+$('mir').onchange=e=>{MIR=e.target.checked;buildCells();};
+$('fps').oninput=e=>{FPS=+e.target.value;$('fpsv').textContent=FPS;};
+$('bgtog').onclick=()=>{dark=!dark;$('bgtog').textContent='BG: '+(dark?'dark':'light');};
+$('playtog').onclick=()=>{playing=!playing;$('playtog').textContent=playing?'⏸ pause':'▶ play';};
+
+function sheetCanvas(){ const s=document.createElement('canvas'); s.width=cellW*frames.length; s.height=cellH; const x=s.getContext('2d'); frames.forEach((f,i)=>x.drawImage(f.cell,i*cellW,0)); return s; }
+$('dlsheet').onclick=()=>{ if(!frames.length)return; sheetCanvas().toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=($('nm').value||'sprite')+'.png'; a.click(); }); };
+$('dljson').onclick=()=>{ if(!frames.length)return; const nm=$('nm').value||'sprite';
+  const meta={[nm]:{src:'sprites/'+nm+'.png', sw:cellW, sh:cellH, w:cellW, h:cellH, frames:frames.length, foots:Array(frames.length).fill(baseY)}};
+  const blob=new Blob([JSON.stringify(meta,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nm+'.json'; a.click(); };
+</script>
+</body></html>
