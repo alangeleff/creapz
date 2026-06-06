@@ -24,7 +24,7 @@ const OBJ = SPRITES.obst;
 const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VER;
 const ROCK_IMG=new Image(); ROCK_IMG.src='./assets/haz_rock2.png?v='+ASSET_VER;
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.src='./assets/caveplat1.png?v='+ASSET_VER;
-const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil1.png?v='+ASSET_VER;
+const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+ASSET_VER;
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], TEX=[];
 let STARS=[], TREES=[], GRAVES_BG=[];
