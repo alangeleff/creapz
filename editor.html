@@ -114,7 +114,7 @@ const GRID=20, TERRACE_DROP=130, DEF_TERR=600;
 const ENEMY_COLS={zombie:'#6b7d52',zgen:'#3ad07a',gob:'#c8a24a',bd:'#9a6cff'};
 const HAZ_COLS={spike:'#d9d2c0',rock:'#7a7280',tar:'#2a1f30',spikeshot:'#cfc8b6'};
 const HAZ_LABEL={spike:'Bone Spike Pit',rock:'Rock Drop',tar:'Tar Pit',spikeshot:'Spike Cannon'};
-const OBST_COLS={grave:'#8a82a6',crate:'#b6884a'};
+const OBST_COLS={grave:'#8a82a6',crate:'#b6884a',chest:'#caa05a'};
 const CATS=['Background','Ground','Hazards','Enemies','Functions','Objects','Textures'];
 const BGE_IMG={cavebg:new Image(), cavebg2:new Image()};
 BGE_IMG.cavebg.onload=()=>draw(); BGE_IMG.cavebg.src='./assets/cavebg1.png';
@@ -122,6 +122,7 @@ BGE_IMG.cavebg2.onload=()=>draw(); BGE_IMG.cavebg2.src='./assets/cavebg2.png';
 const BG_LABEL={cavebg:'Cave Background (far)', cavebg2:'Cave Midground (near)'};
 const TEX_COLS={ceiling:'#7a5a36',rockpile:'#8a6a3a'}, TEX_LABEL={ceiling:'Cave Ceiling',rockpile:'Rock Pile'};
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.onload=()=>draw(); CAVEPLAT_IMG.src='./assets/caveplat1.png';
+const CHEST_E=new Image(); CHEST_E.onload=()=>draw(); CHEST_E.src='./assets/chest_closed1.png';
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.onload=()=>draw(); CAVECEIL_IMG.src='./assets/caveceil2.png';
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.onload=()=>draw(); CAVEGND_IMG.src='./assets/caveground_dirt1.png';
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.onload=()=>draw(); CAVETOP_IMG.src='./assets/caveground_top1.png';
@@ -172,6 +173,7 @@ const STAMPS=[
  {k:'soul',label:'Soul',sw:'#7fe0ff',cat:'Functions'},
  {k:'grave',label:'Gravestone',sw:OBST_COLS.grave,cat:'Objects'},
  {k:'crate',label:'Crate',sw:OBST_COLS.crate,cat:'Objects'},
+ {k:'chest',label:'Treasure Chest',sw:'#caa05a',cat:'Objects'},
  {k:'tex_ceiling',label:'Cave Ceiling',sw:'#7a5a36',cat:'Textures'},
  {k:'tex_rockpile',label:'Rock Pile',sw:'#8a6a3a',cat:'Textures'},
  {k:'bg_cavebg',label:'Cave Background (far)',sw:'#2a3340',cat:'Background'},
@@ -290,6 +292,8 @@ function showSel(){
  const o=sel.obj; const _ak=assetKey(sel); let html='<h4>'+(LABELOF[_ak]||LABELOF[sel.kind]||sel.type)+'</h4>';
  const _flds=(sel.type==='haz'&&o.t==='spikeshot')?['x','y','dir','tx','ty','tw','th']:(SEL_FIELDS[sel.type]||[]);
  for(const f of _flds){ if(o[f]===undefined)continue; html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; }
+ if(sel.type==='obst' && o.type==='chest'){ const cur=o.loot||'gold'; const opts=['gold','soul','heart','stone'].map(v=>'<option'+(v===cur?' selected':'')+'>'+v+'</option>').join('');
+   html+='<div class="row"><span>loot</span><select data-loot style="flex:1;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px;font-size:13px">'+opts+'</select></div>'; }
  const _grp=swapGroupOf(_ak);
  if(_grp){ const _others=_grp.members.filter(m=>m[0]!==_ak);
    if(_others.length){ html+='<div style="margin-top:10px;font-size:11px;color:#9bd0ff">Swap to ('+_grp.label+')</div>';
@@ -298,6 +302,7 @@ function showSel(){
  html+='<button class="del">Delete</button>';
  selBox.innerHTML=html;
  selBox.querySelectorAll('.swapb').forEach(b=>b.onclick=()=>{ histPush(); applySwap(sel.raw,b.dataset.k); persist(); sel=reselect(sel); showSel(); draw(); });
+ const _ls=selBox.querySelector('[data-loot]'); if(_ls) _ls.onchange=()=>{ histPush(); o.loot=_ls.value; persist(); draw(); };
  selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ histPush(); o[inp.dataset.f]=v; syncBack(sel); persist(); draw(); } });
  selBox.querySelector('.dup').onclick=()=>dupSel();
  selBox.querySelector('.del').onclick=()=>{ histPush(); delObj(sel); sel=null; showSel(); persist(); draw(); };
@@ -337,7 +342,7 @@ function hit(wxp,wyp){
  for(const e of M.enemies){ const ey=(e[4]??M.goalY); if(!locked.has(e)&&Math.abs(wxp-e[0])<32&&wyp<ey+8&&wyp>ey-50) return wrap('enemy',e,['x','min','max','gy'],[0,1,2,4],e[3]); }
  const ps=allProps().sort((a,b)=>b.z-a.z);  // visual top first
  for(const pr of ps){ if(locked.has(pr.raw)) continue; const r=pr.raw;
-   if(pr.kind==='obst'){ if(Math.abs(wxp-r.x)<26&&wyp<(r.gy||0)+6&&wyp>(r.gy||0)-56) return {type:'obst',kind:r.type,obj:r,raw:r,sync(){}}; }
+   if(pr.kind==='obst'){ const rw=r.type==='chest'?50:26, rh=r.type==='chest'?66:56; if(Math.abs(wxp-r.x)<rw&&wyp<(r.gy||0)+6&&wyp>(r.gy||0)-rh) return {type:'obst',kind:r.type,obj:r,raw:r,sync(){}}; }
    else if(pr.kind==='haz'){ if(r.t==='spikeshot'){ if((Math.abs(wxp-r.x)<30&&wyp>r.y-60&&wyp<r.y+60)||(wxp>=r.tx&&wxp<=r.tx+r.tw&&wyp>=r.ty&&wyp<=r.ty+r.th)) return {type:'haz',kind:'haz_'+r.t,obj:r,raw:r,sync(){}}; } else { const top=r.t==='rock'?r.y-16:r.y-24; if(wxp>=r.x-6&&wxp<=r.x+r.w+6&&wyp>=top&&wyp<=r.y+14) return {type:'haz',kind:'haz_'+r.t,obj:r,raw:r,sync(){}}; } }
    else if(pr.kind==='plat'){ const x=r.x??r.x0; if(wxp>=x-8&&wxp<=x+r.w+8&&Math.abs(wyp-r.y)<24) return {type:'plat',kind:'plat_'+r.t,obj:r,raw:r,sync(){}}; }
    else if(pr.kind==='terrace'){ if(wxp>=r[0]&&wxp<=r[1]&&wyp>=r[2]-4&&wyp<=r[2]+(r[3]||TERRACE_DROP)) return wrap('terrace',r,['x0','x1','gy','depth'],[0,1,2,3]); }
@@ -394,7 +399,7 @@ function placeAt(kind,gx,gy){
  else if(kind.startsWith('haz_')){ const t=kind.split('_')[1]; const h={t,x:gx,y:gy,w:240,z:topZ()+10}; if(t==='spikeshot'){ h.w=28; h.dir=-1; h.tx=gx-340; h.ty=gy-150; h.tw=220; h.th=300; } (M.hazards=M.hazards||[]).push(h); sel={type:'haz',kind,obj:h,raw:h,sync(){}}; }
  else if(kind.startsWith('bg_')){ const t=kind.split('_').slice(1).join('_'); const b={t,par:(t==='cavebg2'?0.45:0.2)}; (M.bg=M.bg||[]).push(b); sel={type:'bg',kind,obj:b,raw:b,sync(){}}; }
  else if(kind.startsWith('tex_')){ const t=kind.split('_')[1]; const tx={t,x:gx,y:gy,w:300,z:topZ()+10}; (M.tex=M.tex||[]).push(tx); sel={type:'tex',kind,obj:tx,raw:tx,sync(){}}; }
- else if(OBST_COLS[kind]){ const o={x:gx,type:kind,gy,z:topZ()+10}; (M.obst=M.obst||[]).push(o); sel={type:'obst',kind,obj:o,raw:o,sync(){}}; }
+ else if(OBST_COLS[kind]){ const o={x:gx,type:kind,gy,z:topZ()+10}; if(kind==='chest')o.loot='gold'; (M.obst=M.obst||[]).push(o); sel={type:'obst',kind,obj:o,raw:o,sync(){}}; }
  else if(ENEMY_COLS[kind]){ const en=[gx,Math.max(0,gx-300),gx+300,kind,gy]; M.enemies.push(en); sel=wrap('enemy',en,['x','min','max','gy'],[0,1,2,4],kind); }
  showSel(); persist(); draw();
 }
@@ -536,6 +541,8 @@ function dTex(t){ const X=sx(t.x),Y=sy(t.y);
    if(sel&&sel.raw===t){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-dh*zoom-2,t.w*zoom+4,dh*zoom+4); } }
  else { ctx.fillStyle='#7a5a36'; ctx.fillRect(X,Y,t.w*zoom,30*zoom); } }
 function dObst(o){ const X=sx(o.x),Y=sy(o.gy||0);
+ if(o.type==='chest'){ if(CHEST_E.naturalWidth){ const dw=96*zoom, dh=dw*CHEST_E.naturalHeight/CHEST_E.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.drawImage(CHEST_E,X-dw/2,Y-dh,dw,dh); if(sel&&sel.raw===o){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-dw/2-2,Y-dh-2,dw+4,dh+4); } }
+   else { ctx.fillStyle='#5a3a1e'; ctx.fillRect(X-48*zoom,Y-62*zoom,96*zoom,62*zoom); } return; }
  if(!dSprite(o.type,X,Y,zoom,'b',false)){ ctx.fillStyle=OBST_COLS[o.type]||'#999';
    if(o.type==='crate'){ const ww=40*zoom; ctx.fillRect(X-ww/2,Y-ww,ww,ww); } else { const w2=34*zoom,h2=46*zoom; ctx.beginPath(); ctx.moveTo(X-w2/2,Y); ctx.lineTo(X-w2/2,Y-h2+w2/2); ctx.arc(X,Y-h2+w2/2,w2/2,Math.PI,0); ctx.lineTo(X+w2/2,Y); ctx.fill(); } }
  if(sel&&sel.raw===o){ const e=EDSPR[o.type], h=e?e.m.h*zoom:50*zoom, w=e?e.m.w*zoom:40*zoom; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-w/2-2,Y-h-2,w+4,h+4); } }

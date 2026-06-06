@@ -1,4 +1,4 @@
-const ASSET_VER='1780728752';
+const ASSET_VER='1780733139';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -25,6 +25,8 @@ const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VE
 const SPIKESHOT_IMG=new Image(); SPIKESHOT_IMG.src='./assets/haz_spikeshot1.png?v='+ASSET_VER;
 const ROCK_IMG=new Image(); ROCK_IMG.src='./assets/haz_rock2.png?v='+ASSET_VER;
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.src='./assets/caveplat1.png?v='+ASSET_VER;
+const CHEST_CLOSED_IMG=new Image(); CHEST_CLOSED_IMG.src='./assets/chest_closed1.png?v='+ASSET_VER;
+const CHEST_OPEN_IMG=new Image(); CHEST_OPEN_IMG.src='./assets/chest_open1.png?v='+ASSET_VER;
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='+ASSET_VER;
@@ -131,7 +133,8 @@ function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
-  OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z}));
+  OBST = ST.obst.map(o => { const def=OBJ[o.type]||{w:96,h:62}; const m={x:o.x, type:o.type, w:def.w, h:def.h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z}; if(o.type==='chest'){ m.state='closed'; m.openT=0; m.loot=o.loot||'gold'; } return m; });
+  loots=[];
   SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:o.gy-o.h}));
   TSOLID = SEG.map(s => ({l:s[0], r:s[1], top:s[2], bot:s[2]+(s[3]||130)}));
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
@@ -399,7 +402,7 @@ function drawSoulFx(x,y,R,A,ph){
 const BAT_FPS = 15, BITE_FPS = 29, BAT_PATROL = 1.25, BAT_CHASE = 2.1, BAT_AGGRO = 280;
 
 let mode='select', chosen=ORDER[0];
-let p, souls, soulCount, gt=0, camX=0, camY=0, WORLDH=440, GOALY=360, zombies, plats, chkOn, bats, bolts, impacts;
+let p, souls, soulCount, gt=0, camX=0, camY=0, WORLDH=440, GOALY=360, zombies, plats, chkOn, bats, bolts, impacts, loots=[];
 let paused=false, menuRects=[];
 let musicVol=1, sfxVol=1;
 try{ musicVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_mvol')??'1'))); sfxVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_svol')??'1'))); }catch(e){}
@@ -694,7 +697,7 @@ function reset(keep){
   hazReset();
 }
 function onReset(){ if (p && p.dead && !p.won) reset(true); else reset(); }
-function hazReset(){ rocks=[]; volleys=[]; for(const h of HAZ){ h.cd=0; if(h.cds) h.cds=h.cds.map(()=>0); } }
+function hazReset(){ rocks=[]; volleys=[]; loots=[]; for(const h of HAZ){ h.cd=0; if(h.cds) h.cds=h.cds.map(()=>0); } }
 let zbits=[];
 const ZBIT_COLS=['#4a5d3a','#6b7d52','#8a8f96','#5d6168','#9aa4ab','#3a4030','#b9c0c6'];
 function zbitsBurst(z,n){
@@ -984,6 +987,22 @@ function update(dt){
   }
   // --- combat ---
   let pwb = (p.attackT>0) ? worldWeaponBox(SPR.chars[chosen].attack, curFrame(), p.x, p.y, p.facing) : null;
+  for (const o of OBST){
+    if (o.type!=='chest') continue;
+    if (o.state==='closed'){
+      const cb={x:o.x-o.w*0.5, y:o.gy-o.h, w:o.w, h:o.h};
+      if (!p.dead && ((p.diveT>0 && overlap(pb,cb)) || (pwb && overlap(pwb,cb)))){
+        o.state='open'; o.openT=0; playSfx('sfx_meleehit',0.85); playSfx('sfx_ignite',1.1); spawnLoot(o);
+      }
+    } else o.openT+=dt;
+  }
+  for (const L of loots){
+    if (L.collected){ L.fade=(L.fade||0)+dt*3.2; continue; }
+    L.t+=dt; L.y += (L.restY - L.y)*0.1;
+    const drawY=L.y+Math.sin(L.t*3)*3, lb={x:L.x-18,y:drawY-18,w:36,h:36};
+    if (!p.dead && overlap(pb,lb)){ L.collected=true; L.fade=0; collectLoot(L); }
+  }
+  loots=loots.filter(L=>!L.collected || (L.fade||0)<1);
   for (const z of zombies){
     z.t+=dt; const zpx=z.x;
     if (z.hitCd>0) z.hitCd-=dt;
@@ -1419,8 +1438,39 @@ function terrWallX(nx, px, y, hw){
   }
   return nx;
 }
+function spawnLoot(o){ loots.push({x:o.x, y:o.gy-o.h+12, restY:o.gy-o.h-56, t:0, type:o.loot||'gold', collected:false, fade:0}); }
+function collectLoot(L){
+  if (L.type==='heart'){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup'); }
+  else if (L.type==='soul'){ soulCount++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
+  else if (L.type==='stone'){ addScore(2000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.7); }
+  else { addScore(500); playSfx('sfx_soul',0.8); }
+}
+function drawTreasure(x,y,type,sc,al){
+  ctx.save(); ctx.globalAlpha=al;
+  const col={heart:'#ff4d6d',soul:'#7fe0ff',gold:'#ffcf3c',stone:'#46e0c0'}[type]||'#ffcf3c';
+  const g=ctx.createRadialGradient(x,y,1,x,y,26*sc); g.addColorStop(0,col); g.addColorStop(0.5,col+'66'); g.addColorStop(1,col+'00');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,26*sc,0,7); ctx.fill();
+  ctx.translate(x,y); ctx.scale(sc,sc);
+  if (type==='heart'){ ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(0,8); ctx.bezierCurveTo(-12,-4,-7,-14,0,-6); ctx.bezierCurveTo(7,-14,12,-4,0,8); ctx.fill(); }
+  else if (type==='soul'){ ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0,9,0,7); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(-2,-2,3,0,7); ctx.fill(); }
+  else { ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(0,-11); ctx.lineTo(9,-3); ctx.lineTo(5,11); ctx.lineTo(-5,11); ctx.lineTo(-9,-3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(0,-11); ctx.lineTo(9,-3); ctx.lineTo(0,-1); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+}
+function drawLoots(){ for(const L of loots){ const sx=pxf(L.x,1); if(sx<-60||sx>W+60) continue; const y=L.y+Math.sin(L.t*3)*3; const sc=L.collected?(1+(L.fade||0)*0.8):1, al=L.collected?Math.max(0,1-(L.fade||0)):1; drawTreasure(sx,y,L.type,sc,al); } }
 function drawObstacle(o){
   const sx=pxf(o.x,1); if(sx<-90||sx>W+90) return;
+  if (o.type==='chest'){
+    const opening=o.state==='open', img=opening?CHEST_OPEN_IMG:CHEST_CLOSED_IMG;
+    if (img.complete && img.naturalWidth){ const dw=o.w, dh=dw*img.naturalHeight/img.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.drawImage(img, sx-dw/2, o.gy-dh, dw, dh); }
+    else { ctx.fillStyle='#5a3a1e'; ctx.fillRect(sx-o.w/2,o.gy-o.h,o.w,o.h); }
+    if (opening && o.openT<0.55){ const a=Math.max(0,1-o.openT/0.55), cy=o.gy-o.h*0.7, rad=18+o.openT*210;
+      const g=ctx.createRadialGradient(sx,cy,2,sx,cy,rad); g.addColorStop(0,'rgba(255,252,220,'+(a*0.95).toFixed(2)+')'); g.addColorStop(0.45,'rgba(255,214,96,'+(a*0.55).toFixed(2)+')'); g.addColorStop(1,'rgba(255,180,40,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy,rad,0,7); ctx.fill();
+      ctx.strokeStyle='rgba(255,240,180,'+(a*0.8).toFixed(2)+')'; ctx.lineWidth=2;
+      for(let k=0;k<8;k++){ const ang=k*0.785+o.openT*2.4; ctx.beginPath(); ctx.moveTo(sx,cy); ctx.lineTo(sx+Math.cos(ang)*rad*0.9, cy+Math.sin(ang)*rad*0.9); ctx.stroke(); } }
+    return;
+  }
   const im=SPR.obst[o.type]; ctx.imageSmoothingEnabled=true;
   ctx.drawImage(im.img, sx-o.w/2, o.gy-o.h, o.w, o.h);
 }
@@ -1916,6 +1966,7 @@ function draw(){
   drawChecks();
   drawRocks();
   drawVolleys();
+  drawLoots();
   for (const z of zombies) drawZombie(z);
   for (const b of bats) drawBat(b);
   drawZbits();
