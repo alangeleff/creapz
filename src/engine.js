@@ -1,4 +1,4 @@
-const ASSET_VER='1780726660';
+const ASSET_VER='1780728456';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -22,6 +22,7 @@ const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power 
 const BASH_VX = 11.4, BASH_VY = 12.6;   // Scythe Bash (cReaper) — snappier than the dive per Alan
 const OBJ = SPRITES.obst;
 const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VER;
+const SPIKESHOT_IMG=new Image(); SPIKESHOT_IMG.src='./assets/haz_spikeshot1.png?v='+ASSET_VER;
 const ROCK_IMG=new Image(); ROCK_IMG.src='./assets/haz_rock2.png?v='+ASSET_VER;
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.src='./assets/caveplat1.png?v='+ASSET_VER;
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
@@ -30,7 +31,7 @@ const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='
 const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png?v='+ASSET_VER;
 const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+ASSET_VER;
 const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='+ASSET_VER; return i;})(), cavebg2:(()=>{const i=new Image(); i.src='./assets/cavebg2.png?v='+ASSET_VER; return i;})()};
-let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], TEX=[], BG=[];
+let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[];
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
@@ -132,11 +133,12 @@ function loadStage(i){
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
   OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z}));
   SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:o.gy-o.h}));
+  TSOLID = SEG.map(s => ({l:s[0], r:s[1], top:s[2], bot:s[2]+(s[3]||130)}));
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
   TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z}));
   BG = (ST.bg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha}));
   HAZ = (ST.hazards||[]).map(h=>{
-    const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0};
+    const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0, dir:h.dir, tx:h.tx, ty:h.ty, tw:h.tw, th:h.th};
     if(h.t==='rock'){ const n=Math.max(1,Math.round(h.w/160)); const step=h.w/n; o.spawns=[]; for(let i=0;i<n;i++) o.spawns.push(Math.round(h.x+step*(i+0.5))); o.cds=o.spawns.map(()=>0); }
     return o;
   });
@@ -692,7 +694,7 @@ function reset(keep){
   hazReset();
 }
 function onReset(){ if (p && p.dead && !p.won) reset(true); else reset(); }
-function hazReset(){ rocks=[]; for(const h of HAZ){ h.cd=0; if(h.cds) h.cds=h.cds.map(()=>0); } }
+function hazReset(){ rocks=[]; volleys=[]; for(const h of HAZ){ h.cd=0; if(h.cds) h.cds=h.cds.map(()=>0); } }
 let zbits=[];
 const ZBIT_COLS=['#4a5d3a','#6b7d52','#8a8f96','#5d6168','#9aa4ab','#3a4030','#b9c0c6'];
 function zbitsBurst(z,n){
@@ -923,8 +925,8 @@ function update(dt){
     }
   }
   let nx=p.x+p.vx;
-  for (const s of SOLID){
-    if (p.y>s.top+4 && (p.y-PH)<GROUND){
+  for (const s of TSOLID){
+    if (p.y>s.top+4 && (p.y-PH)<s.bot){
       if (nx+PW/2>s.l && nx-PW/2<s.r){
         if (p.x+PW/2<=s.l+0.5) nx=s.l-PW/2; else if (p.x-PW/2>=s.r-0.5) nx=s.r+PW/2;
       }
@@ -941,9 +943,9 @@ function update(dt){
       if (cand[0].q && cand[0].q.t==='c' && cand[0].q.ct===0) cand[0].q.ct=0.0001;
     } else { p.onGround=false; p.standPlat=null; }
   } else { p.onGround=false; p.standPlat=null; }
-  // hard-resolve any overlap with solid obstacles (accurate edges, no pass-through)
-  for (const s of SOLID){
-    if (p.y>s.top+4 && (p.y-PH)<GROUND){
+  // hard-resolve overlap with solid terrain walls (accurate edges, no pass-through)
+  for (const s of TSOLID){
+    if (p.y>s.top+4 && (p.y-PH)<s.bot){
       const pl=p.x-PW/2, pr=p.x+PW/2;
       if (pr>s.l && pl<s.r){
         if (pr-s.l < s.r-pl) p.x=s.l-PW/2; else p.x=s.r+PW/2;
@@ -983,7 +985,7 @@ function update(dt){
   // --- combat ---
   let pwb = (p.attackT>0) ? worldWeaponBox(SPR.chars[chosen].attack, curFrame(), p.x, p.y, p.facing) : null;
   for (const z of zombies){
-    z.t+=dt;
+    z.t+=dt; const zpx=z.x;
     if (z.hitCd>0) z.hitCd-=dt;
     if (z.shown>0) z.shown-=dt;
     z.hpShown += (z.hp-z.hpShown)*Math.min(1,dt*10);
@@ -1020,6 +1022,7 @@ function update(dt){
       z.facing=z.pdir;
     }
     else z.state='idle';
+    z.x=terrWallX(z.x, zpx, z.y, 16);
     if (p.inv<=0 && !p.dead && overlap(pBodyBox(), zBodyBox(z))) hurtPlayer(z.x);
   }
   for (const b of bats){
@@ -1109,6 +1112,11 @@ function updateHazards(dt){
     if(h.t==='spike'){
       const sb={x:h.x+8,y:h.y-34,w:h.w-16,h:40};
       if(p.inv<=0 && !p.dead && !p.winning && overlap(pb,sb)) hurtPlayer(p.x);
+    } else if(h.t==='spikeshot'){
+      if(h.cd<=0 && !p.dead && !p.winning){
+        const inTrig = p.x>h.tx && p.x<h.tx+h.tw && p.y>h.ty && (p.y-PH)<h.ty+h.th;
+        if(inTrig){ const dir=h.dir||-1; for(let k=-1;k<=1;k++) volleys.push({x:h.x, y:h.y+k*40, vx:dir*7.2, dist:0, dead:false}); h.cd=1.8; playSfx('sfx_gspear',0.7); }
+      }
     } else if(h.t==='rock'){
       // each spawn point along the span drops independently as the player passes under it
       for(let i=0;i<h.spawns.length;i++){
@@ -1133,12 +1141,28 @@ function updateHazards(dt){
     else if(r.y>WORLDH+80){ r.dead=true; r.dt2=99; }
   }
   rocks=rocks.filter(r=>!r.dead||r.dt2<0.5);
+  for(const v of volleys){
+    if(v.dead) continue;
+    v.x+=v.vx; v.dist+=Math.abs(v.vx);
+    const vb={x:v.x-18,y:v.y-12,w:36,h:24};
+    if(p.inv<=0 && !p.dead && !p.winning && overlap(pb,vb)){ v.dead=true; hurtPlayer(v.x); playSfx('sfx_meleehit',0.7); continue; }
+    for(const s of TSOLID){ if(v.x>s.l-4 && v.x<s.r+4 && v.y>s.top && v.y<s.bot){ v.dead=true; break; } }
+    if(v.dist>1500) v.dead=true;
+  }
+  volleys=volleys.filter(v=>!v.dead);
 }
 function rockBits(r){
   for(let i=0;i<10;i++) zbits.push({x:r.x,y:r.y,vx:(Math.random()-0.5)*150,vy:-40-Math.random()*90,
     sz:2.5+Math.random()*3.5,life:0.4+Math.random()*0.4,t:0,c:['#6b6470','#8a828f','#54505c','#9a93a0'][(Math.random()*4)|0]});
 }
+function drawSpikeProj(sx,sy,dir){
+  if(SPIKESHOT_IMG.complete && SPIKESHOT_IMG.naturalWidth){ const hh=34, ww=hh*SPIKESHOT_IMG.naturalWidth/SPIKESHOT_IMG.naturalHeight;
+    ctx.save(); ctx.translate(sx,sy); ctx.scale(dir,1); ctx.imageSmoothingEnabled=true; ctx.drawImage(SPIKESHOT_IMG,-ww/2,-hh/2,ww,hh); ctx.restore(); }
+  else { ctx.fillStyle='#cfc8b6'; ctx.strokeStyle='#6b6457'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(sx+dir*16,sy); ctx.lineTo(sx-dir*12,sy-9); ctx.lineTo(sx-dir*12,sy+9); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+}
+function drawVolleys(){ for(const v of volleys){ if(v.dead)continue; const sx=v.x-camX; if(sx<-40||sx>W+40)continue; drawSpikeProj(sx, v.y, v.vx<0?-1:1); } }
 function drawOneHaz(h){
+  if(h.t==='spikeshot'){ const lx=h.x-camX; if(lx<-60||lx>W+60) return; const dir=h.dir||-1; for(let k=-1;k<=1;k++) drawSpikeProj(lx, h.y+k*40, dir); return; }
   {
     const x0=h.x-camX, x1=h.x+h.w-camX; if(x1<-30||x0>W+30) return;
     if(h.t==='spike'){
@@ -1386,6 +1410,14 @@ function drawOneTerrace(s){
     }
     ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fillRect(x0,sgy,3,bot-sgy); ctx.fillRect(x1-3,sgy,3,bot-sgy);
   }
+}
+function terrWallX(nx, px, y, hw){
+  for(const s of TSOLID){
+    if(y>s.top+6 && (y-50)<s.bot && nx+hw>s.l && nx-hw<s.r){
+      if(px+hw<=s.l+1) nx=s.l-hw; else if(px-hw>=s.r-1) nx=s.r+hw;
+    }
+  }
+  return nx;
 }
 function drawObstacle(o){
   const sx=pxf(o.x,1); if(sx<-90||sx>W+90) return;
@@ -1883,6 +1915,7 @@ function draw(){
   drawWorldProps();
   drawChecks();
   drawRocks();
+  drawVolleys();
   for (const z of zombies) drawZombie(z);
   for (const b of bats) drawBat(b);
   drawZbits();
