@@ -1,4 +1,4 @@
-const ASSET_VER='1780760285';
+const ASSET_VER='1780761068';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -34,8 +34,8 @@ const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_pow
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
 const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidian','fluorite','chaos','none'];
 const PMETER=20, PDUR=7;
-let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[];
-function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.55; powerPulse=0; if(p.vy>-3)p.vy=-3; p.inv=Math.max(p.inv,0.3); playSfx('sfx_wportal',1); playSfx('sfx_ignite',1.2); }
+let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[];
+function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); loadStage(pendingStage); mode='play'; }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
@@ -862,6 +862,13 @@ function update(dt){
   if (p.flash>0) p.flash-=dt;
   if (p.hurtT>0) p.hurtT-=dt;
   p.hpShown += (p.hp-p.hpShown)*Math.min(1,dt*8);
+  if (powerActive && transformT>0 && !p.dead){
+    transformT-=dt; powerPulse+=dt; p.vx=0; p.vy=0; p.onGround=false; p.y-=16*dt; p.inv=Math.max(p.inv,0.5);
+    if(p.state!=='jump'){ p.state='jump'; p.clock=0; } p.clock+=dt;
+    if(transformT<=0){ powerBoom=0.42; playSfx('sfx_wportal',1.0); playSfx('sfx_meleehit',0.7); }
+    camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38)); camY=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
+    return;
+  }
   if (p.dead){
     const pd0=p.deadT; p.deadT+=dt;
     if (pd0<0.45 && p.deadT>=0.45) playSfx('sfx_dportal');
@@ -1023,7 +1030,7 @@ function update(dt){
   }
   loots=loots.filter(L=>!L.collected || (L.fade||0)<1);
   if (powerActive){
-    powerT-=dt; transformT=Math.max(0,transformT-dt); powerPulse+=dt; p.inv=Math.max(p.inv,0.2);
+    powerT-=dt; if(powerBoom>0)powerBoom-=dt; powerPulse+=dt; p.inv=Math.max(p.inv,0.2);
     if (equippedStone==='ruby'){
       const aura={x:p.x-58,y:p.y-118,w:116,h:120};
       for (const z of zombies){ if(z.dead) continue; if(z.hitCd<=0 && overlap(aura,zBodyBox(z))){ z.hp-=1; z.hitCd=0.25; z.shown=3;
@@ -1782,25 +1789,40 @@ function drawStoneMeter(){ if(!equippedStone) return;
   ctx.restore();
   if(!powerActive && frac>=1){ ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.textAlign='right'; ctx.fillText('JUMP\u00d72!', bx+bw-3, y+h-4); ctx.textAlign='left'; }
 }
-function drawPower(){ if(!powerActive && transformT<=0) return;
-  const col=STONE_DEFS[equippedStone]||'#ffcf3c'; const sx=pxf(p.x,1), cy=p.y-44;
-  if(powerActive){
-    const pr=46+6*Math.sin(gt*6);
-    const g=ctx.createRadialGradient(sx,cy,4,sx,cy,pr+20);
-    g.addColorStop(0,col+'00'); g.addColorStop(0.62,col+'33'); g.addColorStop(0.85,col+'aa'); g.addColorStop(1,col+'00');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy,pr+20,0,7); ctx.fill();
-    for(let i=0;i<4;i++){ const a=gt*3+i*1.57, rr=30+18*Math.sin(gt*4+i); ctx.globalAlpha=0.5+0.5*Math.sin(gt*7+i); ctx.fillStyle=col; ctx.fillRect(sx+Math.cos(a)*rr-1.5, cy+Math.sin(a)*rr-6, 3, 9); }
+function drawPoweredFrame(sx){
+  const pimg=isDing(chosen)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; if(!pimg.complete||!pimg.naturalWidth) return;
+  const cref=(SPR.chars[chosen]&&SPR.chars[chosen].idle)?SPR.chars[chosen].idle.h:132;
+  const hh=cref*1.14, ww=hh*pimg.naturalWidth/pimg.naturalHeight;
+  ctx.save(); ctx.imageSmoothingEnabled=true; if(p.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
+  ctx.drawImage(pimg, sx-ww/2, p.y - hh + 18, ww, hh); ctx.restore();
+}
+function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
+  const col=STONE_DEFS[equippedStone]||'#ffcf3c', sx=pxf(p.x,1), cy=p.y-60;
+  // CHARGE / HANG: energy gathers inward, frame floats, crackle builds
+  if(transformT>0){ const k=transformT/0.95;
+    const gr=ctx.createRadialGradient(sx,cy,2,sx,cy,90*(1-k)+22);
+    gr.addColorStop(0,col); gr.addColorStop(0.5,col+'66'); gr.addColorStop(1,col+'00');
+    ctx.globalAlpha=0.45+0.5*(1-k); ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(sx,cy,90*(1-k)+22,0,7); ctx.fill(); ctx.globalAlpha=1;
+    for(let i=0;i<12;i++){ const a=i*0.5236+gt*4, R=24+k*150; ctx.globalAlpha=0.6*(1-k)+0.25; ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(sx+Math.cos(a)*R, cy+Math.sin(a)*R); ctx.lineTo(sx+Math.cos(a)*(R-24), cy+Math.sin(a)*(R-24)); ctx.stroke(); }
     ctx.globalAlpha=1;
-    if(Math.random()<0.4){ ctx.strokeStyle=col; ctx.lineWidth=2; ctx.globalAlpha=0.7; ctx.beginPath(); let ax=sx+(Math.random()-0.5)*70, ay=cy-50; ctx.moveTo(ax,ay); for(let k=0;k<3;k++){ ax+=(Math.random()-0.5)*30; ay+=22; ctx.lineTo(ax,ay);} ctx.stroke(); ctx.globalAlpha=1; }
+    if(k<0.55 && Math.random()<0.7){ ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.globalAlpha=0.85; let ax=sx+(Math.random()-0.5)*64, ay=cy-46; ctx.beginPath(); ctx.moveTo(ax,ay); for(let j=0;j<3;j++){ ax+=(Math.random()-0.5)*30; ay+=28; ctx.lineTo(ax,ay);} ctx.stroke(); ctx.globalAlpha=1; }
+    drawPoweredFrame(sx);
   }
-  if(transformT>0){ const tp=1-transformT/0.55, R=tp*150;
-    ctx.globalAlpha=1-tp; ctx.strokeStyle=col; ctx.lineWidth=6*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R,0,7); ctx.stroke();
-    ctx.strokeStyle='#ffffff'; ctx.lineWidth=3*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R*0.7,0,7); ctx.stroke();
-    for(let i=0;i<10;i++){ const a=i*0.628+gt*5; ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(sx+Math.cos(a)*R*0.4,cy+Math.sin(a)*R*0.4); ctx.lineTo(sx+Math.cos(a)*R,cy+Math.sin(a)*R); ctx.stroke(); }
-    ctx.globalAlpha=1;
-    const pimg=isDing(chosen)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; if(pimg.complete && pimg.naturalWidth){ const hh=120, ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.globalAlpha=Math.min(1,transformT/0.2+0.35); ctx.imageSmoothingEnabled=true; if(p.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, p.y-hh+8, ww, hh); ctx.restore(); }
+  // BOOM: outward shockwave
+  if(powerBoom>0){ const tp=1-powerBoom/0.42, R=tp*230;
+    ctx.globalAlpha=Math.max(0,1-tp); ctx.strokeStyle='#ffffff'; ctx.lineWidth=9*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R*0.62,0,7); ctx.stroke();
+    ctx.strokeStyle=col; ctx.lineWidth=13*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R,0,7); ctx.stroke(); ctx.globalAlpha=1;
+    if(tp<0.45) drawPoweredFrame(sx);
+  }
+  // SUSTAINED aura while active
+  if(powerActive && transformT<=0){ const pr=48+6*Math.sin(gt*6);
+    const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.6,col+'33'); g.addColorStop(0.85,col+'aa'); g.addColorStop(1,col+'00');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
+    for(let i=0;i<4;i++){ const a=gt*3+i*1.57, rr=30+18*Math.sin(gt*4+i); ctx.globalAlpha=0.5+0.5*Math.sin(gt*7+i); ctx.fillStyle=col; ctx.fillRect(sx+Math.cos(a)*rr-1.5, cy+14+Math.sin(a)*rr-6, 3, 9); } ctx.globalAlpha=1;
+    if(Math.random()<0.32){ ctx.strokeStyle=col; ctx.lineWidth=2; ctx.globalAlpha=0.7; let ax=sx+(Math.random()-0.5)*70, ay=cy-28; ctx.beginPath(); ctx.moveTo(ax,ay); for(let k2=0;k2<3;k2++){ ax+=(Math.random()-0.5)*30; ay+=22; ctx.lineTo(ax,ay);} ctx.stroke(); ctx.globalAlpha=1; }
   }
 }
+
 function drawStonePick(){
   ctx.setTransform(RS,0,0,RS,0,0);
   const bg=ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#0a0712'); bg.addColorStop(1,'#170d24'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
@@ -2012,7 +2034,8 @@ function drawPlayerLayer(){
       drawCharSprite(chosen,'dive',0,sx,p.y,p.facing,1,0);
       ctx.restore();
     }
-    else if (!(p.inv>0 && Math.floor(gt*16)%2===0)) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, p.inv>0?0.45:0);
+    else if ((powerActive && transformT>0)) {} 
+    else if (!(p.inv>0 && !powerActive && Math.floor(gt*16)%2===0)) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.inv>0 && !powerActive)?0.45:0);
     if (p.muzzleT>0){
       const k=1-p.muzzleT/0.14, hx=sx+p.facing*42, hy=p.y-56;
       // soft rim glow washing over the character
