@@ -1,4 +1,4 @@
-const ASSET_VER='1780773957';
+const ASSET_VER='1780774338';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -62,8 +62,8 @@ try{
   if(q.has('dev')){ if(q.get('dev')==='off') localStorage.removeItem('creapz_dev'); else localStorage.setItem('creapz_dev', q.get('dev')); }
   devMode = localStorage.getItem('creapz_dev')===DEVKEY;
 }catch(e){}
-const STAGE_ZONE=['cem','cem','crypt'];        // stageIdx -> zone
-const STAGE_ACT=['cem1','cem2','crypt1'];      // stageIdx -> act record id
+const STAGE_ZONE=['cem','cem','crypt','crypt'];        // stageIdx -> zone
+const STAGE_ACT=['cem1','cem2','crypt1','crypt2'];      // stageIdx -> act record id
 let saves={slots:[null,null,null]}, slotIdx=-1;
 let prog={acts:{},heroAt:'cem'};               // alias of the bound slot
 try{ const s0=JSON.parse(localStorage.getItem(SAVEK)); if(s0&&Array.isArray(s0.slots)) saves={slots:[s0.slots[0]||null,s0.slots[1]||null,s0.slots[2]||null]}; }catch(e){}
@@ -535,7 +535,11 @@ function preloadMusic(key){
 }
 let audioPrimed=false;
 function primeAudio(){
-  audioInit(); if (AC && AC.state==='suspended') AC.resume();
+  audioInit();
+  if (AC){
+    try{ const _b=AC.createBufferSource(); _b.buffer=AC.createBuffer(1,1,22050); _b.connect(AC.destination); _b.start(0); }catch(e){}  // iOS/Android: play a real (silent) node in the gesture to unlock
+    if (AC.state==='suspended') AC.resume().then(()=>{ if((mode==='title'||mode==='select'||mode==='world')&&musicKey!=='title') playMusic('title'); }).catch(()=>{});
+  }
   if (AC && (mode==='title'||mode==='select'||mode==='world') && musicKey!=='title') playMusic('title');
   if (audioPrimed || !AC) return;
   audioPrimed=true;
