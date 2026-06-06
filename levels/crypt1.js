@@ -47,8 +47,8 @@ window.STAGES=window.STAGES||[];window.STAGES[2]={
   [
    1860,
    1980,
-   1360,
-   200,
+   1500,
+   60,
    160,
    "4F",
    "cave"
@@ -78,7 +78,7 @@ window.STAGES=window.STAGES||[];window.STAGES[2]={
    "type": "chest",
    "gy": 1960,
    "z": 200,
-   "loot": "stone_master",
+   "loot": "heart",
    "f": -1
   }
  ],
@@ -306,64 +306,56 @@ window.STAGES=window.STAGES||[];window.STAGES[2]={
    1450,
    2150,
    "zombie",
-   360,
-   -1
+   360
   ],
   [
    1120,
    950,
    1340,
    "gob",
-   760,
-   1
+   760
   ],
   [
    1850,
    1620,
    2200,
    "bd",
-   1160,
-   -1
+   1160
   ],
   [
    1180,
    980,
    1420,
    "gob",
-   1560,
-   1
+   1560
   ],
   [
    1500,
    1320,
    1820,
    "zombie",
-   1960,
-   -1
+   1960
   ],
   [
    1820,
    1560,
    2120,
    "zombie",
-   1960,
-   -1
+   1960
   ],
   [
    2120,
    1820,
    2360,
    "zgen",
-   1960,
-   -1
+   1960
   ],
   [
    900,
    720,
    1180,
    "gob",
-   1960,
-   1
+   1960
   ]
  ],
  "bats": [
@@ -441,8 +433,8 @@ window.STAGES=window.STAGES||[];window.STAGES[2]={
   },
   {
    "t": "spikeshot",
-   "x": 3120,
-   "y": 1520,
+   "x": 3320,
+   "y": 1320,
    "w": 28,
    "dir": -1,
    "tx": 1080,
