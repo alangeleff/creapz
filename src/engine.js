@@ -1,4 +1,4 @@
-const ASSET_VER='1780761068';
+const ASSET_VER='1780762919';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -34,7 +34,7 @@ const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_pow
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
 const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidian','fluorite','chaos','none'];
 const PMETER=20, PDUR=7;
-let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[];
+let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null;
 function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); loadStage(pendingStage); mode='play'; }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
@@ -123,7 +123,7 @@ function getActs(zone){
   });
 }
 function zoneOpen(z){ return !!(ZONE_STAGES[z]&&ZONE_STAGES[z].length&&(devMode||(RELEASED[z]||0)>0)); }
-function bootTest(){ banked=0; pendingStage=window.__testIdx; stonePickSel=0; mode='stonepick'; }
+function bootTest(){ banked=0; if(!chosen) chosen=creaperSkin||'default'; pendingStage=window.__testIdx; stonePickSel=0; mode='stonepick'; }
 function enterWorld(fromAct){
   if(testMode){ try{ if(history.length>1) history.back(); else location.href='editor'; }catch(e){ location.href='editor'; } return; }
   paused=false; tally=null; fading=0; fadeIn=0.5; panelSel=0;
@@ -257,6 +257,7 @@ addEventListener('keydown', e => {
   if (mode==='stonepick'){ primeAudio();
     if(e.code==='ArrowLeft'){ stonePickSel=(stonePickSel+PICK_STONES.length-1)%PICK_STONES.length; playSfx('sfx_mtog'); }
     else if(e.code==='ArrowRight'){ stonePickSel=(stonePickSel+1)%PICK_STONES.length; playSfx('sfx_mtog'); }
+    else if(e.code==='ArrowUp'||e.code==='ArrowDown'){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); playSfx('sfx_mtog'); }
     else if(e.code==='Enter'||e.code==='Space'){ confirmStone(); }
     return; }
   if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; panelSel=0; playSfx('sfx_mtog'); } return; }
@@ -296,7 +297,7 @@ cv.addEventListener('pointerdown', e=>{
   primeAudio();
   const pt=canvasPt(e);
   if (mode==='world'){ WORLDMODE.pdown(pt); return; }
-  if (mode==='stonepick'){ for(const r of stonePickRects){ if(pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ stonePickSel=r.i; confirmStone(); return; } } return; }
+  if (mode==='stonepick'){ if(charToggleRect&&pt.x>charToggleRect.x&&pt.x<charToggleRect.x+charToggleRect.w&&pt.y>charToggleRect.y&&pt.y<charToggleRect.y+charToggleRect.h){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); playSfx('sfx_mtog'); return; } for(const r of stonePickRects){ if(pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ stonePickSel=r.i; confirmStone(); return; } } return; }
   if (mode==='load'){
     if (loaded>=total){
       mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel');
@@ -1791,10 +1792,9 @@ function drawStoneMeter(){ if(!equippedStone) return;
 }
 function drawPoweredFrame(sx){
   const pimg=isDing(chosen)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; if(!pimg.complete||!pimg.naturalWidth) return;
-  const cref=(SPR.chars[chosen]&&SPR.chars[chosen].idle)?SPR.chars[chosen].idle.h:132;
-  const hh=cref*1.14, ww=hh*pimg.naturalWidth/pimg.naturalHeight;
+  const hh=isDing(chosen)?161:163, ww=hh*pimg.naturalWidth/pimg.naturalHeight;
   ctx.save(); ctx.imageSmoothingEnabled=true; if(p.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
-  ctx.drawImage(pimg, sx-ww/2, p.y - hh + 18, ww, hh); ctx.restore();
+  ctx.drawImage(pimg, sx-ww/2, p.y - hh + 16, ww, hh); ctx.restore();
 }
 function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
   const col=STONE_DEFS[equippedStone]||'#ffcf3c', sx=pxf(p.x,1), cy=p.y-60;
@@ -1828,6 +1828,10 @@ function drawStonePick(){
   const bg=ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#0a0712'); bg.addColorStop(1,'#170d24'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
   ctx.textAlign='center'; ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText('Equip a cReapY Stone', W/2, 64);
   ctx.font='14px sans-serif'; ctx.fillStyle='#9b8cff'; ctx.fillText('charge it with souls \u00b7 in the air, tap Jump again to unleash', W/2, 90);
+  const cname=isDing(chosen)?'Dingbat':'cReaper', cw=180, cx0=W/2-cw/2, cy0=104;
+  ctx.fillStyle='rgba(123,92,255,.18)'; roundRect(cx0,cy0,cw,30,8); ctx.fill(); ctx.strokeStyle='#7b5cff'; ctx.lineWidth=1.5; roundRect(cx0,cy0,cw,30,8); ctx.stroke();
+  ctx.fillStyle='#cdbbe6'; ctx.font='bold 14px sans-serif'; ctx.fillText('\u25c2  Character: '+cname+'  \u25b8', W/2, cy0+20);
+  charToggleRect={x:cx0,y:cy0,w:cw,h:30};
   const n=PICK_STONES.length, sz=70, gap=14, totalW=n*sz+(n-1)*gap, x0=W/2-totalW/2, y=H/2-6;
   stonePickRects=[];
   for(let i=0;i<n;i++){ const key=PICK_STONES[i], cx=x0+i*(sz+gap)+sz/2, cy=y, seld=i===stonePickSel;
@@ -2208,10 +2212,6 @@ function draw(){
   // HUD
   drawPlayerHP();
   drawStoneMeter();
-  ctx.fillStyle='rgba(20,16,36,.5)'; roundRect(14,54,128,28,7); ctx.fill();
-  ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(32,68,9,0,7); ctx.fill();
-  ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(32,68,5,0,7); ctx.fill();
-  ctx.fillStyle='#eaf6ff'; ctx.font='bold 16px sans-serif'; ctx.textAlign='left'; ctx.fillText('x '+soulCount+' / '+souls.length, 48, 74);
   if (!menuOpen() && !p.winning) drawPauseBtn();
   drawProgress();
   ctx.textAlign='right'; ctx.font='bold 15px sans-serif';
@@ -2220,6 +2220,10 @@ function draw(){
   ctx.fillText((banked+actScore).toLocaleString('en-US'), W-40, 53);
   ctx.textAlign='left'; ctx.font='10px sans-serif'; ctx.fillStyle='rgba(200,190,255,.7)';
   ctx.fillText('SCORE', W-176, 52);
+  ctx.fillStyle='rgba(20,16,36,.5)'; roundRect(W-184,64,154,26,7); ctx.fill();
+  ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(W-168,77,8,0,7); ctx.fill();
+  ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(W-168,77,4.5,0,7); ctx.fill();
+  ctx.fillStyle='#eaf6ff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='right'; ctx.fillText(soulCount+' / '+souls.length, W-40, 82); ctx.textAlign='left';
   if (p.dead && p.deadT>2.3){
     menuPanel('YOU DIED', [
       {label: p.spawn>90?'Rise at Checkpoint':'Try Again', action:()=>{ paused=false; onReset(); }},
