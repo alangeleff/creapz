@@ -96,7 +96,7 @@
    <button class="btn go" id="bPlay">▶ Play</button>
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
-   <button class="btn" id="bLoadCrypt">Load Crypt I</button>
+   <select class="btn" id="bLoad" title="Load an existing level to edit"><option value="">Load level…</option><option value="stage1.js|0">Cemetery · Act I</option><option value="stage2.js|1">Cemetery · Act II</option><option value="crypt1.js|2">Crypt Depths · Act I</option><option value="crypt2.js|3">Crypt Depths · Act II</option></select>
    <button class="btn warn" id="bClear">Clear</button>
   </div>
   <div id="cvWrap">
@@ -708,11 +708,13 @@ document.getElementById('bExport').onclick=()=>{ const idx=+v('fIdx')||2; const 
  const js='window.STAGES=window.STAGES||[];window.STAGES['+idx+']='+JSON.stringify(o,null,1)+';\n';
  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([js],{type:'text/javascript'}));
  a.download='level-'+(o.name.toLowerCase().replace(/[^a-z0-9]+/g,'')||'stage')+'-act'+o.act+'.js'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('exported - send to Claude to commit'); };
-document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='.js,.json';
+document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file';
  inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{ let j=tx.trim(); const i=j.indexOf('={'); if(i>=0)j=j.slice(i+1,j.lastIndexOf('}')+1);
    histPush(); M=Object.assign(blankLevel(),JSON.parse(j)); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
-document.getElementById('bLoadCrypt').onclick=()=>{ fetch('./levels/crypt1.js?'+Date.now()).then(r=>r.text()).then(tx=>{ try{ const i=tx.indexOf('={');
-   histPush(); M=Object.assign(blankLevel(),JSON.parse(tx.slice(i+1,tx.lastIndexOf('}')+1))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('loaded current Crypt Act I'); }catch(err){ toast('load failed: '+err.message); } }); };
+document.getElementById('bLoad').onchange=function(){ const v=this.value; this.selectedIndex=0; if(!v)return; const parts=v.split('|'), file=parts[0], idx=parts[1];
+  if(!confirm('Load this level into the editor? Your current unsaved work will be replaced.')) return;
+  fetch('./levels/'+file+'?'+Date.now()).then(r=>r.text()).then(tx=>{ try{ const i=tx.indexOf('={');
+    histPush(); M=Object.assign(blankLevel(),JSON.parse(tx.slice(i+1,tx.lastIndexOf('}')+1))); M.theme=M.theme||''; loadFields(); const fi=document.getElementById('fIdx'); if(fi)fi.value=idx; sel=null; showSel(); persist(); draw(); toast('loaded '+file); }catch(err){ toast('load failed: '+err.message); } }); };
 document.getElementById('bClear').onclick=()=>{ if(confirm('Clear the whole level?')){ histPush(); M=blankLevel(); loadFields(); sel=null; showSel(); persist(); draw(); } };
 document.getElementById('bPlay').onclick=()=>{ try{ localStorage.setItem('creapz_testlevel',JSON.stringify(cleanLevel())); }catch(e){} location.href='./?test=1'; };
 

@@ -38,7 +38,7 @@ let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
 const SAVEK='creapz_saves_v2', TOTAL_ACTS=27;   // 9 zones x 3 acts (the full realm)
-const ZONE_STAGES={cem:[0,1],crypt:[2]};       // zone -> stage indices per act
+const ZONE_STAGES={cem:[0,1],crypt:[2,3]};       // zone -> stage indices per act
 const RELEASED={cem:2};                        // publicly playable act count per zone (dev sees everything built)
 const DEVKEY='hellstone';
 let devMode=false;
