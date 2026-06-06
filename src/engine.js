@@ -1,4 +1,4 @@
-const ASSET_VER='1780774338';
+const ASSET_VER='1780775371';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -2484,6 +2484,7 @@ function drawLoading(){
   ctx.fillStyle='#0d0b1a_unused'; ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#9b8cff'; ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.fillText('Loading... '+loaded+'/'+total, W/2, H/2); ctx.textAlign='left';
 }
+try{ audioInit(); }catch(e){}   // create the AudioContext (suspended) at load so the first tap can unlock it on iOS
 reset(); requestAnimationFrame(loop);
 }
 main();
