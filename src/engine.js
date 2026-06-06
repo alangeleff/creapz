@@ -1,4 +1,4 @@
-const ASSET_VER='1780760188';
+const ASSET_VER='1780760285';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -30,6 +30,7 @@ const CHEST_OPEN_IMG=new Image(); CHEST_OPEN_IMG.src='./assets/chest_open1.png?v
 const STONE_DEFS={amethyst:'#b24dff',chaos:'#e24dff',emerald:'#2fe06a',fluorite:'#5fe0c0',holy:'#fff0a0',obsidian:'#9a7fd0',ruby:'#ff3d5a',sapphire:'#4d8cff',topaz:'#ffc23c',master:'#ff7a2c'};
 const STONE_IMGS={}; for(const _k in STONE_DEFS){ const _i=new Image(); _i.src='./assets/stone_'+_k+'.png?v='+ASSET_VER; STONE_IMGS[_k]=_i; }
 const CREAPER_POWER_IMG=new Image(); CREAPER_POWER_IMG.src='./assets/creaper_power.png?v='+ASSET_VER;
+const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_power.png?v='+ASSET_VER;
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
 const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidian','fluorite','chaos','none'];
 const PMETER=20, PDUR=7;
@@ -1797,7 +1798,7 @@ function drawPower(){ if(!powerActive && transformT<=0) return;
     ctx.strokeStyle='#ffffff'; ctx.lineWidth=3*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R*0.7,0,7); ctx.stroke();
     for(let i=0;i<10;i++){ const a=i*0.628+gt*5; ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(sx+Math.cos(a)*R*0.4,cy+Math.sin(a)*R*0.4); ctx.lineTo(sx+Math.cos(a)*R,cy+Math.sin(a)*R); ctx.stroke(); }
     ctx.globalAlpha=1;
-    if(CREAPER_POWER_IMG.complete && CREAPER_POWER_IMG.naturalWidth){ const hh=120, ww=hh*CREAPER_POWER_IMG.naturalWidth/CREAPER_POWER_IMG.naturalHeight; ctx.save(); ctx.globalAlpha=Math.min(1,transformT/0.2+0.35); ctx.imageSmoothingEnabled=true; if(p.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(CREAPER_POWER_IMG, sx-ww/2, p.y-hh+8, ww, hh); ctx.restore(); }
+    const pimg=isDing(chosen)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; if(pimg.complete && pimg.naturalWidth){ const hh=120, ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.globalAlpha=Math.min(1,transformT/0.2+0.35); ctx.imageSmoothingEnabled=true; if(p.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, p.y-hh+8, ww, hh); ctx.restore(); }
   }
 }
 function drawStonePick(){
