@@ -1,4 +1,4 @@
-const ASSET_VER='1780708307';
+const ASSET_VER='1780710640';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -21,8 +21,8 @@ const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
 const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
 const BASH_VX = 11.4, BASH_VY = 12.6;   // Scythe Bash (cReaper) — snappier than the dive per Alan
 const OBJ = SPRITES.obst;
-const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike1.png?v='+ASSET_VER;
-const ROCK_IMG=new Image(); ROCK_IMG.src='./assets/haz_rock1.png?v='+ASSET_VER;
+const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VER;
+const ROCK_IMG=new Image(); ROCK_IMG.src='./assets/haz_rock2.png?v='+ASSET_VER;
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[];
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
@@ -1133,9 +1133,9 @@ function drawHazards(){
     const x0=h.x-camX, x1=h.x+h.w-camX; if(x1<-30||x0>W+30) continue;
     if(h.t==='spike'){
       if(SPIKE_IMG.complete && SPIKE_IMG.naturalWidth){
-        const th=62, tw=th*SPIKE_IMG.naturalWidth/SPIKE_IMG.naturalHeight;
-        ctx.save(); ctx.beginPath(); ctx.rect(h.x-camX,h.y-th,h.w,th+16); ctx.clip();
-        for(let x=h.x; x<h.x+h.w; x+=tw) ctx.drawImage(SPIKE_IMG, x-camX, h.y+12-th, tw, th);
+        const th=72, tw=th*SPIKE_IMG.naturalWidth/SPIKE_IMG.naturalHeight;
+        ctx.save(); ctx.beginPath(); ctx.rect(h.x-camX,h.y-th+18,h.w,th+6); ctx.clip();
+        for(let x=h.x; x<h.x+h.w; x+=tw) ctx.drawImage(SPIKE_IMG, x-camX, h.y+22-th, tw, th);
         ctx.restore();
       } else {
         for(let cx2=h.x; cx2<h.x+h.w-6; cx2+=18){ const sx2=cx2-camX, hgt=20+((cx2*7)%10);
