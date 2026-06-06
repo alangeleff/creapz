@@ -1,4 +1,4 @@
-const ASSET_VER='1780726003';
+const ASSET_VER='1780726660';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -678,7 +678,7 @@ function reset(keep){
     soulCount=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],got:false,pop:0,ph:i*0.31}));
   }
-  plats = PLAT_DEF.map(q=>({x:q.x!==undefined?q.x:q.x0, x0:q.x0, y:q.y, w:q.w, t:q.t, z:q.z,
+  plats = PLAT_DEF.map(q=>({x:q.x!==undefined?q.x:q.x0, x0:q.x0, y:q.y, w:q.w, t:q.t, skin:q.skin, z:q.z,
     range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0,
     ct:0, falling:false, gone:false, dy:0, fv:0, rt:0}));
   const zspawn=ST.enemies;
@@ -1271,6 +1271,25 @@ function drawOnePlat(q){
   if (q.t==='k'){ if (q.gone && q.dy>340) return; const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) return;
     if (CAVEPLAT_IMG.complete && CAVEPLAT_IMG.naturalWidth){ const dh=q.w*CAVEPLAT_IMG.naturalHeight/CAVEPLAT_IMG.naturalWidth;
       ctx.imageSmoothingEnabled=true; ctx.drawImage(CAVEPLAT_IMG, x0, y-dh*0.46, q.w, dh); return; } }
+  if (q.skin==='cave'){
+    if (q.gone && q.dy>340) return;
+    const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) return;
+    let jx=0, jy=0; if (q.t==='c' && q.ct>0 && !q.falling){ jx=(Math.random()-0.5)*3; jy=(Math.random()-0.5)*2; }
+    ctx.save(); ctx.translate(jx,jy);
+    ctx.save(); ctx.beginPath(); ctx.rect(x0,y,q.w,TH); ctx.clip();
+    if (CAVEGND_IMG.complete && CAVEGND_IMG.naturalWidth){ const tw=CAVEGND_IMG.naturalWidth*(64/CAVEGND_IMG.naturalHeight); for(let gx=x0; gx<x0+q.w; gx+=tw) ctx.drawImage(CAVEGND_IMG, gx, y-6, tw, 64); }
+    else { ctx.fillStyle='#3a2a1a'; ctx.fillRect(x0,y,q.w,TH); }
+    ctx.fillStyle='rgba(0,0,0,.42)'; ctx.fillRect(x0,y+TH-5,q.w,5);
+    if (q.t==='c'){ ctx.strokeStyle='rgba(10,6,16,.6)'; ctx.lineWidth=1.5;
+      for (let cx2=x0+14; cx2<x0+q.w-6; cx2+=26){ ctx.beginPath(); ctx.moveTo(cx2,y+3); ctx.lineTo(cx2-5,y+12); ctx.lineTo(cx2+3,y+TH-4); ctx.stroke(); } }
+    ctx.restore();
+    if (CAVETOP_IMG.complete && CAVETOP_IMG.naturalWidth){ const TT=48, tw=TT*CAVETOP_IMG.naturalWidth/CAVETOP_IMG.naturalHeight, ty=y-0.40*TT;
+      ctx.save(); ctx.beginPath(); ctx.rect(x0,ty,q.w,TT); ctx.clip(); ctx.imageSmoothingEnabled=true;
+      for(let gx=x0; gx<x0+q.w; gx+=tw) ctx.drawImage(CAVETOP_IMG, gx, ty, tw, TT); ctx.restore(); }
+    ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.lineWidth=2; ctx.strokeRect(x0,y,q.w,TH);
+    ctx.restore();
+    return;
+  }
   {
     if (q.gone && q.dy>340) return;
     const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) return;
