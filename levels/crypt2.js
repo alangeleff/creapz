@@ -64,7 +64,7 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
   ],
   [
    940,
-   980,
+   1020,
    1420,
    40,
    510,
@@ -72,20 +72,11 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "cave"
   ],
   [
-   1040,
-   1080,
-   1460,
+   1100,
+   1180,
+   1480,
    40,
    520,
-   null,
-   "cave"
-  ],
-  [
-   1140,
-   1180,
-   1500,
-   40,
-   530,
    null,
    "cave"
   ],
@@ -162,7 +153,7 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "cave"
   ],
   [
-   2200,
+   2240,
    2440,
    2140,
    60,
@@ -171,28 +162,28 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "cave"
   ],
   [
-   2040,
-   2140,
-   2200,
+   2060,
+   2180,
+   2220,
    60,
    780,
    null,
    "cave"
   ],
   [
-   1880,
-   1980,
-   2280,
+   1820,
+   1920,
+   2300,
    60,
    790,
    null,
    "cave"
   ],
   [
-   2040,
+   2000,
    2100,
-   2580,
-   60,
+   2600,
+   300,
    800,
    null,
    "cave"
@@ -234,18 +225,18 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "cave"
   ],
   [
-   1600,
-   1700,
-   2440,
+   1560,
+   1660,
+   2460,
    60,
    850,
    null,
    "cave"
   ],
   [
-   1820,
-   1920,
-   2540,
+   1780,
+   1880,
+   2560,
    60,
    860,
    null,
@@ -273,6 +264,13 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "type": "grave",
    "gy": 1500,
    "z": 610
+  },
+  {
+   "x": 60,
+   "type": "chest",
+   "gy": 2120,
+   "z": 910,
+   "loot": "gold"
   }
  ],
  "plats": [
@@ -353,7 +351,7 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "skin": "cave"
   },
   {
-   "x": 620,
+   "x": 700,
    "y": 860,
    "w": 160,
    "t": "k",
@@ -361,7 +359,7 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "g": "2F"
   },
   {
-   "x": 320,
+   "x": 380,
    "y": 960,
    "w": 160,
    "t": "k",
@@ -369,7 +367,7 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "g": "2F"
   },
   {
-   "x": 400,
+   "x": 440,
    "y": 780,
    "w": 160,
    "t": "k",
@@ -393,7 +391,7 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "g": "2F"
   },
   {
-   "x": 540,
+   "x": 580,
    "y": 1060,
    "w": 160,
    "t": "k",
@@ -491,6 +489,30 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "w": 120,
    "t": "k",
    "z": 700
+  },
+  {
+   "x": 400,
+   "y": 2200,
+   "w": 120,
+   "t": "c",
+   "z": 880,
+   "skin": "cave"
+  },
+  {
+   "x": 280,
+   "y": 2120,
+   "w": 120,
+   "t": "c",
+   "z": 890,
+   "skin": "cave"
+  },
+  {
+   "x": 0,
+   "y": 2120,
+   "w": 280,
+   "t": "s",
+   "z": 900,
+   "skin": "cave"
   }
  ],
  "chk": [
@@ -789,7 +811,7 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    1120
   ],
   [
-   400,
+   460,
    880
   ],
   [
@@ -801,7 +823,7 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    700
   ],
   [
-   700,
+   760,
    760
   ],
   [
@@ -843,6 +865,34 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
   [
    920,
    2240
+  ],
+  [
+   1940,
+   2480
+  ],
+  [
+   2120,
+   2480
+  ],
+  [
+   2300,
+   2420
+  ],
+  [
+   1700,
+   2340
+  ],
+  [
+   1960,
+   2180
+  ],
+  [
+   2460,
+   2360
+  ],
+  [
+   2640,
+   2300
   ]
  ],
  "enemies": [
@@ -924,9 +974,9 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    900
   ],
   [
-   400,
-   160,
-   980,
+   680,
+   540,
+   1000,
    "gob",
    400
   ],
@@ -1078,8 +1128,8 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
   {
    "t": "spike",
    "x": 0,
-   "y": 1760,
-   "w": 600,
+   "y": 1780,
+   "w": 1280,
    "z": 420
   },
   {
@@ -1125,9 +1175,9 @@ window.STAGES=window.STAGES||[];window.STAGES[3]={
    "z": 750,
    "dir": 1,
    "tx": 0,
-   "ty": 2100,
+   "ty": 2120,
    "tw": 520,
-   "th": 220
+   "th": 200
   },
   {
    "t": "spikeshot",
