@@ -1,4 +1,4 @@
-const ASSET_VER='1780762919';
+const ASSET_VER='1780763956';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -867,7 +867,7 @@ function update(dt){
     transformT-=dt; powerPulse+=dt; p.vx=0; p.vy=0; p.onGround=false; p.y-=16*dt; p.inv=Math.max(p.inv,0.5);
     if(p.state!=='jump'){ p.state='jump'; p.clock=0; } p.clock+=dt;
     if(transformT<=0){ powerBoom=0.42; playSfx('sfx_wportal',1.0); playSfx('sfx_meleehit',0.7); }
-    camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38)); camY=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
+    camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38)); const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62)); camY+=(_cty-camY)*Math.min(1,dt*7);
     return;
   }
   if (p.dead){
@@ -1792,7 +1792,7 @@ function drawStoneMeter(){ if(!equippedStone) return;
 }
 function drawPoweredFrame(sx){
   const pimg=isDing(chosen)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; if(!pimg.complete||!pimg.naturalWidth) return;
-  const hh=isDing(chosen)?161:163, ww=hh*pimg.naturalWidth/pimg.naturalHeight;
+  const hh=isDing(chosen)?122:163, ww=hh*pimg.naturalWidth/pimg.naturalHeight;
   ctx.save(); ctx.imageSmoothingEnabled=true; if(p.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
   ctx.drawImage(pimg, sx-ww/2, p.y - hh + 16, ww, hh); ctx.restore();
 }
