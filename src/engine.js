@@ -1,4 +1,4 @@
-const ASSET_VER='1780763956';
+const ASSET_VER='1780764365';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -31,6 +31,8 @@ const STONE_DEFS={amethyst:'#b24dff',chaos:'#e24dff',emerald:'#2fe06a',fluorite:
 const STONE_IMGS={}; for(const _k in STONE_DEFS){ const _i=new Image(); _i.src='./assets/stone_'+_k+'.png?v='+ASSET_VER; STONE_IMGS[_k]=_i; }
 const CREAPER_POWER_IMG=new Image(); CREAPER_POWER_IMG.src='./assets/creaper_power.png?v='+ASSET_VER;
 const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_power.png?v='+ASSET_VER;
+const POWER_IMGS={};
+function poweredImg(){ const ck=chosen; if(!POWER_IMGS[ck]){ const im=new Image(); im._ok=null; im.onload=()=>{im._ok=true;}; im.onerror=()=>{im._ok=false;}; im.src='./assets/power_'+ck+'.png?v='+ASSET_VER; POWER_IMGS[ck]=im; } const sk=POWER_IMGS[ck]; if(sk && sk._ok && sk.naturalWidth) return sk; return isDing(ck)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; }
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
 const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidian','fluorite','chaos','none'];
 const PMETER=20, PDUR=7;
@@ -1777,10 +1779,10 @@ function drawSkullIcon(cx,cy,r){
   ctx.fillStyle='#1a1530'; ctx.beginPath(); ctx.arc(cx-r*0.42,cy-1,r*0.3,0,7); ctx.arc(cx+r*0.42,cy-1,r*0.3,0,7); ctx.fill();
 }
 function drawStoneMeter(){ if(!equippedStone) return;
-  const x=14,y=46,w=152,h=15, bx=x+30, bw=w-30;
+  const x=14,y=49,w=150,h=14, bx=x+26, bw=w-26;
   ctx.fillStyle='rgba(16,12,30,.66)'; roundRect(x-2,y-2,w+6,h+6,7); ctx.fill();
   const img=STONE_IMGS[equippedStone];
-  if(img&&img.naturalWidth){ const ih=22, iw=img.naturalWidth*ih/img.naturalHeight; ctx.drawImage(img, x+13-iw/2, y+h/2-ih/2, iw, ih); }
+  if(img&&img.naturalWidth){ const ih=15, iw=img.naturalWidth*ih/img.naturalHeight; ctx.drawImage(img, x+11-iw/2, y+h/2-ih/2, iw, ih); }
   ctx.fillStyle='rgba(0,0,0,.5)'; roundRect(bx,y+3,bw,h-6,5); ctx.fill();
   const col=STONE_DEFS[equippedStone]||'#c8fb50';
   const frac = powerActive ? Math.max(0,powerT/PDUR) : stoneCharge/PMETER;
@@ -1791,13 +1793,18 @@ function drawStoneMeter(){ if(!equippedStone) return;
   if(!powerActive && frac>=1){ ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.textAlign='right'; ctx.fillText('JUMP\u00d72!', bx+bw-3, y+h-4); ctx.textAlign='left'; }
 }
 function drawPoweredFrame(sx){
-  const pimg=isDing(chosen)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; if(!pimg.complete||!pimg.naturalWidth) return;
+  const pimg=poweredImg(); if(!pimg||!pimg.complete||!pimg.naturalWidth) return;
   const hh=isDing(chosen)?122:163, ww=hh*pimg.naturalWidth/pimg.naturalHeight;
   ctx.save(); ctx.imageSmoothingEnabled=true; if(p.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
   ctx.drawImage(pimg, sx-ww/2, p.y - hh + 16, ww, hh); ctx.restore();
 }
 function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
   const col=STONE_DEFS[equippedStone]||'#ffcf3c', sx=pxf(p.x,1), cy=p.y-60;
+  // VIGNETTE: spotlight the hero, dark the rest (ramps in on charge, lifts on boom)
+  const vig = transformT>0 ? (1-transformT/0.95) : (powerBoom>0 ? powerBoom/0.42 : 0);
+  if(vig>0){ const va=0.64*vig, vg=ctx.createRadialGradient(sx,cy,40,sx,cy,Math.max(W,H)*0.72);
+    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(0.42,'rgba(0,0,0,'+(va*0.32).toFixed(2)+')'); vg.addColorStop(1,'rgba(0,0,0,'+va.toFixed(2)+')');
+    ctx.fillStyle=vg; ctx.fillRect(0,camY,W,H); }
   // CHARGE / HANG: energy gathers inward, frame floats, crackle builds
   if(transformT>0){ const k=transformT/0.95;
     const gr=ctx.createRadialGradient(sx,cy,2,sx,cy,90*(1-k)+22);
@@ -1807,6 +1814,9 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
     ctx.globalAlpha=1;
     if(k<0.55 && Math.random()<0.7){ ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.globalAlpha=0.85; let ax=sx+(Math.random()-0.5)*64, ay=cy-46; ctx.beginPath(); ctx.moveTo(ax,ay); for(let j=0;j<3;j++){ ax+=(Math.random()-0.5)*30; ay+=28; ctx.lineTo(ax,ay);} ctx.stroke(); ctx.globalAlpha=1; }
     drawPoweredFrame(sx);
+    if(equippedStone){ const simg=STONE_IMGS[equippedStone]; if(simg&&simg.naturalWidth){ const kk=1-k; const ry=cy-12-kk*112, ssz=34+kk*36;
+      const sg=ctx.createRadialGradient(sx,ry,2,sx,ry,ssz); sg.addColorStop(0,col); sg.addColorStop(0.5,col+'88'); sg.addColorStop(1,col+'00'); ctx.globalAlpha=0.85; ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sx,ry,ssz,0,7); ctx.fill(); ctx.globalAlpha=1;
+      const sw=ssz*simg.naturalWidth/simg.naturalHeight; ctx.imageSmoothingEnabled=true; ctx.drawImage(simg, sx-sw/2, ry-ssz/2, sw, ssz); } }
   }
   // BOOM: outward shockwave
   if(powerBoom>0){ const tp=1-powerBoom/0.42, R=tp*230;
