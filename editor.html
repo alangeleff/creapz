@@ -428,7 +428,7 @@ function draw(){
  syncFields(); ctx.clearRect(0,0,CW,CH);
  ctx.fillStyle=M.theme==='crypt'?'#0a0712':'#0e1326'; ctx.fillRect(0,0,CW,CH);
  for(const b of (M.bg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue; const X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd=M.h*zoom;
-   const sc=Math.max(Wd/img.naturalWidth,(H*zoom)/img.naturalHeight); const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc;
+   const sc=Math.max(Wd/img.naturalWidth,Hd/img.naturalHeight); const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc;
    ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Hd); ctx.clip(); ctx.globalAlpha=b.t==='cavebg2'?1:0.9;
    for(let y=Y;y<Y+Hd;y+=dh) for(let x=X;x<X+Wd+dw;x+=dw) ctx.drawImage(img,x,y,dw,dh); ctx.globalAlpha=1; ctx.restore(); }
  ctx.strokeStyle='#2a2150'; ctx.lineWidth=2; ctx.strokeRect(sx(0),sy(0),M.world*zoom,M.h*zoom);
