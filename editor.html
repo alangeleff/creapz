@@ -8,8 +8,19 @@
  *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;overflow:hidden;touch-action:none}
  #wrap{display:flex;height:100%}
- #pal{width:182px;flex:none;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:8px}
+ #pal{width:194px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+ #palList{flex:1 1 56%;overflow-y:auto;padding:8px;border-bottom:2px solid var(--line)}
+ #layers{flex:1 1 44%;overflow-y:auto;padding:8px}
  #pal h3{font-size:10px;letter-spacing:.5px;color:var(--mut);margin:12px 6px 6px;text-transform:uppercase}
+ .cat{font-size:10px;letter-spacing:.5px;color:var(--lime);margin:10px 4px 4px;text-transform:uppercase;font-weight:700}
+ .litem{display:flex;align-items:center;gap:5px;padding:5px 6px;border-radius:6px;font-size:12px;cursor:pointer;margin:1px 0}
+ .litem:hover{background:#1d1838}
+ .litem.sel{background:#242a16;outline:1px solid var(--lime)}
+ .litem .lc{width:11px;height:11px;border-radius:2px;flex:none}
+ .litem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .litem .lb{background:#241d44;border:none;color:#cdbbe6;border-radius:4px;font-size:12px;line-height:1;padding:3px 5px;cursor:pointer}
+ .litem .lb:hover{background:#352a5c}
+ .litem.lock{opacity:.5}
  .tool{display:flex;align-items:center;gap:8px;padding:9px 10px;margin:4px 0;border-radius:8px;background:#1d1838;border:1px solid transparent;cursor:grab;font-size:13px;touch-action:none}
  .tool:active{cursor:grabbing}
  .tool.on{border-color:var(--lime);background:#242a16}
@@ -38,7 +49,7 @@
 </style>
 </head><body>
 <div id="wrap">
- <div id="pal"></div>
+ <div id="pal"><div id="palList"></div><div id="layers"></div></div>
  <div id="main">
   <div id="bar">
    <label>name</label><input id="fName" size="11" value="Crypt Depths">
@@ -71,22 +82,26 @@ const GRID=20, TERRACE_DROP=130, DEF_TERR=600;
 const ENEMY_COLS={zombie:'#6b7d52',zgen:'#3ad07a',gob:'#c8a24a',bd:'#9a6cff'};
 const HAZ_COLS={spike:'#d9d2c0',rock:'#7a7280',tar:'#2a1f30'};
 const HAZ_LABEL={spike:'Bone Spike Pit',rock:'Rock Drop',tar:'Tar Pit'};
+const OBST_COLS={grave:'#8a82a6',crate:'#b6884a'};
+const CATS=['Ground','Hazards','Enemies','Functions','Objects'];
 const STAMPS=[
- {k:'terrace',label:'Terrace ground',sw:'#7a5a36'},
- {k:'plat_s',label:'Platform · static',sw:'#caa46a'},
- {k:'plat_m',label:'Platform · moving',sw:'#6ad0ff'},
- {k:'plat_c',label:'Platform · crumble',sw:'#e0843c'},
- {k:'chk',label:'Checkpoint',sw:'#ff9a3c'},
- {k:'goal',label:'Goal (exit)',sw:'#e0506a'},
- {k:'soul',label:'Soul',sw:'#7fe0ff'},
- {k:'zombie',label:'Enemy · Zombie',sw:ENEMY_COLS.zombie},
- {k:'zgen',label:'Enemy · Zombie General',sw:ENEMY_COLS.zgen},
- {k:'gob',label:'Enemy · Goblin',sw:ENEMY_COLS.gob},
- {k:'bd',label:'Enemy · Brain Dead',sw:ENEMY_COLS.bd},
- {k:'bat',label:'Bat (flyer)',sw:'#b07a5a'},
- {k:'haz_spike',label:'Hazard · Bone Spike Pit',sw:'#d9d2c0'},
- {k:'haz_rock',label:'Hazard · Rock Drop',sw:'#7a7280'},
- {k:'haz_tar',label:'Hazard · Tar Pit',sw:'#2a1f30'},
+ {k:'terrace',label:'Terrace ground',sw:'#7a5a36',cat:'Ground'},
+ {k:'plat_s',label:'Platform · static',sw:'#caa46a',cat:'Ground'},
+ {k:'plat_m',label:'Platform · moving',sw:'#6ad0ff',cat:'Ground'},
+ {k:'plat_c',label:'Platform · crumble',sw:'#e0843c',cat:'Ground'},
+ {k:'haz_spike',label:'Bone Spike Pit',sw:'#d9d2c0',cat:'Hazards'},
+ {k:'haz_rock',label:'Rock Drop',sw:'#7a7280',cat:'Hazards'},
+ {k:'haz_tar',label:'Tar Pit',sw:'#2a1f30',cat:'Hazards'},
+ {k:'zombie',label:'Zombie',sw:ENEMY_COLS.zombie,cat:'Enemies'},
+ {k:'zgen',label:'Zombie General',sw:ENEMY_COLS.zgen,cat:'Enemies'},
+ {k:'gob',label:'Goblin',sw:ENEMY_COLS.gob,cat:'Enemies'},
+ {k:'bd',label:'Brain Dead',sw:ENEMY_COLS.bd,cat:'Enemies'},
+ {k:'bat',label:'Bat (flyer)',sw:'#b07a5a',cat:'Enemies'},
+ {k:'chk',label:'Checkpoint',sw:'#ff9a3c',cat:'Functions'},
+ {k:'goal',label:'Goal (exit)',sw:'#e0506a',cat:'Functions'},
+ {k:'soul',label:'Soul',sw:'#7fe0ff',cat:'Functions'},
+ {k:'grave',label:'Gravestone',sw:OBST_COLS.grave,cat:'Objects'},
+ {k:'crate',label:'Crate',sw:OBST_COLS.crate,cat:'Objects'},
 ];
 const LABELOF={}; STAMPS.forEach(s=>LABELOF[s.k]=s.label);
 let eraseMode=false;
@@ -104,19 +119,19 @@ function snap(v){return Math.round(v/GRID)*GRID;}
 function cvxy(e){ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
 
 // ---- palette (drag sources) ----
-const pal=document.getElementById('pal');
-pal.innerHTML='<h3>Drag a piece onto the map</h3>'+STAMPS.map(t=>
- `<div class="tool" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${t.label}</div>`).join('')
- +'<h3>Modes</h3>'
- +'<div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div>'
- +'<h3>How</h3><div style="font-size:11px;color:#9b8cffaa;padding:0 6px;line-height:1.8">'
- +'drag piece → ghost → drop<br>1 finger / drag = pan<br>2 fingers = pinch zoom<br>tap a piece = edit<br>drag a piece = move it<br>selected: drag ⟷ handles to size</div>';
+const pal=document.getElementById('palList');
+let palHtml='<h3>Drag a piece onto the map</h3>';
+for(const cat of CATS){ palHtml+='<div class="cat">'+cat+'</div>';
+  for(const t of STAMPS.filter(s=>s.cat===cat)) palHtml+=`<div class="tool" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${t.label}</div>`;
+}
+palHtml+='<h3>Modes</h3><div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div>';
+pal.innerHTML=palHtml;
 document.getElementById('mErase').onclick=function(){ eraseMode=!eraseMode; this.classList.toggle('on',eraseMode); sel=null; showSel(); };
 
 // ---- selection / edit panel ----
 let sel=null;
 const selBox=document.getElementById('sel');
-const SEL_FIELDS={terrace:['x0','x1','gy'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w']};
+const SEL_FIELDS={terrace:['x0','x1','gy'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w'],obst:['x','gy']};
 function showSel(){
  if(!sel){ selBox.style.display='none'; return; }
  selBox.style.display='block';
@@ -133,21 +148,24 @@ function delObj(s){
  if(A&&s.raw){ const i=A.indexOf(s.raw); if(i>=0)A.splice(i,1); }
  else if(s.type==='plat'){ const i=M.plats.indexOf(s.obj); if(i>=0)M.plats.splice(i,1); }
  else if(s.type==='haz'){ const i=M.hazards.indexOf(s.raw); if(i>=0)M.hazards.splice(i,1); }
+ else if(s.type==='obst'){ const i=M.obst.indexOf(s.raw); if(i>=0)M.obst.splice(i,1); }
  else if(s.type==='goal'){ M.goal=0; M.goalY=0; }
 }
 
 // ---- hit test ----
 function hit(wxp,wyp){
- if(M.goal&&Math.hypot(wxp-M.goal,wyp-(M.goalY-30))<44) return {type:'goal',kind:'goal',obj:{x:M.goal,gy:M.goalY},raw:'goal',sync(){M.goal=this.obj.x;M.goalY=this.obj.gy;}};
- for(const c of M.chk){ if(Math.hypot(wxp-c[0],wyp-(c[1]-30))<36) return wrap('chk',c,['x','gy'],[0,1]); }
- for(const s of M.souls){ if(Math.hypot(wxp-s[0],wyp-s[1])<24) return wrap('soul',s,['x','y'],[0,1]); }
- for(const b of M.bats){ if(Math.hypot(wxp-b[0],wyp-b[3])<28) return wrap('bat',b,['x','min','max','y'],[0,1,2,3]); }
- for(const e of M.enemies){ const ey=(e[4]??M.goalY); if(Math.abs(wxp-e[0])<32&&wyp<ey+8&&wyp>ey-50) return wrap('enemy',e,['x','min','max','gy'],[0,1,2,4],e[3]); }
- for(const h of (M.hazards||[])){ const top=h.t==='rock'?h.y-16:h.y-24; if(wxp>=h.x-6&&wxp<=h.x+h.w+6&&wyp>=top&&wyp<=h.y+14) return {type:'haz',kind:'haz_'+h.t,obj:h,raw:h,sync(){}}; }
- for(const p of M.plats){ const x=p.x??p.x0; if(wxp>=x-8&&wxp<=x+p.w+8&&Math.abs(wyp-p.y)<24) return {type:'plat',kind:'plat_'+p.t,obj:p,raw:p,sync(){}}; }
- for(const s of M.seg){ if(wxp>=s[0]&&wxp<=s[1]&&wyp>=s[2]-4&&wyp<=s[2]+TERRACE_DROP) return wrap('terrace',s,['x0','x1','gy'],[0,1,2]); }
+ if(M.goal&&!locked.has('goal')&&Math.hypot(wxp-M.goal,wyp-(M.goalY-30))<44) return selGoal();
+ for(const c of M.chk){ if(!locked.has(c)&&Math.hypot(wxp-c[0],wyp-(c[1]-30))<36) return wrap('chk',c,['x','gy'],[0,1]); }
+ for(const o of (M.obst||[])){ if(!locked.has(o)&&Math.abs(wxp-o.x)<26&&wyp<(o.gy||0)+6&&wyp>(o.gy||0)-56) return {type:'obst',kind:o.type,obj:o,raw:o,sync(){}}; }
+ for(const s of M.souls){ if(!locked.has(s)&&Math.hypot(wxp-s[0],wyp-s[1])<24) return wrap('soul',s,['x','y'],[0,1]); }
+ for(const b of M.bats){ if(!locked.has(b)&&Math.hypot(wxp-b[0],wyp-b[3])<28) return wrap('bat',b,['x','min','max','y'],[0,1,2,3]); }
+ for(const e of M.enemies){ const ey=(e[4]??M.goalY); if(!locked.has(e)&&Math.abs(wxp-e[0])<32&&wyp<ey+8&&wyp>ey-50) return wrap('enemy',e,['x','min','max','gy'],[0,1,2,4],e[3]); }
+ for(const h of (M.hazards||[])){ const top=h.t==='rock'?h.y-16:h.y-24; if(!locked.has(h)&&wxp>=h.x-6&&wxp<=h.x+h.w+6&&wyp>=top&&wyp<=h.y+14) return {type:'haz',kind:'haz_'+h.t,obj:h,raw:h,sync(){}}; }
+ for(const p of M.plats){ const x=p.x??p.x0; if(!locked.has(p)&&wxp>=x-8&&wxp<=x+p.w+8&&Math.abs(wyp-p.y)<24) return {type:'plat',kind:'plat_'+p.t,obj:p,raw:p,sync(){}}; }
+ for(const s of M.seg){ if(!locked.has(s)&&wxp>=s[0]&&wxp<=s[1]&&wyp>=s[2]-4&&wyp<=s[2]+TERRACE_DROP) return wrap('terrace',s,['x0','x1','gy'],[0,1,2]); }
  return null;
 }
+function selGoal(){ return {type:'goal',kind:'goal',obj:{x:M.goal,gy:M.goalY},raw:'goal',sync(){M.goal=this.obj.x;M.goalY=this.obj.gy;}}; }
 function wrap(type,raw,names,idx,kind){ const o={}; names.forEach((n,i)=>o[n]=raw[idx[i]]);
  return {type,kind:kind||type,obj:o,raw,sync(){names.forEach((n,i)=>raw[idx[i]]=o[n]);}}; }
 
@@ -190,6 +208,7 @@ function placeAt(kind,gx,gy){
  else if(kind==='soul'){ M.souls.push([gx,gy]); sel=null; }
  else if(kind==='bat'){ const b=[gx,Math.max(0,gx-300),gx+300,gy]; M.bats.push(b); sel=wrap('bat',b,['x','min','max','y'],[0,1,2,3]); }
  else if(kind.startsWith('haz_')){ const t=kind.split('_')[1]; const h={t,x:gx,y:gy,w:240}; (M.hazards=M.hazards||[]).push(h); sel={type:'haz',kind,obj:h,raw:h,sync(){}}; }
+ else if(OBST_COLS[kind]){ const o={x:gx,type:kind,gy}; (M.obst=M.obst||[]).push(o); sel={type:'obst',kind,obj:o,raw:o,sync(){}}; }
  else if(ENEMY_COLS[kind]){ const en=[gx,Math.max(0,gx-300),gx+300,kind,gy]; M.enemies.push(en); sel=wrap('enemy',en,['x','min','max','gy'],[0,1,2,4],kind); }
  showSel(); persist(); draw();
 }
@@ -277,6 +296,10 @@ function draw(){
  for(const e of M.enemies){ const ey=(e[4]??M.goalY); ctx.fillStyle=ENEMY_COLS[e[3]]||'#aaa'; const ww=24*zoom,hh=34*zoom;
    ctx.fillRect(sx(e[0])-ww/2,sy(ey)-hh,ww,hh); ctx.strokeStyle='#ffffff33'; ctx.beginPath(); ctx.moveTo(sx(e[1]),sy(ey)+3); ctx.lineTo(sx(e[2]),sy(ey)+3); ctx.stroke();
    ctx.fillStyle='#000a'; ctx.font='9px sans-serif'; ctx.fillText(e[3],sx(e[0])-ww/2+1,sy(ey)-hh+9); }
+ for(const o of (M.obst||[])){ const X=sx(o.x),Y=sy(o.gy||0); ctx.fillStyle=OBST_COLS[o.type]||'#999';
+   if(o.type==='crate'){ const ww=40*zoom; ctx.fillRect(X-ww/2,Y-ww,ww,ww); ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=1; ctx.strokeRect(X-ww/2,Y-ww,ww,ww); ctx.beginPath(); ctx.moveTo(X-ww/2,Y-ww); ctx.lineTo(X+ww/2,Y); ctx.moveTo(X+ww/2,Y-ww); ctx.lineTo(X-ww/2,Y); ctx.stroke(); }
+   else { const w2=34*zoom,h2=46*zoom; ctx.beginPath(); ctx.moveTo(X-w2/2,Y); ctx.lineTo(X-w2/2,Y-h2+w2/2); ctx.arc(X,Y-h2+w2/2,w2/2,Math.PI,0); ctx.lineTo(X+w2/2,Y); ctx.fill(); }
+   if(sel&&sel.raw===o){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-24*zoom,Y-52*zoom,48*zoom,56*zoom); } }
  for(const b of M.bats){ ctx.fillStyle='#b07a5a'; ctx.beginPath(); ctx.ellipse(sx(b[0]),sy(b[3]),12*zoom,7*zoom,0,0,7); ctx.fill();
    ctx.strokeStyle='#b07a5a55'; ctx.beginPath(); ctx.moveTo(sx(b[1]),sy(b[3])); ctx.lineTo(sx(b[2]),sy(b[3])); ctx.stroke(); }
  for(const c of M.chk){ const X=sx(c[0]),Y=sy(c[1]); ctx.fillStyle='#ff9a3c'; ctx.fillRect(X-2,Y-46*zoom,4,46*zoom);
@@ -288,6 +311,7 @@ function draw(){
  // handles
  for(const h of handles(sel)){ ctx.fillStyle='#c8fb50'; ctx.strokeStyle='#10210a'; ctx.lineWidth=2;
    ctx.beginPath(); ctx.arc(sx(h.x),sy(h.y),7,0,7); ctx.fill(); ctx.stroke(); }
+ if(typeof buildLayers==='function') buildLayers();
 }
 function spawnY(x){ let best=null; for(const s of M.seg){ if(x>=s[0]&&x<=s[1]){ if(best===null||s[2]<best)best=s[2]; } } return best; }
 
@@ -297,6 +321,50 @@ function v(id){return document.getElementById(id).value;}
 function loadFields(){ document.getElementById('fName').value=M.name; document.getElementById('fAct').value=M.act;
  document.getElementById('fTheme').value=M.theme||''; document.getElementById('fMusic').value=M.music; document.getElementById('fW').value=M.world; document.getElementById('fH').value=M.h; }
 ['fName','fAct','fTheme','fMusic','fW','fH'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{syncFields();persist();draw();}));
+
+// ---- layers panel: select / reorder / lock any placed piece ----
+const locked=new Set();
+function itemList(){
+ const out=[];
+ M.seg.forEach((sg,i)=>out.push({cat:'Ground',label:'Terrace',color:'#7a5a36',raw:sg,arr:M.seg,idx:i,mk:()=>wrap('terrace',sg,['x0','x1','gy'],[0,1,2]),cx:(sg[0]+sg[1])/2,cy:sg[2]}));
+ M.plats.forEach((p,i)=>out.push({cat:'Ground',label:'Platform '+p.t,color:p.t==='m'?'#6ad0ff':p.t==='c'?'#e0843c':'#caa46a',raw:p,arr:M.plats,idx:i,mk:()=>({type:'plat',kind:'plat_'+p.t,obj:p,raw:p,sync(){}}),cx:(p.x??p.x0)+p.w/2,cy:p.y}));
+ (M.hazards||[]).forEach((h,i)=>out.push({cat:'Hazards',label:HAZ_LABEL[h.t]||h.t,color:HAZ_COLS[h.t],raw:h,arr:M.hazards,idx:i,mk:()=>({type:'haz',kind:'haz_'+h.t,obj:h,raw:h,sync(){}}),cx:h.x+h.w/2,cy:h.y}));
+ M.enemies.forEach((e,i)=>out.push({cat:'Enemies',label:(LABELOF[e[3]]||e[3]),color:ENEMY_COLS[e[3]]||'#aaa',raw:e,arr:M.enemies,idx:i,mk:()=>wrap('enemy',e,['x','min','max','gy'],[0,1,2,4],e[3]),cx:e[0],cy:e[4]??M.goalY}));
+ M.bats.forEach((b,i)=>out.push({cat:'Enemies',label:'Bat',color:'#b07a5a',raw:b,arr:M.bats,idx:i,mk:()=>wrap('bat',b,['x','min','max','y'],[0,1,2,3]),cx:b[0],cy:b[3]}));
+ M.chk.forEach((c,i)=>out.push({cat:'Functions',label:'Checkpoint',color:'#ff9a3c',raw:c,arr:M.chk,idx:i,mk:()=>wrap('chk',c,['x','gy'],[0,1]),cx:c[0],cy:c[1]}));
+ if(M.goal) out.push({cat:'Functions',label:'Goal (exit)',color:'#e0506a',raw:'goal',arr:null,idx:-1,mk:()=>selGoal(),cx:M.goal,cy:M.goalY});
+ (M.obst||[]).forEach((o,i)=>out.push({cat:'Objects',label:o.type==='grave'?'Gravestone':'Crate',color:OBST_COLS[o.type]||'#999',raw:o,arr:M.obst,idx:i,mk:()=>({type:'obst',kind:o.type,obj:o,raw:o,sync(){}}),cx:o.x,cy:o.gy||0}));
+ return out;
+}
+function buildLayers(){
+ const host=document.getElementById('layers'); if(!host) return;
+ const items=itemList(); let html='<h3>Layers — tap to select</h3>';
+ const soulN=M.souls.length;
+ for(const cat of CATS){
+   const list=items.filter(it=>it.cat===cat); if(!list.length && !(cat==='Functions'&&soulN)) continue;
+   html+='<div class="cat">'+cat+'</div>';
+   list.forEach((it,k)=>{ const isSel=sel&&sel.raw===it.raw; const lk=locked.has(it.raw);
+     html+=`<div class="litem${isSel?' sel':''}${lk?' lock':''}" data-cat="${cat}" data-i="${k}">`
+       +`<span class="lc" style="background:${it.color}"></span><span class="nm">${it.label}</span>`
+       +`<button class="lb" data-act="front" title="bring forward">▲</button>`
+       +`<button class="lb" data-act="back" title="send back">▼</button>`
+       +`<button class="lb" data-act="lock" title="lock">${lk?'🔒':'🔓'}</button></div>`;
+   });
+   if(cat==='Functions'&&soulN) html+=`<div class="litem" style="opacity:.7;cursor:default"><span class="lc" style="background:#7fe0ff"></span><span class="nm">Souls ×${soulN}</span></div>`;
+ }
+ host.innerHTML=html;
+ host.querySelectorAll('.litem[data-i]').forEach(row=>{
+   const cat=row.dataset.cat, k=+row.dataset.i; const it=items.filter(x=>x.cat===cat)[k];
+   row.querySelectorAll('.lb').forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
+     const a=b.dataset.act;
+     if(a==='lock'){ if(locked.has(it.raw))locked.delete(it.raw); else locked.add(it.raw); buildLayers(); return; }
+     if(it.arr){ histPush(); const i=it.arr.indexOf(it.raw); if(i<0)return; it.arr.splice(i,1);
+       if(a==='front') it.arr.push(it.raw); else it.arr.unshift(it.raw); persist(); draw(); }
+   });
+   row.onclick=()=>{ sel=it.mk(); centerOn(it.cx,it.cy); showSel(); draw(); };
+ });
+}
+function centerOn(x,y){ camx=x-(CW/2)/zoom; camy=y-(CH/2)/zoom; }
 
 // ---- persist / io / play ----
 function persist(){ syncFields(); try{ localStorage.setItem('creapz_editdraft',JSON.stringify(M)); }catch(e){} }

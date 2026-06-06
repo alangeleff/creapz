@@ -123,8 +123,8 @@ function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
-  OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h}));
-  SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:GROUND-o.h}));
+  OBST = ST.obst.map(o => ({x:o.x, type:o.type, w:OBJ[o.type].w, h:OBJ[o.type].h, gy:(o.gy!==undefined?o.gy:GROUND)}));
+  SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:o.gy-o.h}));
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
   HAZ = (ST.hazards||[]).map(h=>{
     const o={t:h.t, x:h.x, w:h.w, y:h.y, cd:0};
@@ -1312,7 +1312,7 @@ function drawGround(){
 function drawObstacle(o){
   const sx=pxf(o.x,1); if(sx<-90||sx>W+90) return;
   const im=SPR.obst[o.type]; ctx.imageSmoothingEnabled=true;
-  ctx.drawImage(im.img, sx-o.w/2, GROUND-o.h, o.w, o.h);
+  ctx.drawImage(im.img, sx-o.w/2, o.gy-o.h, o.w, o.h);
 }
 // self-drifting clouds, two depth layers (right -> left, independent of camera)
 const CLOUDS=Array.from({length:10},(_,i)=>{
