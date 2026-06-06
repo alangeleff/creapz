@@ -71,15 +71,18 @@ let cellW=160, cellH=160, baseY=0;
 function colorDist(r,g,b, c){ return Math.abs(r-c[0])+Math.abs(g-c[1])+Math.abs(b-c[2]); }
 
 function processImg(img){
-  const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
-  const x=c.getContext('2d'); x.drawImage(img,0,0);
+  // downscale big AI images so mobile can process them fast (we normalize height anyway)
+  const MAXD=640, scl=Math.min(1, MAXD/Math.max(img.naturalWidth,img.naturalHeight));
+  const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*scl); c.height=Math.round(img.naturalHeight*scl);
+  const x=c.getContext('2d'); x.imageSmoothingEnabled=true; x.drawImage(img,0,0,c.width,c.height);
   const W=c.width,H=c.height, id=x.getImageData(0,0,W,H), d=id.data;
-  // bg color = median-ish of 4 corners
+  // bg color from 4 corners; detect magenta keying (robust to gradient/vignette)
   const corners=[[0,0],[W-1,0],[0,H-1],[W-1,H-1]].map(([px,py])=>{const i=(py*W+px)*4; return [d[i],d[i+1],d[i+2]];});
   const bg=[0,1,2].map(k=>Math.round(corners.reduce((s,c)=>s+c[k],0)/4));
-  // flood fill bg from borders
+  const magenta = bg[0]>120 && bg[2]>110 && bg[1]<bg[0]*0.72 && bg[1]<bg[2]*0.72;
+  const isBgCol=(r,g,b)=> magenta ? (r>110 && b>100 && g<r*0.74 && g<b*0.74) : (colorDist(r,g,b,bg)<TOL);
   const vis=new Uint8Array(W*H); const st=[];
-  const isBg=p=>{const i=p*4; return d[i+3]>8 && colorDist(d[i],d[i+1],d[i+2],bg)<TOL;};
+  const isBg=p=>{const i=p*4; return d[i+3]>8 && isBgCol(d[i],d[i+1],d[i+2]);};
   for(let xx=0;xx<W;xx++){ for(const py of [0,H-1]){const p=py*W+xx; if(!vis[p]&&isBg(p)){vis[p]=1;st.push(p);}} }
   for(let yy=0;yy<H;yy++){ for(const px of [0,W-1]){const p=yy*W+px; if(!vis[p]&&isBg(p)){vis[p]=1;st.push(p);}} }
   while(st.length){ const p=st.pop(); const px=p%W, py=(p/W)|0;
