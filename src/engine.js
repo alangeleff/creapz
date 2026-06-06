@@ -1,4 +1,4 @@
-const ASSET_VER='1780764365';
+const ASSET_VER='1780767416';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -38,7 +38,7 @@ const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidi
 const PMETER=20, PDUR=7;
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null;
 function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
-function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); loadStage(pendingStage); mode='play'; }
+function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} loadStage(pendingStage); mode='play'; }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='+ASSET_VER;
@@ -133,7 +133,7 @@ function enterWorld(fromAct){
   mode='world';
   WORLDMODE.enter({ctx,W,H,keys,isDing:isDing(chosen),getActs,zoneOpen,dev:devMode,playSfx,
     launch:(zone,ai)=>{ const si=(ZONE_STAGES[zone]||[])[ai]; if(si===undefined) return;
-      prog.heroAt=zone; saveProg(); banked=0; pendingStage=si; stonePickSel=0; mode='stonepick'; },
+      prog.heroAt=zone; saveProg(); banked=0; equippedStone=null; mode='play'; loadStage(si); },
     exit:()=>{ playSfx('sfx_msel'); mode='title'; menuShown=true; },
     openSkins:()=>{ selMode='skin';
       if(isDing(chosen)){ dingSkin=chosen; selFoc=1; } else { creaperSkin=chosen; selFoc=0; }
