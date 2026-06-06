@@ -1,4 +1,4 @@
-const ASSET_VER='1780767416';
+const ASSET_VER='1780767704';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -36,9 +36,12 @@ function poweredImg(){ const ck=chosen; if(!POWER_IMGS[ck]){ const im=new Image(
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
 const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidian','fluorite','chaos','none'];
 const PMETER=20, PDUR=7;
-let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null;
+let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
 function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} loadStage(pendingStage); mode='play'; }
+function prettySkin(id){ const m={'default':'Default','dingbat':'Dingbat','ding_onyx':'Onyx','ding_frost':'Frost','ding_blood':'Blood'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
+function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
+function cycleSkin(dir){ const list=isDing(chosen)?DORDER:ORDER; let i=list.indexOf(chosen); if(i<0)i=0; chosen=list[(i+dir+list.length)%list.length]; if(isDing(chosen))dingSkin=chosen; else creaperSkin=chosen; try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='+ASSET_VER;
@@ -259,7 +262,9 @@ addEventListener('keydown', e => {
   if (mode==='stonepick'){ primeAudio();
     if(e.code==='ArrowLeft'){ stonePickSel=(stonePickSel+PICK_STONES.length-1)%PICK_STONES.length; playSfx('sfx_mtog'); }
     else if(e.code==='ArrowRight'){ stonePickSel=(stonePickSel+1)%PICK_STONES.length; playSfx('sfx_mtog'); }
-    else if(e.code==='ArrowUp'||e.code==='ArrowDown'){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); playSfx('sfx_mtog'); }
+    else if(e.code==='ArrowUp'||e.code==='ArrowDown'){ toggleChar(); }
+    else if(e.code==='Comma'){ cycleSkin(-1); }
+    else if(e.code==='Period'){ cycleSkin(1); }
     else if(e.code==='Enter'||e.code==='Space'){ confirmStone(); }
     return; }
   if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; panelSel=0; playSfx('sfx_mtog'); } return; }
@@ -299,7 +304,11 @@ cv.addEventListener('pointerdown', e=>{
   primeAudio();
   const pt=canvasPt(e);
   if (mode==='world'){ WORLDMODE.pdown(pt); return; }
-  if (mode==='stonepick'){ if(charToggleRect&&pt.x>charToggleRect.x&&pt.x<charToggleRect.x+charToggleRect.w&&pt.y>charToggleRect.y&&pt.y<charToggleRect.y+charToggleRect.h){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); playSfx('sfx_mtog'); return; } for(const r of stonePickRects){ if(pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ stonePickSel=r.i; confirmStone(); return; } } return; }
+  if (mode==='stonepick'){ const inR=(rr)=>rr&&pt.x>rr.x&&pt.x<rr.x+rr.w&&pt.y>rr.y&&pt.y<rr.y+rr.h;
+    if(inR(charToggleRect)){ toggleChar(); return; }
+    if(inR(skinPrevRect)){ cycleSkin(-1); return; }
+    if(inR(skinNextRect)){ cycleSkin(1); return; }
+    for(const r of stonePickRects){ if(pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ stonePickSel=r.i; confirmStone(); return; } } return; }
   if (mode==='load'){
     if (loaded>=total){
       mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel');
@@ -1838,11 +1847,16 @@ function drawStonePick(){
   const bg=ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#0a0712'); bg.addColorStop(1,'#170d24'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
   ctx.textAlign='center'; ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText('Equip a cReapY Stone', W/2, 64);
   ctx.font='14px sans-serif'; ctx.fillStyle='#9b8cff'; ctx.fillText('charge it with souls \u00b7 in the air, tap Jump again to unleash', W/2, 90);
-  const cname=isDing(chosen)?'Dingbat':'cReaper', cw=180, cx0=W/2-cw/2, cy0=104;
-  ctx.fillStyle='rgba(123,92,255,.18)'; roundRect(cx0,cy0,cw,30,8); ctx.fill(); ctx.strokeStyle='#7b5cff'; ctx.lineWidth=1.5; roundRect(cx0,cy0,cw,30,8); ctx.stroke();
-  ctx.fillStyle='#cdbbe6'; ctx.font='bold 14px sans-serif'; ctx.fillText('\u25c2  Character: '+cname+'  \u25b8', W/2, cy0+20);
-  charToggleRect={x:cx0,y:cy0,w:cw,h:30};
-  const n=PICK_STONES.length, sz=70, gap=14, totalW=n*sz+(n-1)*gap, x0=W/2-totalW/2, y=H/2-6;
+  const cname=isDing(chosen)?'Dingbat':'cReaper', cw=210, cx0=W/2-cw/2;
+  let cy0=100;
+  ctx.fillStyle='rgba(123,92,255,.18)'; roundRect(cx0,cy0,cw,28,8); ctx.fill(); ctx.strokeStyle='#7b5cff'; ctx.lineWidth=1.5; roundRect(cx0,cy0,cw,28,8); ctx.stroke();
+  ctx.fillStyle='#cdbbe6'; ctx.font='bold 14px sans-serif'; ctx.fillText('\u25c2  Character: '+cname+'  \u25b8', W/2, cy0+19);
+  charToggleRect={x:cx0,y:cy0,w:cw,h:28};
+  let cy1=132; const sname=prettySkin(chosen);
+  ctx.fillStyle='rgba(60,90,160,.18)'; roundRect(cx0,cy1,cw,28,8); ctx.fill(); ctx.strokeStyle='#5fb4ff'; ctx.lineWidth=1.5; roundRect(cx0,cy1,cw,28,8); ctx.stroke();
+  ctx.fillStyle='#bfe4ff'; ctx.font='bold 14px sans-serif'; ctx.fillText('\u25c2  Skin: '+sname+'  \u25b8', W/2, cy1+19);
+  skinPrevRect={x:cx0,y:cy1,w:cw/2,h:28}; skinNextRect={x:cx0+cw/2,y:cy1,w:cw/2,h:28};
+  const n=PICK_STONES.length, sz=66, gap=12, totalW=n*sz+(n-1)*gap, x0=W/2-totalW/2, y=H/2+18;
   stonePickRects=[];
   for(let i=0;i<n;i++){ const key=PICK_STONES[i], cx=x0+i*(sz+gap)+sz/2, cy=y, seld=i===stonePickSel;
     ctx.fillStyle=seld?'rgba(200,251,80,.14)':'rgba(255,255,255,.04)'; roundRect(cx-sz/2,cy-sz/2,sz,sz,12); ctx.fill();
