@@ -33,6 +33,7 @@ for(const k in HEROES){ const im=new Image(); im.onload=()=>{ HEROES[k].img=im; 
 let ctx,W,H,hooks,keys;
 let camX=227,camY=640,panHold=false,drag=null;
 let hero='cem',hx=227,hy=640,route=[],ptQ=[],walking=false,panel=null,toast=null,toastT=0,lastDir={r:1,m:1};
+let focus='cem',camFollow=false,chipSel=0;
 
 function vs(){ return Math.max(W/VW,H/VH)*ZOOM; }
 function clampCam(){
@@ -89,6 +90,7 @@ function enter(o){
   hx=ALL[hero].x; hy=ALL[hero].y;
   camX=hx; camY=hy;
   route=[]; ptQ=[]; walking=false; panel=null; toast=null; toastT=0; panHold=false; drag=null;
+  focus=hero; camFollow=false; chipSel=0;
 }
 
 function tap(pt){
@@ -117,26 +119,40 @@ function tap(pt){
   }
   for(const n of WORLDS){
     const dx=pt.x-vx(n.x), dy=pt.y-vy(n.y), r=(26*s+14);
-    if(dx*dx+dy*dy<r*r){
-      if(n.locked){ say('Sealed by the usurper’s power…',2.2); return; }
-      if(hero===n.id&&!walking){
-        const zo=hooks.zoneOpen?hooks.zoneOpen(n.id):!!n.play;
-        if(!zo){ say(n.name.toUpperCase()+' — coming soon…',2.4); }
-        else { panel=n.id; hooks.playSfx('sfx_mtog'); }
-        return;
-      }
-      panHold=false; // travel re-engages the camera
-      if(walking&&route.length){
-        const anchor=route[0];
-        const p=pathTo(anchor,n.id);
-        if(p) route=p; else say('No open path there',2);
-      } else {
-        const p=pathTo(hero,n.id);
-        if(p){ route=p.slice(1); walking=true; panel=null; startEdge(); }
-      }
-      return;
-    }
+    if(dx*dx+dy*dy<r*r){ camFollow=false; focus=n.id; selectNode(n); return; }
   }
+}
+function selectNode(n){
+  if(n.locked){ say('Sealed by the usurper’s power…',2.2); return; }
+  if(hero===n.id&&!walking){
+    const zo=hooks.zoneOpen?hooks.zoneOpen(n.id):!!n.play;
+    if(!zo){ say(n.name.toUpperCase()+' — coming soon…',2.4); }
+    else { panel=n.id; chipSel=0; hooks.playSfx('sfx_mtog'); }
+    return;
+  }
+  panHold=false;
+  if(walking&&route.length){ const anchor=route[0]; const p=pathTo(anchor,n.id); if(p) route=p; else say('No open path there',2); }
+  else { const p=pathTo(hero,n.id); if(p){ route=p.slice(1); walking=true; panel=null; startEdge(); } }
+}
+function nodeInDir(dx,dy){ const cur=ALL[focus]||ALL[hero]; let best=null,bs=-1e9;
+  for(const n of WORLDS){ if(n.id===focus) continue; const ax=n.x-cur.x, ay=n.y-cur.y, d=Math.hypot(ax,ay); if(d<1)continue;
+    const al=(ax*dx+ay*dy)/d; if(al<0.4) continue; const sc=al - d/5000; if(sc>bs){ bs=sc; best=n.id; } }
+  return best; }
+function key(code){
+  if(panel){
+    const acts=hooks.getActs(panel);
+    if(code==='ArrowLeft'){ chipSel=(chipSel+2)%3; hooks.playSfx('sfx_mtog'); }
+    else if(code==='ArrowRight'){ chipSel=(chipSel+1)%3; hooks.playSfx('sfx_mtog'); }
+    else if(code==='Enter'||code==='Space'){ const st=acts[chipSel];
+      if(st==='soon') say('Act '+['I','II','III'][chipSel]+' is still being carved…');
+      else if(st==='locked') say('Clear the previous act first');
+      else { hooks.playSfx('sfx_msel'); const w=panel; panel=null; hooks.launch(w,chipSel); } }
+    return;
+  }
+  if(!focus) focus=hero;
+  const D={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[code];
+  if(D){ camFollow=true; const nx=nodeInDir(D[0],D[1]); if(nx){ focus=nx; hooks.playSfx('sfx_mtog'); } return; }
+  if(code==='Enter'||code==='Space'){ camFollow=true; selectNode(ALL[focus]||ALL[hero]); }
 }
 function pdown(pt){ drag={x:pt.x,y:pt.y,moved:false}; }
 function pmove(pt){
@@ -146,7 +162,7 @@ function pmove(pt){
   if(drag.moved){
     const s=vs();
     camX-=dx/s; camY-=dy/s; clampCam();
-    drag.x=pt.x; drag.y=pt.y; panHold=true;
+    drag.x=pt.x; drag.y=pt.y; panHold=true; camFollow=false;
   }
 }
 function pup(pt){
@@ -160,12 +176,8 @@ function frame(dt,t){
   ctx.clearRect(0,0,W,H);
   const s=vs();
   // keyboard pan
-  if(keys){
-    let kx=0,ky=0;
-    if(keys['ArrowLeft'])kx-=1; if(keys['ArrowRight'])kx+=1;
-    if(keys['ArrowUp'])ky-=1; if(keys['ArrowDown'])ky+=1;
-    if(kx||ky){ camX+=kx*PAN*dt/ (s/0.83); camY+=ky*PAN*dt/(s/0.83); panHold=true; clampCam(); }
-  }
+  if(camFollow && !drag){ const tgt = walking ? {x:hx,y:hy} : (ALL[focus]||{x:camX,y:camY});
+    camX+=(tgt.x-camX)*Math.min(1,dt*4.5); camY+=(tgt.y-camY)*Math.min(1,dt*4.5); clampCam(); }
   if(!panHold&&!drag){
     camX+=(hx-camX)*Math.min(1,dt*3.2);
     camY+=(hy-camY)*Math.min(1,dt*3.2);
@@ -221,6 +233,7 @@ function frame(dt,t){
     ctx.fillText(n.name, vx(n.x), vy(n.y)-R-9*s);
     ctx.restore();
   }
+  if(camFollow && focus && !panel){ const fn=ALL[focus]; if(fn){ const RR=26*s+12, pl=RR*(1+0.06*Math.sin(t*5)); ctx.strokeStyle='#c8fb50'; ctx.lineWidth=3*s; ctx.beginPath(); ctx.arc(vx(fn.x),vy(fn.y),pl,0,7); ctx.stroke(); } }
   // walker
   if(walking){
     if(!ptQ.length&&route.length) startEdge();
@@ -273,6 +286,7 @@ function frame(dt,t){
       ctx.fillStyle=st==='done'?'rgba(200,251,80,0.12)':st==='open'?'rgba(123,92,255,0.25)':'rgba(60,56,80,0.4)';
       ctx.strokeStyle=st==='done'?'#c8fb50':st==='open'?'#a98aff':'#55506e'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.roundRect(c.x,c.y,c.w,c.h,10); ctx.fill(); ctx.stroke();
+      if(camFollow && i===chipSel){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.roundRect(c.x-2,c.y-2,c.w+4,c.h+4,11); ctx.stroke(); }
       ctx.fillStyle=(st==='locked'||st==='soon')?'#6e6886':'#e6e0fa'; ctx.font='bold 15px sans-serif';
       ctx.fillText('ACT '+['I','II','III'][i], c.x+c.w/2, c.y+22);
       ctx.font='11px sans-serif';
@@ -306,5 +320,5 @@ function frame(dt,t){
   }
   ctx.textAlign='left';
 }
-return {enter,frame,pdown,pmove,pup,escape};
+return {enter,frame,pdown,pmove,pup,escape,key};
 })();

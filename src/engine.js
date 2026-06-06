@@ -1,4 +1,4 @@
-const ASSET_VER='1780773375';
+const ASSET_VER='1780773957';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -258,7 +258,7 @@ addEventListener('keydown', e => {
   }
   if (mode==='world'){
     if (e.code==='Escape'){ if(!WORLDMODE.escape()){ mode='title'; menuShown=true; } playSfx('sfx_mtog'); return; }
-    press(e.code); return;
+    if (WORLDMODE.key) WORLDMODE.key(e.code); else press(e.code); return;
   }
   if (mode==='stonepick'){ primeAudio();
     if(e.code==='ArrowLeft'){ stonePickSel=(stonePickSel+PICK_STONES.length-1)%PICK_STONES.length; playSfx('sfx_mtog'); }
@@ -523,7 +523,8 @@ async function playMusic(key){
   if (musicSrc){ try{ musicSrc.stop(); }catch(e){} musicSrc=null; }
   musicKey=key;
   const buf=await getMusicBuf(key);
-  if (req!==musicReq || !buf || musicSrc) return;   // superseded, failed, or already started — never stack
+  if (req!==musicReq || musicSrc) return;            // superseded or already started
+  if (!buf){ if (musicKey===key) musicKey=null; return; }   // not ready/failed -> allow the loop to retry
   const src=AC.createBufferSource(); src.buffer=buf; src.loop=true;
   src.connect(musicGain); src.start(); musicSrc=src;
 }
@@ -535,6 +536,7 @@ function preloadMusic(key){
 let audioPrimed=false;
 function primeAudio(){
   audioInit(); if (AC && AC.state==='suspended') AC.resume();
+  if (AC && (mode==='title'||mode==='select'||mode==='world') && musicKey!=='title') playMusic('title');
   if (audioPrimed || !AC) return;
   audioPrimed=true;
   ['sfx_msel','sfx_mtog'].forEach(loadSfx);
@@ -2384,14 +2386,14 @@ function drawTitle(){
 }
 function drawOptions(){
   ctx.fillStyle='rgba(8,5,18,.72)'; ctx.fillRect(0,0,W,H);
-  const mw=420, mh=446, mx=W/2-mw/2, my=H/2-mh/2;
+  const mw=420, mh=404, mx=W/2-mw/2, my=H/2-mh/2;
   ctx.fillStyle='rgba(22,16,44,.97)'; roundRect(mx,my,mw,mh,14); ctx.fill();
   ctx.strokeStyle='rgba(150,140,255,.5)'; ctx.lineWidth=1.5; ctx.stroke();
   ctx.textAlign='center'; ctx.fillStyle='#eae6ff'; ctx.font='bold 24px sans-serif';
   ctx.fillText('OPTIONS', W/2, my+40);
   menuRects=[];
   [['MUSIC','m',musicVol],['SOUND','s',sfxVol]].forEach((row,i)=>{
-    const y=my+78+i*56;
+    const y=my+70+i*48;
     ctx.textAlign='left'; ctx.font='600 15px sans-serif'; ctx.fillStyle=(i===optSel)?'#c8fb50':'#cfd0e8';
     if (i===optSel){ ctx.fillText('\u25b8', mx+14, y+6); }
     ctx.fillText(row[0], mx+28, y+6);
@@ -2409,15 +2411,15 @@ function drawOptions(){
     menuRects.push({x:bx2+bw2+14,y:y-16,w:36,h:32,action:row[1]+'+'});
   });
   [['Export Save','export',2],['Import Save','import',3],['Install App','install',4],['Controller','controller',5]].forEach((row,k)=>{
-    const y=my+196+k*46;
+    const y=my+162+k*40;
     const hot=(optSel===row[2]);
-    ctx.fillStyle=hot?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(mx+60,y,mw-120,38,10); ctx.fill();
+    ctx.fillStyle=hot?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(mx+60,y,mw-120,33,9); ctx.fill();
     ctx.strokeStyle=hot?'#c8fb50':'rgba(155,140,255,.45)'; ctx.lineWidth=hot?2:1; ctx.stroke();
-    ctx.fillStyle='#e8e6f5'; ctx.font='600 15px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(row[0], W/2, y+25);
-    menuRects.push({x:mx+60,y:y,w:mw-120,h:38,action:row[1]});
+    ctx.fillStyle='#e8e6f5'; ctx.font='600 14px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(row[0], W/2, y+22);
+    menuRects.push({x:mx+60,y:y,w:mw-120,h:33,action:row[1]});
   });
-  if (optMsg){ ctx.fillStyle='#7fe0ff'; ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.fillText(optMsg, W/2, my+mh-58); }
+  if (optMsg){ ctx.fillStyle='#7fe0ff'; ctx.font='11px sans-serif'; ctx.textAlign='center'; ctx.fillText(optMsg, W/2, my+mh-44); }
   const by3=my+mh-30;
   ctx.fillStyle=(optSel===6)?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(W/2-80,by3-12,160,34,10); ctx.fill();
   ctx.strokeStyle=(optSel===6)?'#c8fb50':'rgba(155,140,255,.45)'; ctx.lineWidth=(optSel===6)?2:1; ctx.stroke();
