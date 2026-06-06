@@ -1,4 +1,4 @@
-const ASSET_VER='1780720387';
+const ASSET_VER='1780722208';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -25,6 +25,7 @@ const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VE
 const ROCK_IMG=new Image(); ROCK_IMG.src='./assets/haz_rock2.png?v='+ASSET_VER;
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.src='./assets/caveplat1.png?v='+ASSET_VER;
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil1.png?v='+ASSET_VER;
+const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+ASSET_VER;
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], TEX=[];
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
@@ -1213,11 +1214,12 @@ function tileDirt(x0,x1,topY,darken,f,hgt){
   const dt=SPR.dirt; if(!dt) return;
   const th=(hgt!==undefined)?hgt:(H-topY);
   if(th<=0) return;   // strips below the flat-world horizon: explicit height required (negative th = infinite tiling loop)
-  const TILE=84, tw=dt.w*TILE/dt.h, ty=TILE;   // fixed tile -> repeats the pattern both axes (no stretch); caller clips
+  const di=(DIRT_SEAM_IMG.complete&&DIRT_SEAM_IMG.naturalWidth)?DIRT_SEAM_IMG:dt.img;
+  const TILE=84, tw=dt.w*TILE/dt.h, ty=TILE;   // seamless tile -> repeats both axes, no stretch; caller clips
   const fac=(f===undefined)?1:f;
   const off=(((camX*fac)%tw)+tw)%tw;
   for(let y=topY; y<topY+th; y+=ty)
-    for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(dt.img, x, y, tw, ty);
+    for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(di, x, y, tw, ty);
   if(darken>0){ ctx.fillStyle='rgba(6,4,12,'+darken+')'; ctx.fillRect(x0,topY,x1-x0,th); }
 }
 function drawTreeImg(x,type){ const t=SPR.trees[type]; if(!t) return; ctx.drawImage(t.img, x-t.w/2, GROUND+10-t.h, t.w, t.h); }
