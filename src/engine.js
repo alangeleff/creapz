@@ -1,4 +1,4 @@
-const ASSET_VER='1780776385';
+const ASSET_VER='1780777382';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -193,7 +193,7 @@ function release(code){
   keys[code]=false;
 }
 addEventListener('keydown', e => {
-  if (mode==='load'){ primeAudio(); if (loaded>=total && titleReady){ mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel'); } return; }
+  if (mode==='load'){ primeAudio(); if (loaded>=total && titleReady){ mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel'); startMusicSync('title'); } return; }
   if (mode==='title'){
     primeAudio();
     if (e.code==='Escape'){ if(optionsOpen||cryptOpen){ optionsOpen=false; cryptOpen=false; playSfx('sfx_mtog'); } return; }
@@ -318,7 +318,7 @@ cv.addEventListener('pointerdown', e=>{
   if (mode==='controls'){ for(const r of ctrlRects){ if(pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ if(r.act==='__reset'){ padMap=Object.assign({},GP_DEFAULT); savePadMap(); playSfx('sfx_mtog'); } else if(r.act==='__done'){ ctrlDone(); } else { gpListen=r.act; playSfx('sfx_mtog'); } return; } } return; }
   if (mode==='load'){
     if (loaded>=total && titleReady){
-      mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel');
+      mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel'); startMusicSync('title');
       try{
         if (matchMedia('(pointer:coarse)').matches && document.documentElement.requestFullscreen){
           document.documentElement.requestFullscreen({navigationUI:'hide'}).then(()=>{
@@ -502,7 +502,7 @@ function drawControls(){
 }
 let slotSel=0, slotConfirm=-1, confSel=1, selMode='new', slotRects=[], delRects=[], confRects=[];
 let TIMG=null;
-let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicKey=null, musicReq=0;
+let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicReady={}, musicKey=null, musicReq=0;
 function audioInit(){
   if (AC) return;
   try{
@@ -513,7 +513,7 @@ function audioInit(){
 function getMusicBuf(key){
   if (!musicBuf[key]){
     musicBuf[key]=fetch('./assets/audio/'+key+'.m4a?v='+ASSET_VER)
-      .then(r=>r.arrayBuffer()).then(ab=>AC.decodeAudioData(ab)).catch(()=>null);
+      .then(r=>r.arrayBuffer()).then(ab=>AC.decodeAudioData(ab)).then(b=>{ musicReady[key]=b; return b; }).catch(()=>null);
   }
   return musicBuf[key];
 }
@@ -527,6 +527,14 @@ async function playMusic(key){
   if (!buf){ if (musicKey===key) musicKey=null; return; }   // not ready/failed -> allow the loop to retry
   const src=AC.createBufferSource(); src.buffer=buf; src.loop=true;
   src.connect(musicGain); src.start(); musicSrc=src;
+}
+function startMusicSync(key){
+  if (!AC || window.SPRITES_INLINE) return false;
+  const b=musicReady[key]; if(!b) return false;
+  if (musicKey===key && musicSrc) return true;
+  if (musicSrc){ try{musicSrc.stop();}catch(e){} musicSrc=null; }
+  musicReq++;
+  try{ if(AC.state==='suspended') AC.resume(); const src=AC.createBufferSource(); src.buffer=b; src.loop=true; src.connect(musicGain); src.start(); musicSrc=src; musicKey=key; return true; }catch(e){ return false; }
 }
 function stopMusic(){ musicReq++; if (musicSrc){ try{ musicSrc.stop(); }catch(e){} musicSrc=null; musicKey=null; } }
 function preloadMusic(key){
