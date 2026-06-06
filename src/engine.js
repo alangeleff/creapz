@@ -1,4 +1,4 @@
-const ASSET_VER='1780772971';
+const ASSET_VER='1780773375';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -451,7 +451,7 @@ const GP_ACTIONS=[['jump','Jump'],['attack','Attack'],['cast','Cast'],['left','M
 const GP_CODE={left:'ArrowLeft',right:'ArrowRight',down:'ArrowDown',jump:'Space',attack:'KeyZ',cast:'KeyX'};
 const GP_DEFAULT={jump:0,attack:2,cast:3,left:14,right:15,down:13,pause:9};
 function loadPadMap(){ try{ const j=JSON.parse(localStorage.getItem('creapz_padmap')); if(j) return Object.assign({},GP_DEFAULT,j); }catch(e){} return Object.assign({},GP_DEFAULT); }
-let padMap=loadPadMap(), padPrev={}, gpListen=null, gpConnected=false, ctrlReturn='title', ctrlRects=[];
+let padMap=loadPadMap(), padPrev={}, padRepeat={}, gpListen=null, gpConnected=false, ctrlReturn='title', ctrlRects=[];
 function savePadMap(){ try{ localStorage.setItem('creapz_padmap',JSON.stringify(padMap)); }catch(e){} }
 function ctrlDone(){ gpListen=null; mode=ctrlReturn; playSfx('sfx_mtog'); }
 function pollGamepad(){
@@ -461,13 +461,27 @@ function pollGamepad(){
   const bp=i=>(i!=null&&gp.buttons[i])?gp.buttons[i].pressed:false, ax=i=>gp.axes[i]||0;
   if(mode==='controls'){
     if(gpListen){ for(let i=0;i<gp.buttons.length;i++){ if(gp.buttons[i].pressed && !padPrev['b'+i]){ padMap[gpListen]=i; savePadMap(); gpListen=null; playSfx('sfx_msel'); break; } } }
+    else if(gp.buttons[1] && gp.buttons[1].pressed && !padPrev['b1']) ctrlDone();
     for(let i=0;i<gp.buttons.length;i++) padPrev['b'+i]=gp.buttons[i].pressed; return;
   }
-  if(mode==='play'){
+  if(mode==='play' && !menuOpen() && !(p&&p.winning)){
     const st={ left:bp(padMap.left)||ax(0)<-0.45, right:bp(padMap.right)||ax(0)>0.45, down:bp(padMap.down)||ax(1)>0.5, jump:bp(padMap.jump), attack:bp(padMap.attack), cast:bp(padMap.cast) };
     for(const a in GP_CODE){ if(st[a]&&!padPrev[a]) press(GP_CODE[a]); else if(!st[a]&&padPrev[a]) release(GP_CODE[a]); padPrev[a]=st[a]; }
     const pz=bp(padMap.pause); if(pz&&!padPrev.pause && p && !p.dead && !p.won && !p.winning){ paused=!paused; panelSel=0; playSfx('sfx_mtog'); } padPrev.pause=pz;
-  } else { for(const a in GP_CODE){ if(padPrev[a]){ release(GP_CODE[a]); padPrev[a]=false; } } }
+    return;
+  }
+  // any menu / paused / overlay: drive the same keyboard nav every menu already listens to
+  for(const a in GP_CODE){ if(padPrev[a]){ release(GP_CODE[a]); padPrev[a]=false; } }
+  const kbd=(ty,code)=>{ try{ window.dispatchEvent(new KeyboardEvent(ty,{code})); }catch(e){} };
+  const now=performance.now();
+  const NAV=[[12,1,-1,'ArrowUp'],[13,1,1,'ArrowDown'],[14,0,-1,'ArrowLeft'],[15,0,1,'ArrowRight']];
+  for(const d of NAV){ const code=d[3], held=bp(d[0])||(d[2]<0?ax(d[1])<-0.5:ax(d[1])>0.5), key='n'+code;
+    if(held){ if(!padPrev[key]){ kbd('keydown',code); padRepeat[key]=now+340; } else if(now>=padRepeat[key]){ kbd('keydown',code); padRepeat[key]=now+150; } }
+    else if(padPrev[key]){ kbd('keyup',code); }
+    padPrev[key]=held; }
+  const conf=bp(0), back=bp(1), start=bp(9);
+  if(conf&&!padPrev.gC) kbd('keydown','Enter'); else if(!conf&&padPrev.gC) kbd('keyup','Enter'); padPrev.gC=conf;
+  if((back||start)&&!padPrev.gB) kbd('keydown','Escape'); else if(!(back||start)&&padPrev.gB) kbd('keyup','Escape'); padPrev.gB=(back||start);
 }
 function gpBtnName(i){ const n={0:'A / \u2715',1:'B / \u25cb',2:'X / \u25a1',3:'Y / \u25b3',4:'LB',5:'RB',6:'LT',7:'RT',8:'Select',9:'Start',10:'L3',11:'R3',12:'D-Up',13:'D-Down',14:'D-Left',15:'D-Right'}; return (i==null||i<0)?'\u2014':(n[i]||('Btn '+i)); }
 function drawControls(){
