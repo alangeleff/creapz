@@ -1,4 +1,4 @@
-const ASSET_VER='1780775371';
+const ASSET_VER='1780776005';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -546,6 +546,18 @@ function primeAudio(){
   ['sfx_msel','sfx_mtog'].forEach(loadSfx);
   (window.STAGES||[]).forEach(st2=>preloadMusic(st2.music));
 }
+// resume audio after backgrounding / app-switch (iOS suspends the context and won't auto-resume)
+function resumeAudio(){
+  if(!AC) return;
+  if(AC.state!=='running'){
+    AC.resume().then(()=>{ if(musicKey){ const k=musicKey; if(musicSrc){ try{musicSrc.stop();}catch(e){} musicSrc=null; } musicKey=null; playMusic(k); } }).catch(()=>{});
+  }
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) setTimeout(resumeAudio,80); });
+window.addEventListener('focus', resumeAudio);
+window.addEventListener('pageshow', resumeAudio);
+document.addEventListener('pointerdown', resumeAudio, true);
+document.addEventListener('keydown', resumeAudio, true);
 let sfxBuf={}, sfxGain=null;
 async function loadSfx(key){
   if (!AC || sfxBuf[key] || window.SPRITES_INLINE) return;
