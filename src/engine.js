@@ -1,4 +1,4 @@
-const ASSET_VER='1780776005';
+const ASSET_VER='1780776385';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -193,7 +193,7 @@ function release(code){
   keys[code]=false;
 }
 addEventListener('keydown', e => {
-  if (mode==='load'){ primeAudio(); if (loaded>=total){ mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel'); } return; }
+  if (mode==='load'){ primeAudio(); if (loaded>=total && titleReady){ mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel'); } return; }
   if (mode==='title'){
     primeAudio();
     if (e.code==='Escape'){ if(optionsOpen||cryptOpen){ optionsOpen=false; cryptOpen=false; playSfx('sfx_mtog'); } return; }
@@ -317,7 +317,7 @@ cv.addEventListener('pointerdown', e=>{
     for(const r of stonePickRects){ if(pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ stonePickSel=r.i; confirmStone(); return; } } return; }
   if (mode==='controls'){ for(const r of ctrlRects){ if(pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ if(r.act==='__reset'){ padMap=Object.assign({},GP_DEFAULT); savePadMap(); playSfx('sfx_mtog'); } else if(r.act==='__done'){ ctrlDone(); } else { gpListen=r.act; playSfx('sfx_mtog'); } return; } } return; }
   if (mode==='load'){
-    if (loaded>=total){
+    if (loaded>=total && titleReady){
       mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel');
       try{
         if (matchMedia('(pointer:coarse)').matches && document.documentElement.requestFullscreen){
@@ -371,7 +371,7 @@ cv.addEventListener('pointerdown', e=>{
 
 // ---- load sprites ----
 const SPR = { chars:{} };
-let loaded=0, total=0;
+let loaded=0, total=0, titleReady=false;
 function L(d){ const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src;
   return {img,sw:d.sw,sh:d.sh,w:d.w,h:d.h,frames:d.frames,foots:d.foots,cxs:d.cxs,weapon:d.weapon}; }
 SPR.obst = {};
@@ -2484,10 +2484,12 @@ function drawLoading(){
   ctx.fillStyle='rgba(255,255,255,.14)'; roundRect(bx2,by2,bw2,14,7); ctx.fill();
   if (pct>0){ ctx.fillStyle='#c8fb50'; roundRect(bx2,by2,Math.max(10,bw2*pct),14,7); ctx.fill(); }
   ctx.fillStyle='#cfd0e8'; ctx.font='600 15px sans-serif';
-  if (loaded>=total){
+  if (loaded>=total && titleReady){
     const pu=0.5+0.5*Math.sin(gt*3.5);
     ctx.fillStyle='rgba(200,251,80,'+(0.4+0.6*pu).toFixed(2)+')';
     ctx.fillText('TAP TO BEGIN', W/2, by2+46);
+  } else if (loaded>=total){
+    ctx.fillStyle='#9b8cff'; ctx.fillText('preparing audio\u2026', W/2, by2+44);
   } else {
     ctx.fillText(Math.round(pct*100)+'%', W/2, by2+44);
   }
@@ -2496,7 +2498,12 @@ function drawLoading(){
   ctx.fillStyle='#0d0b1a_unused'; ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#9b8cff'; ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.fillText('Loading... '+loaded+'/'+total, W/2, H/2); ctx.textAlign='left';
 }
-try{ audioInit(); }catch(e){}   // create the AudioContext (suspended) at load so the first tap can unlock it on iOS
+try{
+  audioInit();                                   // create the (suspended) AudioContext at load so the first tap can unlock it on iOS
+  ['sfx_msel','sfx_mtog'].forEach(loadSfx);       // warm menu SFX
+  Promise.resolve(getMusicBuf('title')).then(()=>{ titleReady=true; }).catch(()=>{ titleReady=true; });  // fetch+decode title music before the menu
+  setTimeout(()=>{ titleReady=true; }, 9000);     // safety: never block the load screen forever
+}catch(e){ titleReady=true; }
 reset(); requestAnimationFrame(loop);
 }
 main();
