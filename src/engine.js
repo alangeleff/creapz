@@ -1,4 +1,4 @@
-const ASSET_VER='1780755579';
+const ASSET_VER='1780760188';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -29,6 +29,13 @@ const CHEST_CLOSED_IMG=new Image(); CHEST_CLOSED_IMG.src='./assets/chest_closed1
 const CHEST_OPEN_IMG=new Image(); CHEST_OPEN_IMG.src='./assets/chest_open1.png?v='+ASSET_VER;
 const STONE_DEFS={amethyst:'#b24dff',chaos:'#e24dff',emerald:'#2fe06a',fluorite:'#5fe0c0',holy:'#fff0a0',obsidian:'#9a7fd0',ruby:'#ff3d5a',sapphire:'#4d8cff',topaz:'#ffc23c',master:'#ff7a2c'};
 const STONE_IMGS={}; for(const _k in STONE_DEFS){ const _i=new Image(); _i.src='./assets/stone_'+_k+'.png?v='+ASSET_VER; STONE_IMGS[_k]=_i; }
+const CREAPER_POWER_IMG=new Image(); CREAPER_POWER_IMG.src='./assets/creaper_power.png?v='+ASSET_VER;
+const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
+const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidian','fluorite','chaos','none'];
+const PMETER=20, PDUR=7;
+let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[];
+function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.55; powerPulse=0; if(p.vy>-3)p.vy=-3; p.inv=Math.max(p.inv,0.3); playSfx('sfx_wportal',1); playSfx('sfx_ignite',1.2); }
+function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); loadStage(pendingStage); mode='play'; }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='+ASSET_VER;
@@ -115,7 +122,7 @@ function getActs(zone){
   });
 }
 function zoneOpen(z){ return !!(ZONE_STAGES[z]&&ZONE_STAGES[z].length&&(devMode||(RELEASED[z]||0)>0)); }
-function bootTest(){ document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); banked=0; loadStage(window.__testIdx); mode='play'; }
+function bootTest(){ banked=0; pendingStage=window.__testIdx; stonePickSel=0; mode='stonepick'; }
 function enterWorld(fromAct){
   if(testMode){ try{ if(history.length>1) history.back(); else location.href='editor'; }catch(e){ location.href='editor'; } return; }
   paused=false; tally=null; fading=0; fadeIn=0.5; panelSel=0;
@@ -123,7 +130,7 @@ function enterWorld(fromAct){
   mode='world';
   WORLDMODE.enter({ctx,W,H,keys,isDing:isDing(chosen),getActs,zoneOpen,dev:devMode,playSfx,
     launch:(zone,ai)=>{ const si=(ZONE_STAGES[zone]||[])[ai]; if(si===undefined) return;
-      prog.heroAt=zone; saveProg(); banked=0; mode='play'; loadStage(si); },
+      prog.heroAt=zone; saveProg(); banked=0; pendingStage=si; stonePickSel=0; mode='stonepick'; },
     exit:()=>{ playSfx('sfx_msel'); mode='title'; menuShown=true; },
     openSkins:()=>{ selMode='skin';
       if(isDing(chosen)){ dingSkin=chosen; selFoc=1; } else { creaperSkin=chosen; selFoc=0; }
@@ -139,6 +146,7 @@ function loadStage(i){
   loots=[];
   SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:o.gy-o.h}));
   TSOLID = SEG.map(s => ({l:s[0], r:s[1], top:s[2], bot:s[2]+(s[3]||130)}));
+  stoneCharge=0; powerActive=false; powerT=0; transformT=0;
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
   TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z}));
   BG = (ST.bg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha}));
@@ -171,6 +179,7 @@ function press(code){
   // Aerial attack: melee button midair -> Power Dive (Dingbat) / Scythe Bash (cReaper)
   if (code==='KeyZ' && !keys[code] && mode==='play' && p && !p.dead && !p.onGround)
     diveReq={dir:0, t:performance.now()};   // dir resolved at trigger (held dir, else facing)
+  if ((code==='Space'||code==='ArrowUp') && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && equippedStone && stoneCharge>=PMETER && !powerActive) activatePower();
   keys[code]=true;
 }
 function release(code){
@@ -244,6 +253,11 @@ addEventListener('keydown', e => {
     if (e.code==='Escape'){ if(!WORLDMODE.escape()){ mode='title'; menuShown=true; } playSfx('sfx_mtog'); return; }
     press(e.code); return;
   }
+  if (mode==='stonepick'){ primeAudio();
+    if(e.code==='ArrowLeft'){ stonePickSel=(stonePickSel+PICK_STONES.length-1)%PICK_STONES.length; playSfx('sfx_mtog'); }
+    else if(e.code==='ArrowRight'){ stonePickSel=(stonePickSel+1)%PICK_STONES.length; playSfx('sfx_mtog'); }
+    else if(e.code==='Enter'||e.code==='Space'){ confirmStone(); }
+    return; }
   if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; panelSel=0; playSfx('sfx_mtog'); } return; }
   if (e.code==='KeyR'&&mode==='play'){ paused=false; onReset(); return; }
   if (mode==='play' && p && p.won && tally){
@@ -281,6 +295,7 @@ cv.addEventListener('pointerdown', e=>{
   primeAudio();
   const pt=canvasPt(e);
   if (mode==='world'){ WORLDMODE.pdown(pt); return; }
+  if (mode==='stonepick'){ for(const r of stonePickRects){ if(pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ stonePickSel=r.i; confirmStone(); return; } } return; }
   if (mode==='load'){
     if (loaded>=total){
       mode='title'; titleFade=0; menuShown=false; playSfx('sfx_msel');
@@ -813,6 +828,7 @@ function loop(now){
     WORLDMODE.frame(dt, gt);
     if (fadeIn>0){ fadeIn-=dt; ctx.fillStyle='rgba(5,3,12,'+Math.min(1,fadeIn/0.5).toFixed(2)+')'; ctx.fillRect(0,0,W,H); }
   }
+  else if (mode==='stonepick') drawStonePick();
   else { update(dt); draw(); }
   requestAnimationFrame(loop);
 }
@@ -985,7 +1001,7 @@ function update(dt){
   for (const s of souls){
     if (s.got){ if(s.pop<1) s.pop+=dt/0.28; continue; }
     const r=30, sb={x:s.x-r,y:s.y-r,w:2*r,h:2*r};
-    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
+    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+1); }
   }
   // --- combat ---
   let pwb = (p.attackT>0) ? worldWeaponBox(SPR.chars[chosen].attack, curFrame(), p.x, p.y, p.facing) : null;
@@ -1005,6 +1021,16 @@ function update(dt){
     if (!p.dead && overlap(pb,lb)){ L.collected=true; L.fade=0; collectLoot(L); }
   }
   loots=loots.filter(L=>!L.collected || (L.fade||0)<1);
+  if (powerActive){
+    powerT-=dt; transformT=Math.max(0,transformT-dt); powerPulse+=dt; p.inv=Math.max(p.inv,0.2);
+    if (equippedStone==='ruby'){
+      const aura={x:p.x-58,y:p.y-118,w:116,h:120};
+      for (const z of zombies){ if(z.dead) continue; if(z.hitCd<=0 && overlap(aura,zBodyBox(z))){ z.hp-=1; z.hitCd=0.25; z.shown=3;
+        for(let i=0;i<5;i++) zbits.push({x:z.x,y:z.y-40,vx:(Math.random()-0.5)*170,vy:-30-Math.random()*120,sz:2+Math.random()*3,life:0.4+Math.random()*0.4,t:0,c:['#ff7a2c','#ffcf3c','#ff3d2c'][(Math.random()*3)|0]});
+        if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.55); } else playSfx('sfx_meleehit',0.45); } }
+    }
+    if (powerT<=0){ powerActive=false; stoneCharge=0; }
+  }
   for (const z of zombies){
     z.t+=dt; const zpx=z.x;
     if (z.hitCd>0) z.hitCd-=dt;
@@ -1741,6 +1767,58 @@ function drawSkullIcon(cx,cy,r){
   ctx.fillRect(cx-r*0.55,cy+r*0.3,r*1.1,r*0.7);
   ctx.fillStyle='#1a1530'; ctx.beginPath(); ctx.arc(cx-r*0.42,cy-1,r*0.3,0,7); ctx.arc(cx+r*0.42,cy-1,r*0.3,0,7); ctx.fill();
 }
+function drawStoneMeter(){ if(!equippedStone) return;
+  const x=14,y=46,w=152,h=15, bx=x+30, bw=w-30;
+  ctx.fillStyle='rgba(16,12,30,.66)'; roundRect(x-2,y-2,w+6,h+6,7); ctx.fill();
+  const img=STONE_IMGS[equippedStone];
+  if(img&&img.naturalWidth){ const ih=22, iw=img.naturalWidth*ih/img.naturalHeight; ctx.drawImage(img, x+13-iw/2, y+h/2-ih/2, iw, ih); }
+  ctx.fillStyle='rgba(0,0,0,.5)'; roundRect(bx,y+3,bw,h-6,5); ctx.fill();
+  const col=STONE_DEFS[equippedStone]||'#c8fb50';
+  const frac = powerActive ? Math.max(0,powerT/PDUR) : stoneCharge/PMETER;
+  ctx.save(); roundRect(bx,y+3,bw,h-6,5); ctx.clip();
+  ctx.fillStyle=col; ctx.fillRect(bx,y+3,Math.max(0,bw*frac),h-6);
+  if(!powerActive && frac>=1){ ctx.fillStyle='rgba(255,255,255,'+(0.25+0.3*Math.sin(gt*8)).toFixed(2)+')'; ctx.fillRect(bx,y+3,bw,h-6); }
+  ctx.restore();
+  if(!powerActive && frac>=1){ ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.textAlign='right'; ctx.fillText('JUMP\u00d72!', bx+bw-3, y+h-4); ctx.textAlign='left'; }
+}
+function drawPower(){ if(!powerActive && transformT<=0) return;
+  const col=STONE_DEFS[equippedStone]||'#ffcf3c'; const sx=pxf(p.x,1), cy=p.y-44;
+  if(powerActive){
+    const pr=46+6*Math.sin(gt*6);
+    const g=ctx.createRadialGradient(sx,cy,4,sx,cy,pr+20);
+    g.addColorStop(0,col+'00'); g.addColorStop(0.62,col+'33'); g.addColorStop(0.85,col+'aa'); g.addColorStop(1,col+'00');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy,pr+20,0,7); ctx.fill();
+    for(let i=0;i<4;i++){ const a=gt*3+i*1.57, rr=30+18*Math.sin(gt*4+i); ctx.globalAlpha=0.5+0.5*Math.sin(gt*7+i); ctx.fillStyle=col; ctx.fillRect(sx+Math.cos(a)*rr-1.5, cy+Math.sin(a)*rr-6, 3, 9); }
+    ctx.globalAlpha=1;
+    if(Math.random()<0.4){ ctx.strokeStyle=col; ctx.lineWidth=2; ctx.globalAlpha=0.7; ctx.beginPath(); let ax=sx+(Math.random()-0.5)*70, ay=cy-50; ctx.moveTo(ax,ay); for(let k=0;k<3;k++){ ax+=(Math.random()-0.5)*30; ay+=22; ctx.lineTo(ax,ay);} ctx.stroke(); ctx.globalAlpha=1; }
+  }
+  if(transformT>0){ const tp=1-transformT/0.55, R=tp*150;
+    ctx.globalAlpha=1-tp; ctx.strokeStyle=col; ctx.lineWidth=6*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R,0,7); ctx.stroke();
+    ctx.strokeStyle='#ffffff'; ctx.lineWidth=3*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R*0.7,0,7); ctx.stroke();
+    for(let i=0;i<10;i++){ const a=i*0.628+gt*5; ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(sx+Math.cos(a)*R*0.4,cy+Math.sin(a)*R*0.4); ctx.lineTo(sx+Math.cos(a)*R,cy+Math.sin(a)*R); ctx.stroke(); }
+    ctx.globalAlpha=1;
+    if(CREAPER_POWER_IMG.complete && CREAPER_POWER_IMG.naturalWidth){ const hh=120, ww=hh*CREAPER_POWER_IMG.naturalWidth/CREAPER_POWER_IMG.naturalHeight; ctx.save(); ctx.globalAlpha=Math.min(1,transformT/0.2+0.35); ctx.imageSmoothingEnabled=true; if(p.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(CREAPER_POWER_IMG, sx-ww/2, p.y-hh+8, ww, hh); ctx.restore(); }
+  }
+}
+function drawStonePick(){
+  ctx.setTransform(RS,0,0,RS,0,0);
+  const bg=ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#0a0712'); bg.addColorStop(1,'#170d24'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  ctx.textAlign='center'; ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText('Equip a cReapY Stone', W/2, 64);
+  ctx.font='14px sans-serif'; ctx.fillStyle='#9b8cff'; ctx.fillText('charge it with souls \u00b7 in the air, tap Jump again to unleash', W/2, 90);
+  const n=PICK_STONES.length, sz=70, gap=14, totalW=n*sz+(n-1)*gap, x0=W/2-totalW/2, y=H/2-6;
+  stonePickRects=[];
+  for(let i=0;i<n;i++){ const key=PICK_STONES[i], cx=x0+i*(sz+gap)+sz/2, cy=y, seld=i===stonePickSel;
+    ctx.fillStyle=seld?'rgba(200,251,80,.14)':'rgba(255,255,255,.04)'; roundRect(cx-sz/2,cy-sz/2,sz,sz,12); ctx.fill();
+    if(seld){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=3; roundRect(cx-sz/2,cy-sz/2,sz,sz,12); ctx.stroke(); }
+    if(key==='none'){ ctx.fillStyle='#8a80a8'; ctx.font='bold 13px sans-serif'; ctx.fillText('NONE', cx, cy+4); }
+    else { const img=STONE_IMGS[key]; if(img&&img.naturalWidth){ const h=sz-14, w=h*img.naturalWidth/img.naturalHeight; if(seld){ctx.save();ctx.shadowColor=STONE_DEFS[key];ctx.shadowBlur=20;} ctx.drawImage(img,cx-w/2,cy-h/2,w,h); if(seld)ctx.restore(); } }
+    stonePickRects.push({x:cx-sz/2,y:cy-sz/2,w:sz,h:sz,i}); }
+  const sel=PICK_STONES[stonePickSel];
+  ctx.font='bold 21px sans-serif'; ctx.fillStyle= sel==='none'?'#9b8cff':STONE_DEFS[sel];
+  ctx.fillText(sel==='none'?'No stone \u2014 pure skill':(sel.charAt(0).toUpperCase()+sel.slice(1)+'  \u2014  '+(STONE_POWER[sel]||'')), W/2, y+sz/2+46);
+  ctx.font='13px sans-serif'; ctx.fillStyle='#cdbbe6'; ctx.fillText('\u2190 \u2192  choose       Space / tap  equip & descend', W/2, H-34);
+  ctx.textAlign='left';
+}
 function drawPlayerHP(){
   const x=14,y=14,w=196,h=26, bx=x+44, bw=w-46;
   ctx.fillStyle='rgba(16,12,30,.72)'; roundRect(x-2,y-2,w+6,h+6,9); ctx.fill();
@@ -2000,6 +2078,7 @@ function draw(){
     drawSoulFx(sx, s.y, 13*sc, alpha, s.ph*19);
   }
   drawPlayerLayer();
+  drawPower();
   for (const fx of chkFx){
     const st=SPR.chkst; if(!st) break;
     const sx=fx.cx-camX, gy=(fx.cgy!==undefined?fx.cgy:GROUND)+8-st.h;
@@ -2104,6 +2183,7 @@ function draw(){
   }
   // HUD
   drawPlayerHP();
+  drawStoneMeter();
   ctx.fillStyle='rgba(20,16,36,.5)'; roundRect(14,54,128,28,7); ctx.fill();
   ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(32,68,9,0,7); ctx.fill();
   ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(32,68,5,0,7); ctx.fill();
