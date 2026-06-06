@@ -1,4 +1,4 @@
-const ASSET_VER='1780767704';
+const ASSET_VER='1780772205';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -295,6 +295,10 @@ function bindBtn(id,code){
   el.addEventListener('pointercancel',e=>{e.preventDefault();release(code);});
 }
 bindBtn('bL','ArrowLeft'); bindBtn('bR','ArrowRight'); bindBtn('bJ','Space'); bindBtn('bA','KeyZ'); bindBtn('bC','KeyX'); bindBtn('bD','ArrowDown');
+// --- block mobile zoom gestures (two-finger button presses were triggering a stuck pinch-zoom) ---
+['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('touchmove',e=>{ if(e.touches&&e.touches.length>1) e.preventDefault(); },{passive:false});
+let _ltap=0; document.addEventListener('touchend',e=>{ const n=Date.now(); if(n-_ltap<=320) e.preventDefault(); _ltap=n; },{passive:false});
 // canvas taps (character select)
 function canvasPt(e){ const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H }; }
 cv.addEventListener('pointermove', e=>{ if(mode==='world') WORLDMODE.pmove(canvasPt(e)); });
@@ -983,7 +987,16 @@ function update(dt){
     if (cand.length){ p.y=cand[0].t; p.vy=0; p.onGround=true; p.standPlat=cand[0].q;
       if (cand[0].q && cand[0].q.t==='c' && cand[0].q.ct===0) cand[0].q.ct=0.0001;
     } else { p.onGround=false; p.standPlat=null; }
-  } else { p.onGround=false; p.standPlat=null; }
+  } else {
+    p.onGround=false; p.standPlat=null;
+    // ceiling bonk: rising head into a terrace underside -> stop vertically (don't eject sideways)
+    for (const s of TSOLID){
+      if (p.x+PW/2>s.l+3 && p.x-PW/2<s.r-3){
+        const head=p.y-PH;
+        if (head<s.bot && head>s.top-40 && (prevFeet-PH)>=s.bot-1){ p.y=s.bot+PH; p.vy=0; break; }
+      }
+    }
+  }
   // hard-resolve overlap with solid terrain walls (accurate edges, no pass-through)
   for (const s of TSOLID){
     if (p.y>s.top+4 && (p.y-PH)<s.bot){
