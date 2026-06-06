@@ -47,6 +47,14 @@
   .grpL{display:flex;flex-direction:column;gap:12px;align-items:center;pointer-events:auto}
   .grpL .row{display:flex;gap:16px}
   .btn.dn{width:56px;height:56px;font-size:19px}
+  @media (pointer: coarse) and (min-width: 700px){
+   .btn{width:98px;height:98px;font-size:32px}
+   .btn.jump{width:120px;height:120px}
+   .btn.dn{width:80px;height:80px;font-size:26px}
+   .grp,.row,.grpR{gap:24px}
+   .col{gap:20px}
+   .touch{opacity:.62}
+  }
   .grpR{display:flex;gap:16px;align-items:center;pointer-events:auto}
   .grpR .col{display:flex;flex-direction:column;gap:14px}
   #rst,#chr{position:fixed;top:calc(12px + env(safe-area-inset-top));z-index:6;pointer-events:auto;

@@ -1157,7 +1157,7 @@ function rockBits(r){
 }
 function drawSpikeProj(sx,sy,dir){
   if(SPIKESHOT_IMG.complete && SPIKESHOT_IMG.naturalWidth){ const hh=34, ww=hh*SPIKESHOT_IMG.naturalWidth/SPIKESHOT_IMG.naturalHeight;
-    ctx.save(); ctx.translate(sx,sy); ctx.scale(-dir,1); ctx.imageSmoothingEnabled=true; ctx.drawImage(SPIKESHOT_IMG,-ww/2,-hh/2,ww,hh); ctx.restore(); }
+    ctx.save(); ctx.translate(sx,sy); ctx.scale(dir,1); ctx.imageSmoothingEnabled=true; ctx.drawImage(SPIKESHOT_IMG,-ww/2,-hh/2,ww,hh); ctx.restore(); }
   else { ctx.fillStyle='#cfc8b6'; ctx.strokeStyle='#6b6457'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(sx+dir*16,sy); ctx.lineTo(sx-dir*12,sy-9); ctx.lineTo(sx-dir*12,sy+9); ctx.closePath(); ctx.fill(); ctx.stroke(); }
 }
 function drawVolleys(){ for(const v of volleys){ if(v.dead)continue; const sx=v.x-camX; if(sx<-40||sx>W+40)continue; drawSpikeProj(sx, v.y, v.vx<0?-1:1); } }

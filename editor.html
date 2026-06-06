@@ -17,7 +17,7 @@
  .litem:hover{background:#1d1838}
  .litem.sel{background:#242a16;outline:1px solid var(--lime)}
  .litem .lc{width:11px;height:11px;border-radius:2px;flex:none}
- .litem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .litem .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .litem .lb{background:#241d44;border:none;color:#cdbbe6;border-radius:5px;font-size:14px;line-height:1;padding:5px 8px;cursor:pointer;min-width:26px;text-align:center}
  .litem .lb:hover{background:#352a5c}
  .litem.lock{opacity:.5}
@@ -53,17 +53,17 @@
  #zoomb button{width:38px;height:38px;border-radius:9px;background:#15112af2;border:1px solid var(--line);color:var(--ink);font-size:18px;cursor:pointer}
  /* Larger touch targets on tablets / iPads (coarse pointer + roomy screen) */
  @media (pointer: coarse) and (min-width: 700px){
-  #pal{width:250px}
+  #pal{width:272px}
   #pal h3{font-size:12px}
   .cat{font-size:12px}
   .tool{padding:14px 14px;font-size:16px;margin:7px 0;gap:11px;border-radius:10px}
   .tool .sw{width:20px;height:20px}
   .modebtn{padding:14px 14px;font-size:16px;margin:7px 0;gap:11px;border-radius:10px}
   .modebtn .sw{width:20px;height:20px}
-  .litem{padding:10px 8px;font-size:15px;gap:8px;border-radius:8px}
-  .litem .lc{width:14px;height:14px}
-  .litem .lb{font-size:20px;padding:9px 13px;min-width:42px;border-radius:7px}
-  .lck{width:26px;height:26px;font-size:16px;border-radius:5px}
+  .litem{padding:9px 6px;font-size:15px;gap:5px;border-radius:8px}
+  .litem .lc{width:13px;height:13px}
+  .litem .lb{font-size:16px;padding:7px 8px;min-width:30px;border-radius:6px}
+  .lck{width:22px;height:22px;font-size:13px;border-radius:5px}
   #grpbtn,#addgrpbtn{padding:13px;font-size:15px;border-radius:8px}
   #bar{gap:9px;padding:10px 12px}
   #bar input,#bar select{padding:10px 11px;font-size:15px;border-radius:8px}
@@ -512,7 +512,7 @@ function dHaz(h){ const X=sx(h.x),Y=sy(h.y),Wd=h.w*zoom;
    ctx.strokeStyle='#5fb4ff'; ctx.lineWidth=1.5; ctx.setLineDash([7,5]); ctx.strokeRect(tX,tY,tW,tH); ctx.setLineDash([]);
    ctx.fillStyle='#5fb4ff'; ctx.font=Math.round(11*Math.min(1.5,zoom))+'px sans-serif'; ctx.fillText('TRIGGER ZONE',tX+5,tY+15);
    for(let k=-1;k<=1;k++){ const yy=Y+k*40*zoom;
-     if(SPIKESHOT_E.naturalWidth){ const hh=34*zoom, ww=hh*SPIKESHOT_E.naturalWidth/SPIKESHOT_E.naturalHeight; ctx.save(); ctx.translate(X,yy); ctx.scale(-dir,1); ctx.imageSmoothingEnabled=true; ctx.drawImage(SPIKESHOT_E,-ww/2,-hh/2,ww,hh); ctx.restore(); }
+     if(SPIKESHOT_E.naturalWidth){ const hh=34*zoom, ww=hh*SPIKESHOT_E.naturalWidth/SPIKESHOT_E.naturalHeight; ctx.save(); ctx.translate(X,yy); ctx.scale(dir,1); ctx.imageSmoothingEnabled=true; ctx.drawImage(SPIKESHOT_E,-ww/2,-hh/2,ww,hh); ctx.restore(); }
      else { ctx.fillStyle='#cfc8b6'; ctx.strokeStyle='#6b6457'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(X+dir*16*zoom,yy); ctx.lineTo(X-dir*12*zoom,yy-9*zoom); ctx.lineTo(X-dir*12*zoom,yy+9*zoom); ctx.closePath(); ctx.fill(); ctx.stroke(); } }
    ctx.strokeStyle='#e0506a'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+dir*64*zoom,Y); ctx.stroke();
    ctx.beginPath(); ctx.moveTo(X+dir*64*zoom,Y); ctx.lineTo(X+dir*50*zoom,Y-6*zoom); ctx.lineTo(X+dir*50*zoom,Y+6*zoom); ctx.closePath(); ctx.fillStyle='#e0506a'; ctx.fill();
