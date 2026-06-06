@@ -1,4 +1,4 @@
-const ASSET_VER='1780754004';
+const ASSET_VER='1780755579';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -135,7 +135,7 @@ function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
-  OBST = ST.obst.map(o => { const def=OBJ[o.type]||{w:96,h:62}; const m={x:o.x, type:o.type, w:def.w, h:def.h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z}; if(o.type==='chest'){ m.state='closed'; m.openT=0; m.loot=o.loot||'gold'; } return m; });
+  OBST = ST.obst.map(o => { const def=OBJ[o.type]||{w:96,h:62}; const m={x:o.x, type:o.type, w:def.w, h:def.h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z, f:o.f}; if(o.type==='chest'){ m.state='closed'; m.openT=0; m.loot=o.loot||'gold'; } return m; });
   loots=[];
   SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:o.gy-o.h}));
   TSOLID = SEG.map(s => ({l:s[0], r:s[1], top:s[2], bot:s[2]+(s[3]||130)}));
@@ -694,7 +694,7 @@ function reset(keep){
     dead:false, dieT:0, dframe:0, dstate:kw==='bd'?'walk':'idle', pdir:(z[5]!==undefined?z[5]:-1), min:z[1], max:z[2], kw,
     hp:mh, maxhp:mh, hpShown:mh, hitCd:0, shown:0, aggro:false}; });
   const bspawn=ST.bats;
-  bats = bspawn.map((b,i)=>({x:b[0], y:b[3], y0:b[3], t:Math.random()*3, ph:i*1.7, facing:-1, dir:i%2?1:-1,
+  bats = bspawn.map((b,i)=>({x:b[0], y:b[3], y0:b[3], t:Math.random()*3, ph:i*1.7, facing:(b[4]!==undefined?b[4]:-1), dir:(b[4]!==undefined?b[4]:(i%2?1:-1)),
     min:b[1], max:b[2], dead:false, dieT:0, yD:b[3], state:'idle', bt:0, biteCd:0}));
   hazReset();
 }

@@ -210,7 +210,7 @@ const STAMPS=[
  {k:'zgen',label:'Zombie General',sw:ENEMY_COLS.zgen,cat:'Enemies'},
  {k:'gob',label:'Goblin',sw:ENEMY_COLS.gob,cat:'Enemies'},
  {k:'bd',label:'Brain Dead',sw:ENEMY_COLS.bd,cat:'Enemies'},
- {k:'bat',label:'Bat (flyer)',sw:'#b07a5a',cat:'Enemies'},
+ {k:'bat',label:'Blood Ravager',sw:'#b07a5a',cat:'Enemies'},
  {k:'chk',label:'Checkpoint',sw:'#ff9a3c',cat:'Functions'},
  {k:'goal',label:'Goal (exit)',sw:'#e0506a',cat:'Functions'},
  {k:'soul',label:'Soul',sw:'#7fe0ff',cat:'Functions'},
@@ -353,7 +353,7 @@ function showSel(){
  if(_grp){ const _others=_grp.members.filter(m=>m[0]!==_ak);
    if(_others.length){ html+='<div style="margin-top:10px;font-size:11px;color:#9bd0ff">Swap to ('+_grp.label+')</div>';
      _others.forEach(m=>{ html+='<button class="swapb" data-k="'+m[0]+'" style="width:100%;margin-top:4px;background:#16263a;border:1px solid #3f9bdf;color:#bfe4ff;border-radius:6px;padding:7px;cursor:pointer">\u21c4 '+m[1]+'</button>'; }); } }
- if(sel.type==='enemy'||sel.type==='obst'){ const fv = sel.type==='enemy' ? (sel.raw[5]!==undefined?sel.raw[5]:-1) : (o.f===-1?-1:1);
+ if(sel.type==='enemy'||sel.type==='obst'||sel.type==='bat'){ const fidx = sel.type==='enemy'?5:(sel.type==='bat'?4:-1); const fv = fidx>=0 ? (sel.raw[fidx]!==undefined?sel.raw[fidx]:(sel.type==='enemy'?-1:1)) : (o.f===-1?-1:1);
    html+='<button class="faceb" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #7b5cff;color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer">Face: '+(fv===-1?'◄ Left':'Right ►')+'  · tap to flip</button>'; }
  html+='<button class="dup" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Duplicate</button>';
  html+='<button class="del">Delete</button>';
@@ -361,7 +361,7 @@ function showSel(){
  selBox.querySelectorAll('.swapb').forEach(b=>b.onclick=()=>{ histPush(); applySwap(sel.raw,b.dataset.k); persist(); sel=reselect(sel); showSel(); draw(); });
  const _ls=selBox.querySelector('[data-loot]'); if(_ls) _ls.onchange=()=>{ histPush(); o.loot=_ls.value; persist(); showSel(); draw(); };
  selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ histPush(); o[inp.dataset.f]=v; syncBack(sel); persist(); draw(); } });
- const _fb=selBox.querySelector('.faceb'); if(_fb) _fb.onclick=()=>{ histPush(); if(sel.type==='enemy'){ const cur=sel.raw[5]!==undefined?sel.raw[5]:-1; sel.raw[5]=cur===-1?1:-1; } else { if(o.f===-1) delete o.f; else o.f=-1; } persist(); showSel(); draw(); };
+ const _fb=selBox.querySelector('.faceb'); if(_fb) _fb.onclick=()=>{ histPush(); if(sel.type==='enemy'){ const c=sel.raw[5]!==undefined?sel.raw[5]:-1; sel.raw[5]=c===-1?1:-1; } else if(sel.type==='bat'){ const c=sel.raw[4]!==undefined?sel.raw[4]:1; sel.raw[4]=c===-1?1:-1; } else { if(o.f===-1) delete o.f; else o.f=-1; } persist(); showSel(); draw(); };
  selBox.querySelector('.dup').onclick=()=>dupSel();
  selBox.querySelector('.del').onclick=()=>{ histPush(); delObj(sel); sel=null; showSel(); persist(); draw(); };
 }
@@ -453,7 +453,7 @@ function placeAt(kind,gx,gy){
  else if(kind==='chk'){ const c=[gx,gy]; M.chk.push(c); sel=wrap('chk',c,['x','gy'],[0,1]); }
  else if(kind==='goal'){ M.goal=gx; M.goalY=gy; sel=null; }
  else if(kind==='soul'){ M.souls.push([gx,gy]); sel=null; }
- else if(kind==='bat'){ const b=[gx,Math.max(0,gx-300),gx+300,gy]; M.bats.push(b); sel=wrap('bat',b,['x','min','max','y'],[0,1,2,3]); }
+ else if(kind==='bat'){ const b=[gx,Math.max(0,gx-300),gx+300,gy,-1]; M.bats.push(b); sel=wrap('bat',b,['x','min','max','y'],[0,1,2,3]); }
  else if(kind.startsWith('haz_')){ const t=kind.split('_')[1]; const h={t,x:gx,y:gy,w:240,z:topZ()+10}; if(t==='spikeshot'){ h.w=28; h.dir=-1; h.tx=gx-340; h.ty=gy-150; h.tw=220; h.th=300; } (M.hazards=M.hazards||[]).push(h); sel={type:'haz',kind,obj:h,raw:h,sync(){}}; }
  else if(kind.startsWith('bg_')){ const t=kind.split('_').slice(1).join('_'); const b={t,par:(t==='cavebg2'?0.45:0.2)}; (M.bg=M.bg||[]).push(b); sel={type:'bg',kind,obj:b,raw:b,sync(){}}; }
  else if(kind.startsWith('tex_')){ const t=kind.split('_')[1]; const tx={t,x:gx,y:gy,w:300,z:topZ()+10}; (M.tex=M.tex||[]).push(tx); sel={type:'tex',kind,obj:tx,raw:tx,sync(){}}; }
@@ -626,7 +626,7 @@ function draw(){
    if(sel&&sel.raw===e){ const m=EDSPR[e[3]]; const w=(m?m.m.w:30)*zoom,hh=(m?m.m.h:40)*zoom; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(sx(e[0])-w/2-2,sy(ey)-hh-2,w+4,hh+4); } }
  for(const b of M.bats){
    ctx.strokeStyle='#b07a5a55'; ctx.beginPath(); ctx.moveTo(sx(b[1]),sy(b[3])); ctx.lineTo(sx(b[2]),sy(b[3])); ctx.stroke();
-   if(!dSprite('bat', sx(b[0]), sy(b[3]), zoom*0.62, 'c', false)){ ctx.fillStyle='#b07a5a'; ctx.beginPath(); ctx.ellipse(sx(b[0]),sy(b[3]),12*zoom,7*zoom,0,0,7); ctx.fill(); }
+   if(!dSprite('bat', sx(b[0]), sy(b[3]), zoom*0.62, 'c', b[4]===-1)){ ctx.fillStyle='#b07a5a'; ctx.beginPath(); ctx.ellipse(sx(b[0]),sy(b[3]),12*zoom,7*zoom,0,0,7); ctx.fill(); }
    if(sel&&sel.raw===b){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sx(b[0]),sy(b[3]),28*zoom,0,7); ctx.stroke(); } }
  for(const c of M.chk){ const X=sx(c[0]),Y=sy(c[1]);
    if(!dSprite('chkst', X, Y, zoom, 'b', false)){ ctx.fillStyle='#ff9a3c'; ctx.fillRect(X-2,Y-46*zoom,4,46*zoom); ctx.beginPath(); ctx.moveTo(X+2,Y-46*zoom); ctx.lineTo(X+26*zoom,Y-38*zoom); ctx.lineTo(X+2,Y-30*zoom); ctx.fill(); }
@@ -677,7 +677,7 @@ function propCenter(pr){ const r=pr.raw;
  return [r.x,r.gy||0]; }
 function actorList(){ const out=[];
  M.enemies.forEach(e=>out.push({sec:'Enemies',label:(LABELOF[e[3]]||e[3]),color:ENEMY_COLS[e[3]]||'#aaa',raw:e,mk:()=>wrap('enemy',e,['x','min','max','gy'],[0,1,2,4],e[3]),cx:e[0],cy:e[4]??M.goalY}));
- M.bats.forEach(b=>out.push({sec:'Enemies',label:'Bat',color:'#b07a5a',raw:b,mk:()=>wrap('bat',b,['x','min','max','y'],[0,1,2,3]),cx:b[0],cy:b[3]}));
+ M.bats.forEach(b=>out.push({sec:'Enemies',label:'Blood Ravager',color:'#b07a5a',raw:b,mk:()=>wrap('bat',b,['x','min','max','y'],[0,1,2,3]),cx:b[0],cy:b[3]}));
  M.chk.forEach(c=>out.push({sec:'Functions',label:'Checkpoint',color:'#ff9a3c',raw:c,mk:()=>wrap('chk',c,['x','gy'],[0,1]),cx:c[0],cy:c[1]}));
  if(M.goal) out.push({sec:'Functions',label:'Goal (exit)',color:'#e0506a',raw:'goal',mk:()=>selGoal(),cx:M.goal,cy:M.goalY});
  return out; }
