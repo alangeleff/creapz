@@ -144,7 +144,7 @@ const HAZ_COLS={spike:'#d9d2c0',rock:'#7a7280',tar:'#2a1f30',spikeshot:'#cfc8b6'
 const HAZ_LABEL={spike:'Bone Spike Pit',rock:'Rock Drop',tar:'Tar Pit',spikeshot:'Spike Cannon'};
 const OBST_COLS={grave:'#8a82a6',crate:'#b6884a',chest:'#caa05a'};
 const LOOTS=[['gold','Gold'],['soul','Soul \u00d71'],['soul5','Soul \u00d75'],['soul25','Soul \u00d725'],['soul50','Soul \u00d750'],['soul100','Soul \u00d7100'],['heart','Heart'],['stone_amethyst','Amethyst Stone'],['stone_chaos','Chaos Stone'],['stone_emerald','Emerald Stone'],['stone_fluorite','Fluorite Stone'],['stone_holy','Holy Stone'],['stone_obsidian','Obsidian Stone'],['stone_ruby','Ruby Stone'],['stone_sapphire','Sapphire Stone'],['stone_topaz','Topaz Stone'],['stone_master','Master Stone']];
-const CATS=['Background','Foreground','Ground','Hazards','Enemies','Functions','Objects','Textures'];
+const CATS=['Background','Foreground','Ground','Hazards','Enemies','Functions','Objects','Textures','Decor'];
 const SOUL_COL_ED={1:'#7fe0ff',5:'#ff5a5a',25:'#5ae07a',50:'#b25aff',100:'#ffcf3c'};
 const ASSET_PV=Date.now();
 const BGE_IMG={cavebg:new Image(), cavebg2:new Image(), cryptbg:new Image(), rockwall:new Image(), bonedirt:new Image()};
@@ -155,6 +155,10 @@ BGE_IMG.rockwall.onload=()=>draw(); BGE_IMG.rockwall.src='./assets/rockwall1.png
 BGE_IMG.bonedirt.onload=()=>draw(); BGE_IMG.bonedirt.src='./assets/bonedirt1.png?v=2';
 const BG_LABEL={cavebg:'Cave Background (far)', cavebg2:'Cave Midground (near)', cryptbg:'Crypt Cavern (deep)', rockwall:'Rock Wall Texture', bonedirt:'Bone Dirt'};
 const TEX_COLS={ceiling:'#7a5a36',rockpile:'#8a6a3a'}, TEX_LABEL={ceiling:'Cave Ceiling',rockpile:'Rock Pile'};
+const DECOR=['skull1', 'bone01', 'bone02', 'bone03', 'bone04', 'bone05', 'bone06', 'bone07', 'bone08', 'bone09', 'bone10', 'bone11', 'bone12', 'bone13', 'bone14', 'bone15', 'bone16'];
+const DECOR_LABELS={'skull1': 'Skull', 'bone01': 'Bone Pile 1', 'bone02': 'Bone Pile 2', 'bone03': 'Bone Pile 3', 'bone04': 'Bone Pile 4', 'bone05': 'Bone Pile 5', 'bone06': 'Bone Pile 6', 'bone07': 'Bone Pile 7', 'bone08': 'Bone Pile 8', 'bone09': 'Bone Pile 9', 'bone10': 'Bone Pile 10', 'bone11': 'Bone Pile 11', 'bone12': 'Bone Pile 12', 'bone13': 'Bone Pile 13', 'bone14': 'Bone Pile 14', 'bone15': 'Bone Pile 15', 'bone16': 'Bone Pile 16'};
+const DECOR_IMG={};
+DECOR.forEach(n=>{ TEX_LABEL[n]=DECOR_LABELS[n]; TEX_COLS[n]='#9a8a6a'; const im=new Image(); im.onload=()=>draw(); im.src='./assets/decor_'+n+'.png?v=2'; DECOR_IMG[n]=im; });
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.onload=()=>draw(); CAVEPLAT_IMG.src='./assets/caveplat1.png';
 const CHEST_E=new Image(); CHEST_E.onload=()=>draw(); CHEST_E.src='./assets/chest_closed1.png';
 const TREEBIG_E=new Image(); TREEBIG_E.onload=()=>draw(); TREEBIG_E.src='./assets/sprites/trees_big.png';
@@ -241,6 +245,23 @@ const STAMPS=[
  {k:'chest',label:'Treasure Chest',sw:'#caa05a',cat:'Objects'},
  {k:'tex_ceiling',label:'Cave Ceiling',sw:'#7a5a36',cat:'Textures'},
  {k:'tex_rockpile',label:'Rock Pile',sw:'#8a6a3a',cat:'Textures'},
+ {k:'tex_skull1',label:'Skull',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone01',label:'Bone Pile 1',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone02',label:'Bone Pile 2',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone03',label:'Bone Pile 3',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone04',label:'Bone Pile 4',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone05',label:'Bone Pile 5',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone06',label:'Bone Pile 6',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone07',label:'Bone Pile 7',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone08',label:'Bone Pile 8',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone09',label:'Bone Pile 9',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone10',label:'Bone Pile 10',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone11',label:'Bone Pile 11',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone12',label:'Bone Pile 12',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone13',label:'Bone Pile 13',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone14',label:'Bone Pile 14',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone15',label:'Bone Pile 15',sw:'#9a8a6a',cat:'Decor'},
+ {k:'tex_bone16',label:'Bone Pile 16',sw:'#9a8a6a',cat:'Decor'},
  {k:'bg_cavebg',label:'Cave Background (far)',sw:'#2a3340',cat:'Background'},
  {k:'bg_cavebg2',label:'Cave Midground (near)',sw:'#4a3f33',cat:'Background'},
  {k:'bg_cryptbg',label:'Crypt Cavern (deep)',sw:'#1b2733',cat:'Background'},
@@ -397,7 +418,7 @@ function showSel(){
  if(_grp){ const _others=_grp.members.filter(m=>m[0]!==_ak);
    if(_others.length){ html+='<div style="margin-top:10px;font-size:11px;color:#9bd0ff">Swap to ('+_grp.label+')</div>';
      _others.forEach(m=>{ html+='<button class="swapb" data-k="'+m[0]+'" style="width:100%;margin-top:4px;background:#16263a;border:1px solid #3f9bdf;color:#bfe4ff;border-radius:6px;padding:7px;cursor:pointer">\u21c4 '+m[1]+'</button>'; }); } }
- if(sel.type==='enemy'||sel.type==='obst'||sel.type==='bat'){ const fidx = sel.type==='enemy'?5:(sel.type==='bat'?4:-1); const fv = fidx>=0 ? (sel.raw[fidx]!==undefined?sel.raw[fidx]:(sel.type==='enemy'?-1:1)) : (o.f===-1?-1:1);
+ if(sel.type==='enemy'||sel.type==='obst'||sel.type==='bat'||sel.type==='tex'){ const fidx = sel.type==='enemy'?5:(sel.type==='bat'?4:-1); const fv = fidx>=0 ? (sel.raw[fidx]!==undefined?sel.raw[fidx]:(sel.type==='enemy'?-1:1)) : (o.f===-1?-1:1);
    html+='<button class="faceb" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #7b5cff;color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer">Face: '+(fv===-1?'◄ Left':'Right ►')+'  · tap to flip</button>'; }
  html+='<button class="dup" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Duplicate</button>';
  html+='<button class="del">Delete</button>';
@@ -455,7 +476,7 @@ function hit(wxp,wyp){
    else if(pr.kind==='haz'){ if(r.t==='spikeshot'){ if((Math.abs(wxp-r.x)<30&&wyp>r.y-60&&wyp<r.y+60)||(wxp>=r.tx&&wxp<=r.tx+r.tw&&wyp>=r.ty&&wyp<=r.ty+r.th)) return {type:'haz',kind:'haz_'+r.t,obj:r,raw:r,sync(){}}; } else { const top=r.t==='rock'?r.y-16:r.y-24; if(wxp>=r.x-6&&wxp<=r.x+r.w+6&&wyp>=top&&wyp<=r.y+14) return {type:'haz',kind:'haz_'+r.t,obj:r,raw:r,sync(){}}; } }
    else if(pr.kind==='plat'){ const x=r.x??r.x0; if(wxp>=x-8&&wxp<=x+r.w+8&&Math.abs(wyp-r.y)<24) return {type:'plat',kind:'plat_'+r.t,obj:r,raw:r,sync(){}}; }
    else if(pr.kind==='terrace'){ if(wxp>=r[0]&&wxp<=r[1]&&wyp>=r[2]-4&&wyp<=r[2]+(r[3]||TERRACE_DROP)) return wrap('terrace',r,['x0','x1','gy','depth'],[0,1,2,3]); }
-   else if(pr.kind==='tex'){ if(r.t==='rockpile'){ const dh=ROCKPILE_IMG.naturalWidth?r.w*ROCKPILE_IMG.naturalHeight/ROCKPILE_IMG.naturalWidth:60; if(wxp>=r.x-4&&wxp<=r.x+r.w+4&&wyp>=r.y-dh-4&&wyp<=r.y+4) return {type:'tex',kind:'tex_'+r.t,obj:r,raw:r,sync(){}}; } else { const dh=CAVECEIL_IMG.naturalWidth?r.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth:60; if(wxp>=r.x-4&&wxp<=r.x+r.w+4&&wyp>=r.y-4&&wyp<=r.y+dh+4) return {type:'tex',kind:'tex_'+r.t,obj:r,raw:r,sync(){}}; } }
+   else if(pr.kind==='tex'){ if(DECOR_IMG[r.t]&&DECOR_IMG[r.t].naturalWidth){ const dh=r.w*DECOR_IMG[r.t].naturalHeight/DECOR_IMG[r.t].naturalWidth; if(wxp>=r.x-4&&wxp<=r.x+r.w+4&&wyp>=r.y-dh-4&&wyp<=r.y+4) return {type:'tex',kind:'tex_'+r.t,obj:r,raw:r,sync(){}}; } else if(r.t==='rockpile'){ const dh=ROCKPILE_IMG.naturalWidth?r.w*ROCKPILE_IMG.naturalHeight/ROCKPILE_IMG.naturalWidth:60; if(wxp>=r.x-4&&wxp<=r.x+r.w+4&&wyp>=r.y-dh-4&&wyp<=r.y+4) return {type:'tex',kind:'tex_'+r.t,obj:r,raw:r,sync(){}}; } else { const dh=CAVECEIL_IMG.naturalWidth?r.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth:60; if(wxp>=r.x-4&&wxp<=r.x+r.w+4&&wyp>=r.y-4&&wyp<=r.y+dh+4) return {type:'tex',kind:'tex_'+r.t,obj:r,raw:r,sync(){}}; } }
  }
  for(const b of (M.fg||[])){ if(b.w&&b.h&&!locked.has(b)&&wxp>=b.x&&wxp<=b.x+b.w&&wyp>=b.y&&wyp<=b.y+b.h) return {type:'fg',kind:'fg_'+b.t,obj:b,raw:b,sync(){}}; }
  for(const b of (M.bg||[])){ if(b.w&&b.h&&!locked.has(b)&&wxp>=b.x&&wxp<=b.x+b.w&&wyp>=b.y&&wyp<=b.y+b.h) return {type:'bg',kind:'bg_'+b.t,obj:b,raw:b,sync(){}}; }
@@ -473,7 +494,7 @@ function handles(s){
    return [{id:'left',x:o.x0,y:my},{id:'right',x:o.x1,y:my},{id:'top',x:cx,y:o.gy},{id:'depth',x:cx,y:o.gy+dep}]; }
  if(s.type==='plat'){ const o=s.obj, x=o.x??o.x0; const hs=[{id:'pl',x:x,y:o.y},{id:'pr',x:x+o.w,y:o.y}];
    if(o.t==='m'){ const x0=o.x0??x, r=o.range||0; hs.push({id:'mstart',x:x0,y:o.y-26},{id:'mend',x:x0+r,y:o.y-26}); } return hs; }
- if(s.type==='tex'){ const o=s.obj, dh=CAVECEIL_IMG.naturalWidth?o.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth:60; return [{id:'txl',x:o.x,y:o.y+dh/2},{id:'txr',x:o.x+o.w,y:o.y+dh/2}]; }
+ if(s.type==='tex'){ const o=s.obj; if(DECOR_IMG[o.t]&&DECOR_IMG[o.t].naturalWidth){ const dh=o.w*DECOR_IMG[o.t].naturalHeight/DECOR_IMG[o.t].naturalWidth; return [{id:'txl',x:o.x,y:o.y-dh/2},{id:'txr',x:o.x+o.w,y:o.y-dh/2}]; } const dh=CAVECEIL_IMG.naturalWidth?o.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth:60; return [{id:'txl',x:o.x,y:o.y+dh/2},{id:'txr',x:o.x+o.w,y:o.y+dh/2}]; }
  if(s.type==='haz'){ const o=s.obj; if(o.t==='spikeshot') return [{id:'trxy',x:o.tx,y:o.ty},{id:'trwh',x:o.tx+o.tw,y:o.ty+o.th}]; const my=o.y+((o.t==='tar'?(o.d||22):16))/2; const hd=[{id:'hx',x:o.x,y:my},{id:'hw',x:o.x+o.w,y:my}]; if(o.t==='tar') hd.push({id:'td',x:o.x+o.w/2,y:o.y+(o.d||22)}); return hd; }
  if(s.type==='enemy'||s.type==='bat'){ const yy=s.type==='bat'?s.obj.y:s.obj.gy; return [{id:'min',x:s.obj.min,y:yy},{id:'max',x:s.obj.max,y:yy}]; }
  return [];
@@ -538,7 +559,7 @@ function placeAt(kind,gx,gy){
  else if(kind.startsWith('haz_')){ const t=kind.split('_')[1]; const h={t,x:gx,y:gy,w:240,z:topZ()+10}; if(t==='spikeshot'){ h.w=28; h.dir=-1; h.tx=gx-340; h.ty=gy-150; h.tw=220; h.th=300; } (M.hazards=M.hazards||[]).push(h); sel={type:'haz',kind,obj:h,raw:h,sync(){}}; }
  else if(kind.startsWith('bg_')){ const t=kind.split('_').slice(1).join('_'); const b={t,par:(t==='cavebg2'?0.45:0.2)}; (M.bg=M.bg||[]).push(b); sel={type:'bg',kind,obj:b,raw:b,sync(){}}; }
  else if(kind.startsWith('fg_')){ const t=kind.split('_').slice(1).join('_'); const b={t,par:1,x:gx-300,y:gy-200,w:600,h:400}; (M.fg=M.fg||[]).push(b); sel={type:'fg',kind,obj:b,raw:b,sync(){}}; }
- else if(kind.startsWith('tex_')){ const t=kind.split('_')[1]; const tx={t,x:gx,y:gy,w:300,z:topZ()+10}; (M.tex=M.tex||[]).push(tx); sel={type:'tex',kind,obj:tx,raw:tx,sync(){}}; }
+ else if(kind.startsWith('tex_')){ const t=kind.split('_')[1]; const tx={t,x:gx,y:gy,w:(DECOR_IMG[t]?160:300),z:topZ()+10}; (M.tex=M.tex||[]).push(tx); sel={type:'tex',kind,obj:tx,raw:tx,sync(){}}; }
  else if(OBST_COLS[kind]){ const o={x:gx,type:kind,gy,z:topZ()+10}; if(kind==='chest')o.loot='gold'; (M.obst=M.obst||[]).push(o); sel={type:'obst',kind,obj:o,raw:o,sync(){}}; }
  else if(ENEMY_COLS[kind]){ const en=[gx,Math.max(0,gx-300),gx+300,kind,gy,-1]; M.enemies.push(en); sel=wrap('enemy',en,['x','min','max','gy'],[0,1,2,4],kind); }
  if(_insertZ!==null && sel && sel.raw){ const _np=allProps().find(p=>p.raw===sel.raw); if(_np){ if(_grp) setG(sel.raw,_grp); _np.setZ(_insertZ+5); renumberZ(); } }
@@ -681,6 +702,8 @@ function dTex(t){ const X=sx(t.x),Y=sy(t.y);
  if(t.t==='ceiling'&&CAVECEIL_IMG.naturalWidth){ const dh=t.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.globalAlpha=0.96; ctx.drawImage(CAVECEIL_IMG, X, Y, t.w*zoom, dh*zoom); ctx.globalAlpha=1;
    if(sel&&sel.raw===t){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-2,t.w*zoom+4,dh*zoom+4); } }
  else if(t.t==='rockpile'&&ROCKPILE_IMG.naturalWidth){ const dh=t.w*ROCKPILE_IMG.naturalHeight/ROCKPILE_IMG.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.drawImage(ROCKPILE_IMG, X, Y-dh*zoom, t.w*zoom, dh*zoom);
+   if(sel&&sel.raw===t){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-dh*zoom-2,t.w*zoom+4,dh*zoom+4); } }
+ else if(DECOR_IMG[t.t]&&DECOR_IMG[t.t].naturalWidth){ const img=DECOR_IMG[t.t]; const dh=t.w*img.naturalHeight/img.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.save(); if(t.f===-1){ ctx.translate(X+t.w*zoom,0); ctx.scale(-1,1); ctx.drawImage(img,0,Y-dh*zoom,t.w*zoom,dh*zoom); } else ctx.drawImage(img,X,Y-dh*zoom,t.w*zoom,dh*zoom); ctx.restore();
    if(sel&&sel.raw===t){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-dh*zoom-2,t.w*zoom+4,dh*zoom+4); } }
  else { ctx.fillStyle='#7a5a36'; ctx.fillRect(X,Y,t.w*zoom,30*zoom); } }
 function dObst(o){ const X=sx(o.x),Y=sy(o.gy||0);
