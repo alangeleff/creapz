@@ -35,6 +35,19 @@
 </div>
 
 <div class="card">
+ <div class="row" style="justify-content:space-between"><label style="margin:0;color:var(--lime)">✨ Generate a cycle from ONE frame</label><span class="hint" style="margin:0">~$0.04 / frame</span></div>
+ <div id="bdrop" style="border:2px dashed var(--lime);border-radius:12px;padding:16px;text-align:center;color:var(--lime);cursor:pointer;margin-top:8px">Tap to set your base reference frame<input id="bfile" type="file" accept="image/*" style="display:none"></div>
+ <div id="bthumb" class="row" style="justify-content:center;margin-top:8px"></div>
+ <div class="row" style="margin-top:10px">
+  <div style="flex:1"><label>Animation</label>
+   <select id="anim" style="width:100%;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:15px">
+    <option value="walk">Walk (6)</option><option value="run">Run (6)</option><option value="idle">Idle / breathe (4)</option><option value="jump">Jump (4)</option></select></div>
+ </div>
+ <button class="btn lime" id="gen" style="width:100%;margin-top:12px;padding:14px">Generate cycle</button>
+ <div class="hint" id="genstat" style="text-align:center;margin-top:8px">Set a base frame, then generate. Frames stream into the preview below as they finish.</div>
+</div>
+
+<div class="card">
  <label>Frame name (for sprites.json) </label><input id="nm" type="text" value="reaperbat_walk">
  <label>Character height: <span class="val" id="thv">128</span> px</label><input id="th" type="range" min="48" max="220" value="128">
  <label>Background removal strength: <span class="val" id="tov">70</span></label><input id="to" type="range" min="20" max="160" value="70">
@@ -163,5 +176,68 @@ $('dlsheet').onclick=()=>{ if(!frames.length)return; sheetCanvas().toBlob(b=>{ c
 $('dljson').onclick=()=>{ if(!frames.length)return; const nm=$('nm').value||'sprite';
   const meta={[nm]:{src:'sprites/'+nm+'.png', sw:cellW, sh:cellH, w:cellW, h:cellH, frames:frames.length, foots:Array(frames.length).fill(baseY)}};
   const blob=new Blob([JSON.stringify(meta,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nm+'.json'; a.click(); };
+/* ---------- Nano Banana cycle generation ---------- */
+const API='https://creapz.vercel.app/api/genframe';
+let baseRef=null; // {dataURL, b64}
+const GEN_POSES={
+ walk:[
+  'a walking CONTACT pose: the LEFT leg striding far forward with the heel touching down, the RIGHT leg stretched back behind the body, arms swinging in opposition (right arm forward). Clearly mid-stride, legs wide apart.',
+  'a walking DOWN pose: the front (left) leg bent to absorb weight, the body at its LOWEST dip, the back leg pushing off the ground, arms mid-swing.',
+  'a walking PASSING pose: both legs together directly under the body, the back leg swinging through, the body lifted to its HIGHEST point, arms near vertical at the sides.',
+  'a walking CONTACT pose MIRRORED: the RIGHT leg striding far forward with the heel touching down, the LEFT leg stretched back behind, left arm forward. Legs wide apart.',
+  'a walking DOWN pose MIRRORED: the front (right) leg bent absorbing weight, body at its LOWEST dip, left leg pushing off.',
+  'a walking PASSING pose MIRRORED: both legs together under the body, the left leg swinging through, body at its HIGHEST point.'],
+ run:[
+  'a RUNNING contact pose: leaning forward, LEFT leg reaching far forward, RIGHT leg kicked far back, arms pumping hard in opposition. Very dynamic, exaggerated stride.',
+  'a RUNNING push pose: body low and leaning forward, front (left) leg driving down, back leg extending, strong forward momentum.',
+  'a RUNNING airborne pose: BOTH feet off the ground mid-leap, legs tucked, body fully extended forward in a sprint.',
+  'a RUNNING contact pose MIRRORED: leaning forward, RIGHT leg reaching far forward, LEFT leg kicked far back, arms pumping.',
+  'a RUNNING push pose MIRRORED: body low leaning forward, front (right) leg driving down, back leg extending.',
+  'a RUNNING airborne pose MIRRORED: both feet off the ground, legs tucked the opposite way, body extended forward.'],
+ idle:[
+  'a relaxed IDLE standing pose, weight settled, arms at sides, body at normal height.',
+  'an IDLE breathe-in pose: chest and body lifted slightly UP, shoulders raised a touch, subtle.',
+  'a relaxed IDLE standing pose, weight settled, arms at sides, body at normal height.',
+  'an IDLE breathe-out pose: body settled slightly DOWN, shoulders lowered a touch, subtle.'],
+ jump:[
+  'a JUMP crouch/anticipation pose: knees bent deeply, body coiled low preparing to leap.',
+  'a JUMP launch pose: legs pushing off and extending, body stretching UPWARD, arms thrown up.',
+  'a JUMP apex pose: airborne, legs tucked slightly, body at the top of the arc, arms out for balance.',
+  'a JUMP landing pose: legs bent absorbing impact, body compressed low, arms forward for balance.']
+};
+function buildPrompt(pose){
+  return 'You are given a reference image of a 2D pixel-art game character. Redraw the EXACT SAME character — identical design, colors, proportions, outfit, and pixel-art style — in '+pose+
+  ' Side view (profile), facing LEFT, full body with feet fully visible, character centered and the SAME overall size/scale as the reference. Background must be a FLAT SOLID magenta (#FF00FF), perfectly uniform, with NO gradient, NO shadow, NO ground line, and no extra elements. Output only the character on magenta.';
+}
+function downscaleToB64(img,max){ const sc=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight)); const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*sc); c.height=Math.round(img.naturalHeight*sc); c.getContext('2d').drawImage(img,0,0,c.width,c.height); return c.toDataURL('image/png').split(',')[1]; }
+function setBase(file){ const img=new Image(); img.onload=()=>{ baseRef={img, b64:downscaleToB64(img,768)}; const h=$('bthumb'); h.innerHTML=''; const cv=document.createElement('canvas'); const sc=64/Math.max(img.naturalWidth,img.naturalHeight); cv.width=img.naturalWidth*sc; cv.height=img.naturalHeight*sc; cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height); cv.style.borderRadius='8px'; cv.style.border='1px solid var(--line)'; h.appendChild(cv); $('genstat').textContent='Base frame set. Pick an animation and hit Generate.'; }; img.src=URL.createObjectURL(file); }
+$('bdrop').onclick=()=>$('bfile').click();
+$('bfile').onchange=e=>{ if(e.target.files[0]) setBase(e.target.files[0]); };
+function loadB64(b64,mime){ return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src='data:'+(mime||'image/png')+';base64,'+b64; }); }
+function frameValid(img){ const pr=processImg(img); if(!pr) return false; const fill=(pr.cw*pr.ch)/(img.naturalWidth*img.naturalHeight); return fill>0.01 && fill<0.97; } // not empty, not whole-frame (keying failed)
+async function genFrame(pose){
+  for(let attempt=0; attempt<2; attempt++){
+    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageBase64:baseRef.b64,mimeType:'image/png',prompt:buildPrompt(pose)})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok || !j.imageBase64){ if(attempt) throw new Error(j.error||('HTTP '+r.status)); continue; }
+    const img=await loadB64(j.imageBase64,j.mimeType);
+    if(frameValid(img) || attempt===1) return img;
+  }
+}
+$('gen').onclick=async()=>{
+  if(!baseRef){ $('genstat').textContent='Add a base reference frame first.'; return; }
+  const type=$('anim').value, poses=GEN_POSES[type]; const btn=$('gen'); btn.disabled=true; btn.style.opacity=.6;
+  frames=[]; buildCells();
+  $('nm').value='reaperbat_'+type;
+  try{
+    for(let i=0;i<poses.length;i++){
+      $('genstat').textContent='Generating frame '+(i+1)+' of '+poses.length+'…';
+      const img=await genFrame(poses[i]);
+      frames.push({img}); buildCells();
+    }
+    $('genstat').textContent='Done — '+poses.length+' frames. Scrub FPS below to check the motion, then download.';
+  }catch(e){ $('genstat').textContent='Error: '+e.message+' (credits/billing or model issue). Frames so far are kept.'; }
+  btn.disabled=false; btn.style.opacity=1;
+};
 </script>
 </body></html>
