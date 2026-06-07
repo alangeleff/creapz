@@ -143,10 +143,11 @@ const OBST_COLS={grave:'#8a82a6',crate:'#b6884a',chest:'#caa05a'};
 const LOOTS=[['gold','Gold'],['soul','Soul'],['heart','Heart'],['stone_amethyst','Amethyst Stone'],['stone_chaos','Chaos Stone'],['stone_emerald','Emerald Stone'],['stone_fluorite','Fluorite Stone'],['stone_holy','Holy Stone'],['stone_obsidian','Obsidian Stone'],['stone_ruby','Ruby Stone'],['stone_sapphire','Sapphire Stone'],['stone_topaz','Topaz Stone'],['stone_master','Master Stone']];
 const CATS=['Background','Ground','Hazards','Enemies','Functions','Objects','Textures'];
 const ASSET_PV=Date.now();
-const BGE_IMG={cavebg:new Image(), cavebg2:new Image()};
+const BGE_IMG={cavebg:new Image(), cavebg2:new Image(), cryptbg:new Image()};
 BGE_IMG.cavebg.onload=()=>draw(); BGE_IMG.cavebg.src='./assets/cavebg1.png';
 BGE_IMG.cavebg2.onload=()=>draw(); BGE_IMG.cavebg2.src='./assets/cavebg2.png';
-const BG_LABEL={cavebg:'Cave Background (far)', cavebg2:'Cave Midground (near)'};
+BGE_IMG.cryptbg.onload=()=>draw(); BGE_IMG.cryptbg.src='./assets/cryptbg1.png';
+const BG_LABEL={cavebg:'Cave Background (far)', cavebg2:'Cave Midground (near)', cryptbg:'Crypt Cavern (deep)'};
 const TEX_COLS={ceiling:'#7a5a36',rockpile:'#8a6a3a'}, TEX_LABEL={ceiling:'Cave Ceiling',rockpile:'Rock Pile'};
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.onload=()=>draw(); CAVEPLAT_IMG.src='./assets/caveplat1.png';
 const CHEST_E=new Image(); CHEST_E.onload=()=>draw(); CHEST_E.src='./assets/chest_closed1.png';
@@ -232,6 +233,7 @@ const STAMPS=[
  {k:'tex_rockpile',label:'Rock Pile',sw:'#8a6a3a',cat:'Textures'},
  {k:'bg_cavebg',label:'Cave Background (far)',sw:'#2a3340',cat:'Background'},
  {k:'bg_cavebg2',label:'Cave Midground (near)',sw:'#4a3f33',cat:'Background'},
+ {k:'bg_cryptbg',label:'Crypt Cavern (deep)',sw:'#1b2733',cat:'Background'},
 ];
 const LABELOF={}; STAMPS.forEach(s=>LABELOF[s.k]=s.label);
 function assetKey(s){ const r=s.raw, ty=s.type||s.kind;
