@@ -39,9 +39,10 @@
  <div id="bdrop" style="border:2px dashed var(--lime);border-radius:12px;padding:16px;text-align:center;color:var(--lime);cursor:pointer;margin-top:8px">Tap to set your base reference frame<input id="bfile" type="file" accept="image/*" style="display:none"></div>
  <div id="bthumb" class="row" style="justify-content:center;margin-top:8px"></div>
  <div class="row" style="margin-top:10px">
-  <div style="flex:1"><label>Animation</label>
+  <div style="flex:2"><label>Animation (guided by the creaper's real cycle)</label>
    <select id="anim" style="width:100%;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:15px">
-    <option value="walk">Walk (6)</option><option value="run">Run (6)</option><option value="idle">Idle / breathe (4)</option><option value="jump">Jump (4)</option></select></div>
+    <option value="walk">Walk</option><option value="run">Run</option><option value="jump">Jump</option><option value="idle">Idle</option></select></div>
+  <div style="flex:1"><label>Frames: <span class="val" id="nfv">10</span></label><input id="nf" type="range" min="4" max="20" value="10"></div>
  </div>
  <button class="btn lime" id="gen" style="width:100%;margin-top:12px;padding:14px">Generate cycle</button>
  <div class="hint" id="genstat" style="text-align:center;margin-top:8px">Set a base frame, then generate. Frames stream into the preview below as they finish.</div>
@@ -213,6 +214,9 @@ function buildPrompt(pose, mode){
   if(mode==='loop'){
     return 'Image 1 is the canonical character design — match its identity, colors, proportions and style EXACTLY. Image 2 is the previous (second-to-last) frame. Image 3 is the FIRST frame of the loop. Produce the in-between frame that smoothly BRIDGES the motion from Image 2 toward Image 3, so the animation loops seamlessly back to the start. The pose is '+pose+' Make it a natural mid-point between Image 2 and Image 3, distinct from both.'+PROMPT_TAIL;
   }
+  if(mode==='guide'){
+    return 'Image 1 is the CHARACTER to draw — reproduce its exact appearance, colors, hood, face, outfit and pixel-art style faithfully. Image 2 is a solid black POSE SILHOUETTE (a featureless body shape): copy its body pose, leg stride, limb positions and FACING DIRECTION exactly. Draw the Image-1 character standing in the Image-2 pose. Do NOT copy any color or detail from Image 2 — it only provides the pose. Output ONLY the Image-1 character, side view, full body with both feet fully visible, centered at the SAME overall scale as Image 1, on a FLAT SOLID magenta (#FF00FF) background, perfectly uniform, NO gradient, NO shadow, NO ground line, no extra elements.';
+  }
   return 'Image 1 is a 2D pixel-art game character. Redraw the EXACT SAME character — identical design, colors, proportions, outfit and pixel-art style — in '+pose+PROMPT_TAIL;
 }
 function downscaleToB64(img,max){ const sc=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight)); const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*sc); c.height=Math.round(img.naturalHeight*sc); c.getContext('2d').drawImage(img,0,0,c.width,c.height); return c.toDataURL('image/png').split(',')[1]; }
@@ -232,26 +236,37 @@ async function genFrame(pose, refs, mode){
     if(frameValid(img) || attempt===1) return { img, refB64: imgToB64(img,640) };
   }
 }
+/* ---------- canonical creaper pose-guide library (silhouettes) ---------- */
+const ASSET='https://creapz.vercel.app/';
+const CANON={
+  walk:{src:'assets/sprites/chars_default_walk.png', sw:113, sh:139, n:25},
+  run :{src:'assets/sprites/chars_default_run.png',  sw:128, sh:153, n:23},
+  jump:{src:'assets/sprites/chars_default_jump.png', sw:122, sh:190, n:21},
+  idle:{src:'assets/sprites/chars_default_idle.png', sw:119, sh:132, n:25}
+};
+const _canonImg={};
+function loadCanon(type){ const m=CANON[type]; if(_canonImg[type]) return Promise.resolve(_canonImg[type]); return new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>{ _canonImg[type]=im; res(im); }; im.onerror=rej; im.src=ASSET+m.src; }); }
+function silhouetteB64(sheet, sw, sh, i){ const c=document.createElement('canvas'); c.width=sw;c.height=sh; const x=c.getContext('2d'); x.drawImage(sheet, i*sw,0,sw,sh, 0,0,sw,sh); const d=x.getImageData(0,0,sw,sh), p=d.data; for(let k=0;k<p.length;k+=4){ if(p[k+3]>40){ p[k]=26;p[k+1]=26;p[k+2]=34;p[k+3]=255; } else { p[k]=205;p[k+1]=205;p[k+2]=210;p[k+3]=255; } } x.putImageData(d,0,0); return c.toDataURL('image/png').split(',')[1]; }
+function sampleIdx(n, count){ const out=[]; for(let k=0;k<count;k++) out.push(Math.round(k*n/count)%n); return out; }
+
+$('nf').oninput=e=>{ $('nfv').textContent=e.target.value; };
 $('gen').onclick=async()=>{
   if(!baseRef){ $('genstat').textContent='Add a base reference frame first.'; return; }
-  const type=$('anim').value, poses=GEN_POSES[type]; const btn=$('gen'); btn.disabled=true; btn.style.opacity=.6;
-  frames=[]; buildCells();
-  $('nm').value='reaperbat_'+type;
-  let firstRef=null, prevRef=null;
+  const type=$('anim').value, m=CANON[type], count=+$('nf').value;
+  const btn=$('gen'); btn.disabled=true; btn.style.opacity=.6;
+  frames=[]; buildCells(); $('nm').value='sprite_'+type;
   try{
-    for(let i=0;i<poses.length;i++){
-      $('genstat').textContent='Generating frame '+(i+1)+' of '+poses.length+'…';
-      let refs, mode;
-      if(i===0){ refs=[baseRef.b64]; mode='single'; }
-      else if(i===poses.length-1 && firstRef){ refs=[baseRef.b64, prevRef, firstRef]; mode='loop'; }
-      else { refs=[baseRef.b64, prevRef]; mode='chain'; }
-      const out=await genFrame(poses[i], refs, mode);
+    $('genstat').textContent='Loading creaper '+type+' reference…';
+    const sheet=await loadCanon(type);
+    const idx=sampleIdx(m.n, count);
+    for(let i=0;i<idx.length;i++){
+      $('genstat').textContent='Generating frame '+(i+1)+' of '+idx.length+' (pose-guided)…';
+      const guide=silhouetteB64(sheet, m.sw, m.sh, idx[i]);
+      const out=await genFrame(null, [baseRef.b64, guide], 'guide');
       frames.push({img:out.img}); buildCells();
-      if(i===0) firstRef=out.refB64;
-      prevRef=out.refB64;
     }
-    $('genstat').textContent='Done — '+poses.length+' chained frames. Scrub FPS below to check the motion, then download.';
-  }catch(e){ $('genstat').textContent='Error: '+e.message+' (credits/billing or model issue). Frames so far are kept.'; }
+    $('genstat').textContent='Done — '+idx.length+' frames matched to the creaper '+type+' cycle. Scrub FPS to check it, then download.';
+  }catch(e){ $('genstat').textContent='Error: '+(e.message||e)+'. Frames so far are kept.'; }
   btn.disabled=false; btn.style.opacity=1;
 };
 </script>
