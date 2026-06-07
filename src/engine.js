@@ -1,4 +1,4 @@
-const ASSET_VER='1780842267';
+const ASSET_VER='1780848028';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -155,7 +155,7 @@ function loadStage(i){
   stoneCharge=0; powerActive=false; powerT=0; transformT=0;
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
   TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z}));
-  BG = (ST.bg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha}));
+  BG = (ST.bg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h}));
   HAZ = (ST.hazards||[]).map(h=>{
     const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0, dir:h.dir, tx:h.tx, ty:h.ty, tw:h.tw, th:h.th};
     if(h.t==='rock'){ const n=Math.max(1,Math.round(h.w/160)); const step=h.w/n; o.spawns=[]; for(let i=0;i<n;i++) o.spawns.push(Math.round(h.x+step*(i+0.5))); o.cds=o.spawns.map(()=>0); }
@@ -1685,9 +1685,10 @@ function skyBG(){
 function drawBackgrounds(){
   for(const b of BG){ const img=BG_IMGS[b.t]; if(!img||!img.complete||!img.naturalWidth) continue;
     const par=(b.par!==undefined&&b.par!==null)?b.par:0.3;
+    ctx.globalAlpha=(b.alpha!==undefined)?b.alpha:1;
+    if(b.w&&b.h){ ctx.drawImage(img, (b.x||0)-camX*par, (b.y||0)-camY*par, b.w, b.h); ctx.globalAlpha=1; continue; }
     const iw=img.naturalWidth, ih=img.naturalHeight, sc=Math.max(W/iw,H/ih), dw=iw*sc, dh=ih*sc;
     let ox=(-camX*par)%dw; if(ox>0)ox-=dw; let oy=(-camY*par)%dh; if(oy>0)oy-=dh;
-    ctx.globalAlpha=(b.alpha!==undefined)?b.alpha:1;
     for(let y=oy; y<H; y+=dh) for(let x=ox; x<W; x+=dw) ctx.drawImage(img, x, y, dw, dh);
     ctx.globalAlpha=1;
   }

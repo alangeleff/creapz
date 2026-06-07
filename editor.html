@@ -333,7 +333,7 @@ document.getElementById('mBulk').onclick=function(){ bulkArm=!bulkArm; this.clas
 // ---- selection / edit panel ----
 let sel=null;
 const selBox=document.getElementById('sel');
-const SEL_FIELDS={terrace:['x0','x1','gy','depth'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w','d'],obst:['x','gy'],tex:['x','y','w'],bg:['par']};
+const SEL_FIELDS={terrace:['x0','x1','gy','depth'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w','d'],obst:['x','gy'],tex:['x','y','w'],bg:['x','y','w','h','par']};
 function showSel(){
  if(!sel){ selBox.style.display='none'; return; }
  if(sel.type==='bulkswap'){ selBox.style.display='block';
@@ -358,6 +358,7 @@ function showSel(){
  const o=sel.obj; const _ak=assetKey(sel); let html='<h4>'+(LABELOF[_ak]||LABELOF[sel.kind]||sel.type)+'</h4>';
  const _flds=(sel.type==='haz'&&o.t==='spikeshot')?['x','y','dir','tx','ty','tw','th']:(SEL_FIELDS[sel.type]||[]);
  for(const f of _flds){ if(o[f]===undefined)continue; html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; }
+ if(sel.type==='bg'){ const _pl=(o.w&&o.h); html+='<div style=\"font-size:11px;color:#9b8cff;margin:4px 0\">'+(_pl?'Stretched to a fixed rect \u2014 drag the corner handles to size it.':'Filling the whole world (tiled).')+'</div>'; html+='<button class=\"bgfit\" style=\"width:100%;margin-top:4px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer\">'+(_pl?'Refit to current view':'Stretch \u2192 fit to view')+'</button>'; if(_pl) html+='<button class=\"bgtile\" style=\"width:100%;margin-top:4px;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer\">Back to full-world tile</button>'; }
  if(sel.type==='obst' && o.type==='chest'){ const cur=o.loot||'gold';
    const opts=LOOTS.map(L=>'<option value="'+L[0]+'"'+(L[0]===cur?' selected':'')+'>'+L[1]+'</option>').join('');
    html+='<div class="row"><span>loot</span><select data-loot style="flex:1;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px;font-size:13px">'+opts+'</select></div>';
@@ -371,6 +372,8 @@ function showSel(){
  html+='<button class="dup" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Duplicate</button>';
  html+='<button class="del">Delete</button>';
  selBox.innerHTML=html;
+ const _bf=selBox.querySelector('.bgfit'); if(_bf)_bf.onclick=()=>{ histPush(); o.x=Math.round(wx(0)); o.y=Math.round(wy(0)); o.w=Math.round(CW/zoom); o.h=Math.round(CH/zoom); persist(); showSel(); draw(); };
+ const _bt=selBox.querySelector('.bgtile'); if(_bt)_bt.onclick=()=>{ histPush(); delete o.x; delete o.y; delete o.w; delete o.h; persist(); showSel(); draw(); };
  selBox.querySelectorAll('.swapb').forEach(b=>b.onclick=()=>{ histPush(); applySwap(sel.raw,b.dataset.k); persist(); sel=reselect(sel); showSel(); draw(); });
  const _ls=selBox.querySelector('[data-loot]'); if(_ls) _ls.onchange=()=>{ histPush(); o.loot=_ls.value; persist(); showSel(); draw(); };
  selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ histPush(); o[inp.dataset.f]=v; syncBack(sel); persist(); draw(); } });
@@ -419,6 +422,7 @@ function hit(wxp,wyp){
    else if(pr.kind==='terrace'){ if(wxp>=r[0]&&wxp<=r[1]&&wyp>=r[2]-4&&wyp<=r[2]+(r[3]||TERRACE_DROP)) return wrap('terrace',r,['x0','x1','gy','depth'],[0,1,2,3]); }
    else if(pr.kind==='tex'){ if(r.t==='rockpile'){ const dh=ROCKPILE_IMG.naturalWidth?r.w*ROCKPILE_IMG.naturalHeight/ROCKPILE_IMG.naturalWidth:60; if(wxp>=r.x-4&&wxp<=r.x+r.w+4&&wyp>=r.y-dh-4&&wyp<=r.y+4) return {type:'tex',kind:'tex_'+r.t,obj:r,raw:r,sync(){}}; } else { const dh=CAVECEIL_IMG.naturalWidth?r.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth:60; if(wxp>=r.x-4&&wxp<=r.x+r.w+4&&wyp>=r.y-4&&wyp<=r.y+dh+4) return {type:'tex',kind:'tex_'+r.t,obj:r,raw:r,sync(){}}; } }
  }
+ for(const b of (M.bg||[])){ if(b.w&&b.h&&!locked.has(b)&&wxp>=b.x&&wxp<=b.x+b.w&&wyp>=b.y&&wyp<=b.y+b.h) return {type:'bg',kind:'bg_'+b.t,obj:b,raw:b,sync(){}}; }
  return null;
 }
 function selGoal(){ return {type:'goal',kind:'goal',obj:{x:M.goal,gy:M.goalY},raw:'goal',sync(){M.goal=this.obj.x;M.goalY=this.obj.gy;}}; }
@@ -428,6 +432,7 @@ function wrap(type,raw,names,idx,kind){ const o={}; names.forEach((n,i)=>o[n]=ra
 // ---- handles for selected terrace/platform (resize) ----
 function handles(s){
  if(!s) return [];
+ if(s.type==='bg'){ const o=s.obj; if(!(o.w&&o.h)) return []; return [{id:'bgtl',x:o.x,y:o.y},{id:'bgbr',x:o.x+o.w,y:o.y+o.h}]; }
  if(s.type==='terrace'){ const o=s.obj, dep=o.depth||TERRACE_DROP, cx=(o.x0+o.x1)/2, my=o.gy+dep/2;
    return [{id:'left',x:o.x0,y:my},{id:'right',x:o.x1,y:my},{id:'top',x:cx,y:o.gy},{id:'depth',x:cx,y:o.gy+dep}]; }
  if(s.type==='plat'){ const o=s.obj, x=o.x??o.x0; const hs=[{id:'pl',x:x,y:o.y},{id:'pr',x:x+o.w,y:o.y}];
@@ -460,6 +465,8 @@ addEventListener('pointerup',e=>{ if(carry){ ghost.style.display='none';
 
 function placeAt(kind,gx,gy){
  histPush();
+ const _prevSel=sel; let _insertZ=null;
+ if(_prevSel){ if(_prevSel.type==='group'&&_prevSel.members){ const ms=allProps().filter(p=>_prevSel.members.includes(p.raw)); if(ms.length)_insertZ=Math.max(...ms.map(p=>p.z)); } else if(_prevSel.raw){ const _p=allProps().find(p=>p.raw===_prevSel.raw); if(_p)_insertZ=_p.z; } }
  if(kind==='terrace'){ const s=[gx,gx+DEF_TERR,gy,TERRACE_DROP,topZ()+10]; M.seg.push(s); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
  else if(kind==='terrace_cave'){ const s=[gx,gx+DEF_TERR,gy,TERRACE_DROP,topZ()+10,null,'cave']; M.seg.push(s); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
  else if(kind.startsWith('plat_')){ const parts=kind.split('_'); let skin,t; if(parts[1]==='cave'){skin='cave';t=parts[2];}else{t=parts[1];} const p={x:gx,y:gy,w:120,t,z:topZ()+10}; if(skin)p.skin=skin; if(t==='m'){p.x0=gx;p.range=180;p.spd=0.3;} M.plats.push(p); sel={type:'plat',kind,obj:p,raw:p,sync(){}}; }
@@ -472,6 +479,7 @@ function placeAt(kind,gx,gy){
  else if(kind.startsWith('tex_')){ const t=kind.split('_')[1]; const tx={t,x:gx,y:gy,w:300,z:topZ()+10}; (M.tex=M.tex||[]).push(tx); sel={type:'tex',kind,obj:tx,raw:tx,sync(){}}; }
  else if(OBST_COLS[kind]){ const o={x:gx,type:kind,gy,z:topZ()+10}; if(kind==='chest')o.loot='gold'; (M.obst=M.obst||[]).push(o); sel={type:'obst',kind,obj:o,raw:o,sync(){}}; }
  else if(ENEMY_COLS[kind]){ const en=[gx,Math.max(0,gx-300),gx+300,kind,gy,-1]; M.enemies.push(en); sel=wrap('enemy',en,['x','min','max','gy'],[0,1,2,4],kind); }
+ if(_insertZ!==null && sel && sel.raw){ const _np=allProps().find(p=>p.raw===sel.raw); if(_np){ _np.setZ(_insertZ+5); renumberZ(); } }
  showSel(); persist(); draw();
 }
 
@@ -540,6 +548,8 @@ function resizeH(h,start,gx,gy){
  else if(h.id==='txl'){ const r=o.x+o.w; o.x=Math.min(gx,r-GRID); o.w=r-o.x; }
  else if(h.id==='min'){ o.min=Math.min(gx,o.x); }
  else if(h.id==='max'){ o.max=Math.max(gx,o.x); }
+ else if(h.id==='bgbr'){ o.w=Math.max(GRID,gx-o.x); o.h=Math.max(GRID,gy-o.y); }
+ else if(h.id==='bgtl'){ const rx=o.x+o.w, ry=o.y+o.h; o.x=Math.min(gx,rx-GRID); o.y=Math.min(gy,ry-GRID); o.w=rx-o.x; o.h=ry-o.y; }
 }
 document.getElementById('zin').onclick=()=>{ zoomAt(1.25); }; document.getElementById('zout').onclick=()=>{ zoomAt(0.8); };
 function zoomAt(f){ const bx=wx(CW/2),by=wy(CH/2); zoom=Math.max(0.12,Math.min(1.6,zoom*f)); camx=bx-(CW/2)/zoom; camy=by-(CH/2)/zoom; draw(); }
@@ -621,10 +631,15 @@ function draw(){
  syncFields(); ctx.clearRect(0,0,CW,CH);
  if(M.theme==='crypt'){ ctx.fillStyle='#0a0712'; ctx.fillRect(0,0,CW,CH); }
  else { ctx.fillStyle='#0c0a16'; ctx.fillRect(0,0,CW,CH); drawCemeteryBackdrop(); }
- for(const b of (M.bg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue; const X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd=M.h*zoom;
-   const sc=Math.max(Wd/img.naturalWidth,Hd/img.naturalHeight); const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc;
-   ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Hd); ctx.clip(); ctx.globalAlpha=b.t==='cavebg2'?1:0.9;
-   for(let y=Y;y<Y+Hd;y+=dh) for(let x=X;x<X+Wd+dw;x+=dw) ctx.drawImage(img,x,y,dw,dh); ctx.globalAlpha=1; ctx.restore(); }
+ for(const b of (M.bg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue;
+   ctx.globalAlpha=b.t==='cavebg2'?1:0.9;
+   if(b.w&&b.h){ ctx.drawImage(img, sx(b.x||0), sy(b.y||0), b.w*zoom, b.h*zoom);
+     if(sel&&sel.raw===b){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(sx(b.x||0),sy(b.y||0),b.w*zoom,b.h*zoom); } }
+   else { const X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd=M.h*zoom;
+     const sc=Math.max(Wd/img.naturalWidth,Hd/img.naturalHeight); const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc;
+     ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Hd); ctx.clip();
+     for(let y=Y;y<Y+Hd;y+=dh) for(let x=X;x<X+Wd+dw;x+=dw) ctx.drawImage(img,x,y,dw,dh); ctx.restore(); }
+   ctx.globalAlpha=1; }
  ctx.strokeStyle='#2a2150'; ctx.lineWidth=2; ctx.strokeRect(sx(0),sy(0),M.world*zoom,M.h*zoom);
  ctx.strokeStyle='#ffffff08'; ctx.lineWidth=1; ctx.beginPath(); const g=GRID*5;
  for(let x=0;x<=M.world;x+=g){ ctx.moveTo(sx(x),sy(0)); ctx.lineTo(sx(x),sy(M.h)); }
