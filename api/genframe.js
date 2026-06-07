@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
     let body = req.body;
     if (typeof body === 'string') body = JSON.parse(body || '{}');
     if (!body || typeof body !== 'object') body = {};
-    const { imageBase64, mimeType = 'image/png', images, prompt } = body;
+    const { imageBase64, mimeType = 'image/png', images, prompt, aspectRatio } = body;
 
     // Accept either a single reference (imageBase64) or an ordered array (images:[{data,mimeType}])
     let refs = [];
@@ -39,9 +39,11 @@ module.exports = async (req, res) => {
 
     const reqParts = refs.map(im => ({ inlineData: { mimeType: im.mimeType, data: im.data } }));
     reqParts.push({ text: prompt });
+    const generationConfig = { responseModalities: ['IMAGE'] };
+    if (aspectRatio) generationConfig.imageConfig = { aspectRatio: String(aspectRatio) };
     const payload = {
       contents: [{ role: 'user', parts: reqParts }],
-      generationConfig: { responseModalities: ['IMAGE'] }
+      generationConfig
     };
 
     const r = await fetch(`${ENDPOINT}?key=${encodeURIComponent(key)}`, {
