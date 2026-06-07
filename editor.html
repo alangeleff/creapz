@@ -356,9 +356,10 @@ function showSel(){
    return; }
  selBox.style.display='block';
  const o=sel.obj; const _ak=assetKey(sel); let html='<h4>'+(LABELOF[_ak]||LABELOF[sel.kind]||sel.type)+'</h4>';
- const _flds=(sel.type==='haz'&&o.t==='spikeshot')?['x','y','dir','tx','ty','tw','th']:(SEL_FIELDS[sel.type]||[]);
+ let _flds=(sel.type==='haz'&&o.t==='spikeshot')?['x','y','dir','tx','ty','tw','th']:(SEL_FIELDS[sel.type]||[]);
+ if(sel.type==='bg') _flds=(o.w&&o.h)?['x','y','w','h']:['par'];
  for(const f of _flds){ if(o[f]===undefined)continue; html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; }
- if(sel.type==='bg'){ const _pl=(o.w&&o.h); html+='<div style=\"font-size:11px;color:#9b8cff;margin:4px 0\">'+(_pl?'Stretched to a fixed rect \u2014 drag the corner handles to size it.':'Filling the whole world (tiled).')+'</div>'; html+='<button class=\"bgfit\" style=\"width:100%;margin-top:4px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer\">'+(_pl?'Refit to current view':'Stretch \u2192 fit to view')+'</button>'; if(_pl) html+='<button class=\"bgtile\" style=\"width:100%;margin-top:4px;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer\">Back to full-world tile</button>'; }
+ if(sel.type==='bg'){ const _pl=(o.w&&o.h); html+='<div style=\"font-size:11px;color:#9b8cff;margin:4px 0\">'+(_pl?'World-locked to this rect \u2014 it lines up in gameplay exactly as shown here. Drag the corner handles to size it.':'Filling the whole world (tiled).')+'</div>'; html+='<button class=\"bgfit\" style=\"width:100%;margin-top:4px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer\">'+(_pl?'Refit to current view':'Stretch \u2192 fit to view')+'</button>'; if(_pl) html+='<button class=\"bgtile\" style=\"width:100%;margin-top:4px;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer\">Back to full-world tile</button>'; }
  if(sel.type==='obst' && o.type==='chest'){ const cur=o.loot||'gold';
    const opts=LOOTS.map(L=>'<option value="'+L[0]+'"'+(L[0]===cur?' selected':'')+'>'+L[1]+'</option>').join('');
    html+='<div class="row"><span>loot</span><select data-loot style="flex:1;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px;font-size:13px">'+opts+'</select></div>';
