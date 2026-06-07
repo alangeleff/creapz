@@ -372,6 +372,9 @@ function showSel(){
      html+='<div style="font-size:11px;color:#9b8cff;margin:4px 0;line-height:1.4">'+(_pon?('Parallax ON \u00b7 scrolls at '+_pv+'\u00d7 world speed. Lower = looks deeper. Editor shows its anchor; it drifts in-game.'):'Parallax OFF \u00b7 world-locked. Lines up in gameplay exactly as placed here.')+'</div>';
      html+='<button class="bgpar" style="width:100%;margin-top:2px;background:'+(_pon?'#242a16':'#1d2a3a')+';border:1px solid '+(_pon?'#c8fb50':'#7b5cff')+';color:'+(_pon?'#c8fb50':'#cdbbe6')+';border-radius:6px;padding:8px;cursor:pointer">Parallax: '+(_pon?'ON':'OFF (locked)')+' \u00b7 tap to toggle</button>';
      if(_pon) html+='<div class="row" style="margin-top:6px;align-items:center"><span>speed</span><input class="parsl" type="range" min="0" max="1.5" step="0.05" value="'+_pv+'" style="flex:1;margin:0 6px"><span class="parval" style="min-width:36px;text-align:right;color:#9bd0ff">'+_pv+'\u00d7</span></div>';
+     const _til=!!o.tile;
+     html+='<button class="bgfill" style="width:100%;margin-top:8px;background:'+(_til?'#242a16':'#1d2a3a')+';border:1px solid '+(_til?'#c8fb50':'#7b5cff')+';color:'+(_til?'#c8fb50':'#cdbbe6')+';border-radius:6px;padding:8px;cursor:pointer">Fill: '+(_til?'Tile (repeat pattern)':'Stretch (distort to fit)')+' \u00b7 tap to toggle</button>';
+     if(_til) html+='<div class="row" style="margin-top:6px;align-items:center"><span>tile size</span><input class="tsc" type="range" min="0.2" max="3" step="0.05" value="'+(o.tscale||1)+'" style="flex:1;margin:0 6px"><span class="tscv" style="min-width:36px;text-align:right;color:#9bd0ff">'+(o.tscale||1)+'\u00d7</span></div>';
      html+='<button class="bgfit" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Refit to current view</button>';
      html+='<button class="bgtile" style="width:100%;margin-top:4px;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer">Back to full-world tile</button>';
    } else {
@@ -392,6 +395,8 @@ function showSel(){
  html+='<button class="del">Delete</button>';
  selBox.innerHTML=html;
  const _bf=selBox.querySelector('.bgfit'); if(_bf)_bf.onclick=()=>{ histPush(); o.x=Math.round(wx(0)); o.y=Math.round(wy(0)); o.w=Math.round(CW/zoom); o.h=Math.round(CH/zoom); delete o.par; persist(); showSel(); draw(); };
+ const _bfl=selBox.querySelector('.bgfill'); if(_bfl)_bfl.onclick=()=>{ histPush(); o.tile=!o.tile; if(o.tile&&!o.tscale)o.tscale=1; persist(); showSel(); draw(); };
+ const _ts=selBox.querySelector('.tsc'); if(_ts)_ts.oninput=()=>{ o.tscale=parseFloat(_ts.value); const v=selBox.querySelector('.tscv'); if(v)v.textContent=o.tscale+'\u00d7'; persist(); draw(); };
  const _bp=selBox.querySelector('.bgpar'); if(_bp)_bp.onclick=()=>{ histPush(); if(o.par!==undefined&&o.par!==1) delete o.par; else o.par=0.5; persist(); showSel(); draw(); };
  const _ps=selBox.querySelector('.parsl'); if(_ps)_ps.oninput=()=>{ o.par=parseFloat(_ps.value); const pv=selBox.querySelector('.parval'); if(pv)pv.textContent=o.par+'\u00d7'; persist(); draw(); };
  const _bt=selBox.querySelector('.bgtile'); if(_bt)_bt.onclick=()=>{ histPush(); delete o.x; delete o.y; delete o.w; delete o.h; persist(); showSel(); draw(); };
@@ -679,8 +684,10 @@ function draw(){
  else { ctx.fillStyle='#0c0a16'; ctx.fillRect(0,0,CW,CH); drawCemeteryBackdrop(); }
  for(const b of (M.bg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue;
    ctx.globalAlpha=b.t==='cavebg2'?1:0.9;
-   if(b.w&&b.h){ ctx.drawImage(img, sx(b.x||0), sy(b.y||0), b.w*zoom, b.h*zoom);
-     if(sel&&sel.raw===b){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(sx(b.x||0),sy(b.y||0),b.w*zoom,b.h*zoom); } }
+   if(b.w&&b.h){ const X=sx(b.x||0), Y=sy(b.y||0), W2=b.w*zoom, H2=b.h*zoom;
+     if(b.tile){ const ts=(b.tscale||1), tw=Math.max(2,img.naturalWidth*ts*zoom), th=Math.max(2,img.naturalHeight*ts*zoom); ctx.save(); ctx.beginPath(); ctx.rect(X,Y,W2,H2); ctx.clip(); for(let yy=Y; yy<Y+H2; yy+=th) for(let xx=X; xx<X+W2; xx+=tw) ctx.drawImage(img,xx,yy,tw,th); ctx.restore(); }
+     else ctx.drawImage(img, X, Y, W2, H2);
+     if(sel&&sel.raw===b){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X,Y,W2,H2); } }
    else { const X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd=M.h*zoom;
      const sc=Math.max(Wd/img.naturalWidth,Hd/img.naturalHeight); const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc;
      ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Hd); ctx.clip();
