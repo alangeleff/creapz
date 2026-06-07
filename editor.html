@@ -721,7 +721,9 @@ function loadFields(){ document.getElementById('fName').value=M.name; document.g
 
 // ---- layers panel: select / reorder / lock any placed piece ----
 const locked=new Set();
-function propLabel(pr){ const r=pr.raw;
+function getName(pr){ const r=pr.raw; return Array.isArray(r)? r[7] : r.name; }
+function setName(pr,nm){ const r=pr.raw; if(Array.isArray(r)){ if(nm){ r[7]=nm; } else { if(r.length>7) r.length=7; } } else { if(nm) r.name=nm; else delete r.name; } }
+function propLabel(pr){ const _nm=getName(pr); if(_nm) return _nm; const r=pr.raw;
  if(pr.kind==='terrace') return (pr.raw[6]==='cave')?'Cave Ground':'Cemetery Ground';
  if(pr.kind==='plat') return (r.skin==='cave'?'Cave ':'')+'Platform '+r.t;
  if(pr.kind==='haz') return HAZ_LABEL[r.t]||r.t;
@@ -765,14 +767,13 @@ function buildLayers(){
    return `<div class="litem${isSel?' sel':''}${lk?' lock':''}${member?' member':''}" data-z="${pr.z}">`
      +`<span class="lck" data-ck="${pr.z}">${ck?'\u2713':''}</span>`
      +`<span class="lc" style="background:${propColor(pr)}"></span><span class="nm">${propLabel(pr)}</span>`
-     +`<button class="lb" data-up="${pr.z}">\u25b2</button><button class="lb" data-down="${pr.z}">\u25bc</button>`
-     +`<button class="lb" data-lockz="${pr.z}">${lk?'\ud83d\udd12':'\ud83d\udd13'}</button></div>`; };
+     +`<button class="lb" data-menu="${pr.z}">\u22ef</button></div>`; };
  units.forEach((u,ui)=>{ const uidx=units.length-1-ui;   // index in non-reversed order for reorderUnit
    if(u.group){ const col=collapsed.has(u.group), gs=sel&&sel.type==='group'&&sel.name===u.group;
      html+=`<div class="litem ghead${gs?' sel':''}" data-grp="${u.group}">`
        +`<span class="lb" data-col="${u.group}">${col?'\u25b8':'\u25be'}</span>`
        +`<span class="nm" style="font-weight:700">\ud83d\udcc1 ${u.group}</span>`
-       +`<button class="lb" data-gup="${uidx}">\u25b2</button><button class="lb" data-gdown="${uidx}">\u25bc</button></div>`;
+       +`<button class="lb" data-gmenu="${u.group}">\u22ef</button></div>`;
      if(!col) u.members.slice().reverse().forEach(m=>html+=rowProp(m,true));
    } else html+=rowProp(u.item,false);
  });
@@ -791,15 +792,13 @@ function buildLayers(){
  const ag=document.getElementById('addgrpbtn'); if(ag) ag.onclick=addToFolder;
  host.querySelectorAll('.litem[data-z]').forEach(row=>{ const pr=byZ(row.dataset.z); if(!pr)return;
    row.querySelector('.lck').onclick=ev=>{ ev.stopPropagation(); if(msel.has(pr.raw))msel.delete(pr.raw); else msel.add(pr.raw); buildLayers(); };
-   row.querySelectorAll('.lb').forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
-     if(b.dataset.lockz!==undefined){ if(locked.has(pr.raw))locked.delete(pr.raw); else locked.add(pr.raw); buildLayers(); return; }
-     histPush(); reorderProp(pr.raw, b.dataset.up!==undefined?'front':'back'); persist(); draw(); });
+   const _mb=row.querySelector('[data-menu]'); if(_mb)_mb.onclick=ev=>{ ev.stopPropagation(); openPropMenu(pr, ev); };
    row.onclick=()=>{ if(layerDragSuppress){layerDragSuppress=false;return;} sel=propSel(pr); const c=propCenter(pr); centerOn(c[0],c[1]); showSel(); draw(); };
  });
  host.querySelectorAll('.litem.ghead').forEach(row=>{ const name=row.dataset.grp;
    row.querySelectorAll('.lb').forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
      if(b.dataset.col!==undefined){ if(collapsed.has(name))collapsed.delete(name); else collapsed.add(name); buildLayers(); return; }
-     histPush(); reorderUnit(+(b.dataset.gup!==undefined?b.dataset.gup:b.dataset.gdown), b.dataset.gup!==undefined?'up':'down'); persist(); draw(); });
+     if(b.dataset.gmenu!==undefined){ openGroupMenu(name, ev); return; } });
    row.onclick=()=>{ if(layerDragSuppress){layerDragSuppress=false;return;} selectGroup(name); };
  });
  host.querySelectorAll('.litem[data-sec]').forEach(row=>{ const sec=row.dataset.sec,k=+row.dataset.i; const it=acts.filter(a=>a.sec===sec)[k];
@@ -873,6 +872,19 @@ function setupLayerDrag(){
     });
   });
 }
+let _lmenu=null;
+function _layerMenuEl(){ if(!_lmenu){ _lmenu=document.createElement('div'); _lmenu.id='lmenu'; _lmenu.style.cssText='position:fixed;z-index:200;background:#15112af6;border:1px solid var(--line);border-radius:9px;padding:5px;display:none;min-width:150px;box-shadow:0 6px 22px #000b'; document.body.appendChild(_lmenu); document.addEventListener('pointerdown',ev=>{ if(_lmenu.style.display==='block' && !_lmenu.contains(ev.target)) _lmenu.style.display='none'; },true); } return _lmenu; }
+function _openMenu(ev, items){ const m=_layerMenuEl(); m.innerHTML=''; items.forEach(it=>{ const b=document.createElement('button'); b.textContent=it.label; b.style.cssText='display:block;width:100%;text-align:left;background:'+(it.danger?'#3a1620':'#1d1838')+';border:1px solid '+(it.danger?'#e23b3b':'transparent')+';color:'+(it.danger?'#ff9a9a':'var(--ink)')+';border-radius:6px;padding:11px 12px;margin:2px 0;cursor:pointer;font-size:14px'; b.onclick=()=>{ m.style.display='none'; it.action(); }; m.appendChild(b); }); m.style.display='block'; const r=m.getBoundingClientRect(); let x=ev.clientX-r.width+20, y=ev.clientY+6; if(x<6)x=6; if(x+r.width>innerWidth-6)x=innerWidth-6-r.width; if(y+r.height>innerHeight-6)y=Math.max(6,ev.clientY-r.height-6); m.style.left=x+'px'; m.style.top=y+'px'; }
+function renameProp(pr){ const cur=getName(pr)||''; const nm=(prompt('Layer name (blank = default):', cur)||'').trim(); if(nm===cur)return; histPush(); setName(pr,nm); persist(); buildLayers(); draw(); }
+function openPropMenu(pr, ev){ const lk=locked.has(pr.raw); _openMenu(ev,[
+  {label:'\u270e  Rename layer', action:()=>renameProp(pr)},
+  {label: lk?'\ud83d\udd13  Unlock':'\ud83d\udd12  Lock', action:()=>{ if(lk)locked.delete(pr.raw); else locked.add(pr.raw); buildLayers(); }},
+  {label:'\ud83d\uddd1  Delete', danger:true, action:()=>{ histPush(); const s=propSel(pr); delObj(s); if(sel&&sel.raw===pr.raw){sel=null;showSel();} persist(); buildLayers(); draw(); }}
+]); }
+function openGroupMenu(name, ev){ _openMenu(ev,[
+  {label:'\u270e  Rename group', action:()=>{ renameGroup(name); buildLayers(); }},
+  {label:'\ud83d\udcc2  Ungroup', danger:true, action:()=>{ ungroup(name); buildLayers(); }}
+]); }
 function centerOn(x,y){ camx=x-(CW/2)/zoom; camy=y-(CH/2)/zoom; }
 
 // ---- persist / io / play ----
