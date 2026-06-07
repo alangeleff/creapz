@@ -147,12 +147,13 @@ const LOOTS=[['gold','Gold'],['soul','Soul \u00d71'],['soul5','Soul \u00d75'],['
 const CATS=['Background','Foreground','Ground','Hazards','Enemies','Functions','Objects','Textures'];
 const SOUL_COL_ED={1:'#7fe0ff',5:'#ff5a5a',25:'#5ae07a',50:'#b25aff',100:'#ffcf3c'};
 const ASSET_PV=Date.now();
-const BGE_IMG={cavebg:new Image(), cavebg2:new Image(), cryptbg:new Image(), rockwall:new Image()};
+const BGE_IMG={cavebg:new Image(), cavebg2:new Image(), cryptbg:new Image(), rockwall:new Image(), bonedirt:new Image()};
 BGE_IMG.cavebg.onload=()=>draw(); BGE_IMG.cavebg.src='./assets/cavebg1.png';
 BGE_IMG.cavebg2.onload=()=>draw(); BGE_IMG.cavebg2.src='./assets/cavebg2.png';
 BGE_IMG.cryptbg.onload=()=>draw(); BGE_IMG.cryptbg.src='./assets/cryptbg1.png';
 BGE_IMG.rockwall.onload=()=>draw(); BGE_IMG.rockwall.src='./assets/rockwall1.png?v=2';
-const BG_LABEL={cavebg:'Cave Background (far)', cavebg2:'Cave Midground (near)', cryptbg:'Crypt Cavern (deep)', rockwall:'Rock Wall Texture'};
+BGE_IMG.bonedirt.onload=()=>draw(); BGE_IMG.bonedirt.src='./assets/bonedirt1.png?v=2';
+const BG_LABEL={cavebg:'Cave Background (far)', cavebg2:'Cave Midground (near)', cryptbg:'Crypt Cavern (deep)', rockwall:'Rock Wall Texture', bonedirt:'Bone Dirt'};
 const TEX_COLS={ceiling:'#7a5a36',rockpile:'#8a6a3a'}, TEX_LABEL={ceiling:'Cave Ceiling',rockpile:'Rock Pile'};
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.onload=()=>draw(); CAVEPLAT_IMG.src='./assets/caveplat1.png';
 const CHEST_E=new Image(); CHEST_E.onload=()=>draw(); CHEST_E.src='./assets/chest_closed1.png';
@@ -244,9 +245,11 @@ const STAMPS=[
  {k:'bg_cavebg2',label:'Cave Midground (near)',sw:'#4a3f33',cat:'Background'},
  {k:'bg_cryptbg',label:'Crypt Cavern (deep)',sw:'#1b2733',cat:'Background'},
  {k:'bg_rockwall',label:'Rock Wall Texture',sw:'#3a3050',cat:'Background'},
+ {k:'bg_bonedirt',label:'Bone Dirt',sw:'#5a4632',cat:'Background'},
  {k:'fg_rockwall',label:'Rock Wall',sw:'#3a3050',cat:'Foreground'},
  {k:'fg_cryptbg',label:'Crypt Cavern',sw:'#1b2733',cat:'Foreground'},
  {k:'fg_cavebg',label:'Cave',sw:'#2a3340',cat:'Foreground'},
+ {k:'fg_bonedirt',label:'Bone Dirt',sw:'#5a4632',cat:'Foreground'},
 ];
 const LABELOF={}; STAMPS.forEach(s=>LABELOF[s.k]=s.label);
 function assetKey(s){ const r=s.raw, ty=s.type||s.kind;
