@@ -158,7 +158,7 @@ const TEX_COLS={ceiling:'#7a5a36',rockpile:'#8a6a3a'}, TEX_LABEL={ceiling:'Cave 
 const DECOR=['skull1', 'bone01', 'bone02', 'bone03', 'bone04', 'bone05', 'bone06', 'bone07', 'bone08', 'bone09', 'bone10', 'bone11', 'bone12', 'bone13', 'bone14', 'bone15', 'bone16'];
 const DECOR_LABELS={'skull1': 'Skull', 'bone01': 'Bone Pile 1', 'bone02': 'Bone Pile 2', 'bone03': 'Bone Pile 3', 'bone04': 'Bone Pile 4', 'bone05': 'Bone Pile 5', 'bone06': 'Bone Pile 6', 'bone07': 'Bone Pile 7', 'bone08': 'Bone Pile 8', 'bone09': 'Bone Pile 9', 'bone10': 'Bone Pile 10', 'bone11': 'Bone Pile 11', 'bone12': 'Bone Pile 12', 'bone13': 'Bone Pile 13', 'bone14': 'Bone Pile 14', 'bone15': 'Bone Pile 15', 'bone16': 'Bone Pile 16'};
 const DECOR_IMG={};
-DECOR.forEach(n=>{ TEX_LABEL[n]=DECOR_LABELS[n]; TEX_COLS[n]='#9a8a6a'; const im=new Image(); im.onload=()=>draw(); im.src='./assets/decor_'+n+'.png?v=2'; DECOR_IMG[n]=im; });
+DECOR.forEach(n=>{ TEX_LABEL[n]=DECOR_LABELS[n]; TEX_COLS[n]='#9a8a6a'; const im=new Image(); im.onload=()=>draw(); im.src='./assets/decor_'+n+'.png?v=3'; DECOR_IMG[n]=im; });
 const CAVEPLAT_IMG=new Image(); CAVEPLAT_IMG.onload=()=>draw(); CAVEPLAT_IMG.src='./assets/caveplat1.png';
 const CHEST_E=new Image(); CHEST_E.onload=()=>draw(); CHEST_E.src='./assets/chest_closed1.png';
 const TREEBIG_E=new Image(); TREEBIG_E.onload=()=>draw(); TREEBIG_E.src='./assets/sprites/trees_big.png';
