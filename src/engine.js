@@ -1,4 +1,4 @@
-const ASSET_VER='1780850915';
+const ASSET_VER='1780857243';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -420,26 +420,30 @@ function _srad(size,stops){ const c=document.createElement('canvas'); c.width=c.
   const g=c.getContext('2d'), gr=g.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
   for (const st of stops) gr.addColorStop(st[0],st[1]);
   g.fillStyle=gr; g.fillRect(0,0,size,size); return c; }
-const SOUL_GLOW=_srad(128,[[0,'rgba(120,215,255,0.55)'],[0.35,'rgba(95,205,255,0.28)'],[0.7,'rgba(70,160,255,0.10)'],[1,'rgba(60,140,255,0)']]);
-const SOUL_CORE=_srad(64,[[0,'rgba(255,255,255,1)'],[0.28,'rgba(225,250,255,1)'],[0.55,'rgba(130,220,255,0.95)'],[0.82,'rgba(80,175,255,0.55)'],[1,'rgba(70,160,255,0)']]);
-const SOUL_MOTE=_srad(20,[[0,'rgba(255,255,255,1)'],[0.4,'rgba(160,230,255,0.9)'],[1,'rgba(110,200,255,0)']]);
-function drawSoulFx(x,y,R,A,ph){
+function makeSoulFx(r,g,b){ const C=a=>'rgba('+r+','+g+','+b+','+a+')'; const hi='rgba('+Math.min(255,r+110)+','+Math.min(255,g+45)+','+Math.min(255,b+30)+',1)';
+  return { glow:_srad(128,[[0,C(0.55)],[0.35,C(0.28)],[0.7,C(0.10)],[1,C(0)]]),
+    core:_srad(64,[[0,'rgba(255,255,255,1)'],[0.28,hi],[0.55,C(0.95)],[0.82,C(0.55)],[1,C(0)]]),
+    mote:_srad(20,[[0,'rgba(255,255,255,1)'],[0.4,C(0.9)],[1,C(0)]]) }; }
+const SOUL_FX={1:makeSoulFx(120,210,255),5:makeSoulFx(255,90,90),25:makeSoulFx(80,224,122),50:makeSoulFx(180,95,255),100:makeSoulFx(255,205,70)};
+const SOUL_COL={1:'#7fe0ff',5:'#ff5a5a',25:'#5ae07a',50:'#b25aff',100:'#ffcf3c'};
+function drawSoulFx(x,y,R,A,ph,val){
+  const fx=SOUL_FX[val]||SOUL_FX[1];
   const bob=Math.sin(gt*2.2+ph)*4, br=0.5+0.5*Math.sin(gt*2.6+ph*1.7), cy=y+bob;
   ctx.globalCompositeOperation='lighter';
   const gs=R*(4.6+0.7*br); ctx.globalAlpha=A*0.85*(0.55+0.40*br);
-  ctx.drawImage(SOUL_GLOW,x-gs/2,cy-gs/2,gs,gs);
+  ctx.drawImage(fx.glow,x-gs/2,cy-gs/2,gs,gs);
   const cs=R*1.9*(1+0.06*br); ctx.globalAlpha=A;
-  ctx.drawImage(SOUL_CORE,x-cs/2,cy-cs/2,cs,cs);
+  ctx.drawImage(fx.core,x-cs/2,cy-cs/2,cs,cs);
   for(let i=0;i<5;i++){ const u=((gt*0.42+ph+i/5)%1);
     const yy=cy+R*1.0-u*R*4.2, xx=x+Math.cos(u*10.5+ph+i)*R*1.25*(1-u*0.45);
     const ua=(u<0.12?u/0.12:1-(u-0.12)/0.88), s=2.4*(1-u*0.5)*(R/13);
-    ctx.globalAlpha=A*0.9*ua; ctx.drawImage(SOUL_MOTE,xx-s*2,yy-s*2,s*4,s*4); }
+    ctx.globalAlpha=A*0.9*ua; ctx.drawImage(fx.mote,xx-s*2,yy-s*2,s*4,s*4); }
   ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
 }
 const BAT_FPS = 15, BITE_FPS = 29, BAT_PATROL = 1.25, BAT_CHASE = 2.1, BAT_AGGRO = 280;
 
 let mode='select', chosen=ORDER[0];
-let p, souls, soulCount, gt=0, camX=0, camY=0, WORLDH=440, GOALY=360, zombies, plats, chkOn, bats, bolts, impacts, loots=[];
+let p, souls, soulCount, soulOrbGot=0, totalOrbVal=0, gt=0, camX=0, camY=0, WORLDH=440, GOALY=360, zombies, plats, chkOn, bats, bolts, impacts, loots=[];
 let paused=false, menuRects=[];
 let musicVol=1, sfxVol=1;
 try{ musicVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_mvol')??'1'))); sfxVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_svol')??'1'))); }catch(e){}
@@ -614,7 +618,7 @@ function addScore(base, kind){
 }
 function computeTally(){
   const rows=[
-    {label:'SOULS  '+soulCount+' / '+souls.length, pts:actSoulPts},
+    {label:'SOULS  '+soulCount+' / '+totalOrbVal, pts:actSoulPts},
     {label:'REAPED  '+Math.min(killCount,totalEnemies)+' / '+totalEnemies, pts:actKillPts},
   ];
   let bonus=0, topTime=false;
@@ -622,13 +626,13 @@ function computeTally(){
   let tb=0;
   for (let i=0;i<br.length;i++){ if (actTime<=br[i][0]){ tb=br[i][1]; topTime=(i===0); break; } }
   if (!gotHit){ rows.push({label:'PERFECT RUN', pts:5000, bonus:true}); bonus+=5000; }
-  if (soulCount>=souls.length){ rows.push({label:'ALL SOULS', pts:2000, bonus:true}); bonus+=2000; }
+  if (soulOrbGot>=souls.length){ rows.push({label:'ALL SOULS', pts:2000, bonus:true}); bonus+=2000; }
   const reapAll=killCount>=totalEnemies;
   if (reapAll){ rows.push({label:'FULL REAP', pts:2000, bonus:true}); bonus+=2000; }
   const mm=Math.floor(actTime/60), ss=Math.floor(actTime%60);
   rows.push({label:'TIME  '+mm+':'+(ss<10?'0':'')+ss, pts:tb, bonus:true});
   bonus+=tb;
-  if (topTime && reapAll && soulCount>=souls.length){
+  if (topTime && reapAll && soulOrbGot>=souls.length){
     rows.push({label:'KILLER BONUS', pts:10000, killer:true}); bonus+=10000;
   }
   const total=actScore+bonus;
@@ -639,7 +643,7 @@ function computeTally(){
     r.done=true;
     r.hi=Math.max(r.hi||0, total);
     r.souls=Math.max(r.souls||0, soulCount);
-    r.maxSouls=souls.length;
+    r.maxSouls=totalOrbVal;
     if(r.secret===undefined) r.secret=null;   // reserved: cReapY stone / secret collectible
     prog.soulz=(prog.soulz||0)+soulCount;
     saveProg();
@@ -764,7 +768,7 @@ function drawTitleCard(){
   ctx.font="40px Creepster, sans-serif";
   ctx.fillStyle='#c8fb50'; ctx.fillText('ACT  '+ST.act, W*0.40, 312);
   // soul orb spinning beside the act numeral
-  drawSoulFx(W*0.34, 299, 9, 1, 2.4);
+  drawSoulFx(W*0.34, 299, 9, 1, 2.4, 1);
   ctx.restore();
 }
 function drawPauseBtn(){
@@ -797,8 +801,9 @@ function reset(keep){
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
   zbits=[]; bolts=[]; impacts=[]; chkFx=[];
   if (!keep){
-    soulCount=0; chkOn=CHK.map(()=>false);
-    souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],got:false,pop:0,ph:i*0.31}));
+    soulCount=0; soulOrbGot=0; chkOn=CHK.map(()=>false);
+    souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],val:(s[2]||1),got:false,pop:0,ph:i*0.31}));
+    totalOrbVal = souls.reduce((a,s)=>a+s.val,0);
   }
   plats = PLAT_DEF.map(q=>({x:q.x!==undefined?q.x:q.x0, x0:q.x0, y:q.y, w:q.w, t:q.t, skin:q.skin, z:q.z,
     range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0,
@@ -1119,7 +1124,7 @@ function update(dt){
   for (const s of souls){
     if (s.got){ if(s.pop<1) s.pop+=dt/0.28; continue; }
     const r=30, sb={x:s.x-r,y:s.y-r,w:2*r,h:2*r};
-    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+1); }
+    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount+=s.val; soulOrbGot++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+s.val); }
   }
   // --- combat ---
   let pwb = (p.attackT>0) ? worldWeaponBox(SPR.chars[chosen].attack, curFrame(), p.x, p.y, p.facing) : null;
@@ -1592,7 +1597,7 @@ function collectLoot(L){
     for(let i=0;i<18;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*230, vy:-30-Math.random()*180, sz:2.5+Math.random()*3.5, life:0.5+Math.random()*0.5, t:0, c:col});
     return; }
   if (L.type==='heart'){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup'); }
-  else if (L.type==='soul'){ soulCount++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
+  else if (L.type==='soul' || /^soul\d+$/.test(L.type)){ const v=L.type==='soul'?1:parseInt(L.type.slice(4)); soulCount+=v; if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+v); addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
   else if (L.type==='stone'){ addScore(2000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.7); }
   else { addScore(500); playSfx('sfx_soul',0.8); }
 }
@@ -1609,12 +1614,13 @@ function drawTreasure(x,y,type,sc,al){
     ctx.restore(); return;
   }
   ctx.save(); ctx.globalAlpha=al;
-  const col={heart:'#ff4d6d',soul:'#7fe0ff',gold:'#ffcf3c',stone:'#46e0c0'}[type]||'#ffcf3c';
+  let col={heart:'#ff4d6d',soul:'#7fe0ff',gold:'#ffcf3c',stone:'#46e0c0'}[type]||'#ffcf3c';
+  if(/^soul\d+$/.test(type)){ col=SOUL_COL[parseInt(type.slice(4))]||'#7fe0ff'; }
   const g=ctx.createRadialGradient(x,y,1,x,y,26*sc); g.addColorStop(0,col); g.addColorStop(0.5,col+'66'); g.addColorStop(1,col+'00');
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,26*sc,0,7); ctx.fill();
   ctx.translate(x,y); ctx.scale(sc,sc);
   if (type==='heart'){ ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(0,8); ctx.bezierCurveTo(-12,-4,-7,-14,0,-6); ctx.bezierCurveTo(7,-14,12,-4,0,8); ctx.fill(); }
-  else if (type==='soul'){ ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0,9,0,7); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(-2,-2,3,0,7); ctx.fill(); }
+  else if (type==='soul' || /^soul\d+$/.test(type)){ ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0,9,0,7); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(-2,-2,3,0,7); ctx.fill(); }
   else { ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(0,-11); ctx.lineTo(9,-3); ctx.lineTo(5,11); ctx.lineTo(-5,11); ctx.lineTo(-9,-3); ctx.closePath(); ctx.fill();
     ctx.fillStyle='rgba(255,255,255,.55)'; ctx.beginPath(); ctx.moveTo(0,-11); ctx.lineTo(9,-3); ctx.lineTo(0,-1); ctx.closePath(); ctx.fill(); }
   ctx.restore();
@@ -2226,7 +2232,7 @@ function draw(){
   for (const s of souls){
     if (s.got&&s.pop>=1) continue; const sx=pxf(s.x,1); if(sx<-60||sx>W+60) continue;
     let alpha=1,sc=1; if(s.got){ alpha=Math.max(0,1-s.pop); sc=1+0.7*s.pop; }
-    drawSoulFx(sx, s.y, 13*sc, alpha, s.ph*19);
+    drawSoulFx(sx, s.y, 13*sc, alpha, s.ph*19, s.val);
   }
   drawPlayerLayer();
   drawPower();
@@ -2346,7 +2352,7 @@ function draw(){
   ctx.fillStyle='rgba(20,16,36,.5)'; roundRect(W-184,64,154,26,7); ctx.fill();
   ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(W-168,77,8,0,7); ctx.fill();
   ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(W-168,77,4.5,0,7); ctx.fill();
-  ctx.fillStyle='#eaf6ff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='right'; ctx.fillText(soulCount+' / '+souls.length, W-40, 82); ctx.textAlign='left';
+  ctx.fillStyle='#eaf6ff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='right'; ctx.fillText(soulCount+' / '+totalOrbVal, W-40, 82); ctx.textAlign='left';
   if (p.dead && p.deadT>2.3){
     menuPanel('YOU DIED', [
       {label: p.spawn>90?'Rise at Checkpoint':'Try Again', action:()=>{ paused=false; onReset(); }},
