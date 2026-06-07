@@ -469,36 +469,41 @@ let carryLive=null;
 // palette drag start
 pal.querySelectorAll('.tool').forEach(el=>{
  el.addEventListener('pointerdown',e=>{
-   if(e.pointerType==='mouse'){ e.preventDefault(); carry={kind:el.dataset.k}; el.classList.add('dragging'); try{el.setPointerCapture(e.pointerId);}catch(_){ } showGhost(e.clientX,e.clientY); return; }
-   // touch/pen: hold briefly to pick up (so a quick swipe just scrolls the list)
-   const sx0=e.clientX, sy0=e.clientY; let armed=false;
-   const arm=()=>{ armed=true; timer=null; carry={kind:el.dataset.k}; el.classList.add('dragging'); try{el.setPointerCapture(e.pointerId);}catch(_){ } if(navigator.vibrate){ try{navigator.vibrate(18);}catch(_){ } } showGhost(e.clientX,e.clientY); };
-   let timer=setTimeout(arm, 200);
-   const move=ev=>{ if(armed){ ev.preventDefault(); showGhost(ev.clientX,ev.clientY); return; } if(Math.hypot(ev.clientX-sx0,ev.clientY-sy0)>9){ if(timer){clearTimeout(timer);timer=null;} done(); } };
-   const up=()=>{ if(timer){clearTimeout(timer);timer=null;} done(); };
+   if(e.pointerType==='mouse'){ e.preventDefault(); el.classList.add('dragging'); startAssetDrag(el.dataset.k, e.pointerId, e.clientX, e.clientY); return; }
+   // touch/pen: hold briefly to pick up (a quick swipe just scrolls the list)
+   const sx0=e.clientX, sy0=e.clientY; let armed=false, timer=null;
+   try{ el.setPointerCapture(e.pointerId); }catch(_){ }
    const done=()=>{ el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up); };
-   el.addEventListener('pointermove',move,{passive:false}); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+   const arm=()=>{ armed=true; timer=null; if(navigator.vibrate){ try{navigator.vibrate(18);}catch(_){ } } el.classList.add('dragging'); done(); try{el.releasePointerCapture(e.pointerId);}catch(_){ } startAssetDrag(el.dataset.k, e.pointerId, e.clientX, e.clientY); };
+   const move=ev=>{ if(armed) return; if(Math.hypot(ev.clientX-sx0,ev.clientY-sy0)>9){ if(timer){clearTimeout(timer);timer=null;} done(); } };
+   const up=()=>{ if(timer){clearTimeout(timer);timer=null;} done(); };
+   timer=setTimeout(arm, 200);
+   el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
  });
 });
 const ghost=document.getElementById('ghost');
 function showGhost(cx,cy){ if(!carry)return; ghost.style.display='block'; ghost.textContent=LABELOF[carry.kind]; ghost.style.left=cx+'px'; ghost.style.top=cy+'px'; }
 const NO_LIVE=new Set(['goal','soul']);
-addEventListener('pointermove',e=>{ if(!carry) return;
-  const r=cv.getBoundingClientRect();
-  const over=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
-  if(over && !NO_LIVE.has(carry.kind)){
-    ghost.style.display='none';
-    const gx=snap(wx(e.clientX-r.left)), gy=snap(wy(e.clientY-r.top));
-    if(!carryLive){ placeAt(carry.kind,gx,gy); carryLive=sel; carry.s0=JSON.parse(JSON.stringify(sel.obj)); carry.gx=gx; carry.gy=gy; carry.lastx=gx; carry.lasty=gy; }
-    else if(gx!==carry.lastx||gy!==carry.lasty){ moveObj(carryLive,carry.s0,gx-carry.gx,gy-carry.gy); syncBack(carryLive); carry.lastx=gx; carry.lasty=gy; showSel(); draw(); }
-  } else { if(carryLive){ delObj(carryLive); carryLive=null; sel=null; showSel(); persist(); draw(); } showGhost(e.clientX,e.clientY); }
-});
-addEventListener('pointerup',e=>{ if(!carry) return; ghost.style.display='none'; document.querySelectorAll('.tool.dragging').forEach(t=>t.classList.remove('dragging'));
-   const r=cv.getBoundingClientRect();
-   const over=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
-   if(carryLive){ if(over){ persist(); } else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
-   else if(over){ placeAt(carry.kind, snap(wx(e.clientX-r.left)), snap(wy(e.clientY-r.top))); }
-   carry=null; carryLive=null; });
+let __veil=null;
+function startAssetDrag(kind, pid, cx, cy){
+  carry={kind}; carryLive=null;
+  if(!__veil){ __veil=document.createElement('div'); __veil.style.cssText='position:fixed;inset:0;z-index:9999;touch-action:none;cursor:grabbing;background:transparent'; }
+  const v=__veil; document.body.appendChild(v); try{ v.setPointerCapture(pid); }catch(_){ }
+  const handle=(clientX,clientY)=>{ const r=cv.getBoundingClientRect(); const over=clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;
+    if(over && !NO_LIVE.has(kind)){ ghost.style.display='none'; const gx=snap(wx(clientX-r.left)), gy=snap(wy(clientY-r.top));
+      if(!carryLive){ placeAt(kind,gx,gy); carryLive=sel; carry.s0=JSON.parse(JSON.stringify(sel.obj)); carry.gx=gx; carry.gy=gy; carry.lastx=gx; carry.lasty=gy; }
+      else if(gx!==carry.lastx||gy!==carry.lasty){ moveObj(carryLive,carry.s0,gx-carry.gx,gy-carry.gy); syncBack(carryLive); carry.lastx=gx; carry.lasty=gy; showSel(); draw(); } }
+    else { if(carryLive){ delObj(carryLive); carryLive=null; sel=null; showSel(); persist(); draw(); } showGhost(clientX,clientY); } };
+  const mv=ev=>{ ev.preventDefault(); handle(ev.clientX,ev.clientY); };
+  const finish=ev=>{ const r=cv.getBoundingClientRect(); const over=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;
+    if(carryLive){ if(over){ persist(); } else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
+    else if(over){ placeAt(kind, snap(wx(ev.clientX-r.left)), snap(wy(ev.clientY-r.top))); }
+    ghost.style.display='none'; carry=null; carryLive=null;
+    document.querySelectorAll('.tool.dragging').forEach(t=>t.classList.remove('dragging'));
+    v.removeEventListener('pointermove',mv); v.removeEventListener('pointerup',finish); v.removeEventListener('pointercancel',finish); if(v.parentNode) v.parentNode.removeChild(v); };
+  v.addEventListener('pointermove',mv,{passive:false}); v.addEventListener('pointerup',finish); v.addEventListener('pointercancel',finish);
+  handle(cx,cy);
+}
 
 function placeAt(kind,gx,gy){
  histPush();
@@ -817,31 +822,48 @@ function _sameUnit(a,b){ if(!a||!b)return false; if(a.group||b.group) return a.g
 function _applyVisOrder(vis){ const asc=vis.slice().reverse(); let k=1; for(const u of asc){ if(u.group){ for(const m of u.members) m.setZ((k++)*10); } else u.item.setZ((k++)*10); } }
 function _dropIndex(rows,py){ for(let i=0;i<rows.length;i++){ const rc=rows[i].getBoundingClientRect(); if(py < rc.top+rc.height/2) return i; } return rows.length; }
 function _showDrop(rows,idx){ const dl=_dl(); const host=document.getElementById('layers'); if(!host)return; const hr=host.getBoundingClientRect(); let y; if(idx<rows.length){ y=rows[idx].getBoundingClientRect().top; } else if(rows.length){ y=rows[rows.length-1].getBoundingClientRect().bottom; } else { y=hr.top; } y=Math.max(hr.top,Math.min(hr.bottom,y)); dl.style.display='block'; dl.style.left=hr.left+'px'; dl.style.width=hr.width+'px'; dl.style.top=(y-1)+'px'; }
+function _allDragRows(){ const host=document.getElementById('layers'); return host?[...host.querySelectorAll('.litem.ghead, .litem[data-z]')]:[]; }
+function _propByZ(z){ return allProps().find(p=>p.z===+z); }
+function _dropRowsFor(row){ const host=document.getElementById('layers'); if(!host) return [];
+  if(row.classList.contains('member')){ const p0=_propByZ(row.dataset.z); const g=p0&&getG(p0.raw); return [...host.querySelectorAll('.litem.member[data-z]')].filter(r=>{ const p=_propByZ(r.dataset.z); return p&&getG(p.raw)===g; }); }
+  return [...host.querySelectorAll('.litem.ghead, .litem[data-z]:not(.member)')];
+}
+function _reorderMember(memberRaw, groupName, newVisIdx){
+  const members=allProps().filter(p=>getG(p.raw)===groupName).sort((a,b)=>b.z-a.z); // top first
+  const from=members.findIndex(p=>p.raw===memberRaw); if(from<0) return;
+  const moved=members.splice(from,1)[0]; let to=newVisIdx; if(from<newVisIdx) to=newVisIdx-1; to=Math.max(0,Math.min(members.length,to)); members.splice(to,0,moved);
+  const slots=members.map(p=>p.z).sort((a,b)=>b-a); members.forEach((p,i)=>p.setZ(slots[i])); renumberZ();
+}
 function setupLayerDrag(){
   const host=document.getElementById('layers'); if(!host) return;
-  _draggableRows().forEach(row=>{
+  _allDragRows().forEach(row=>{
     row.style.touchAction='none';
     row.addEventListener('pointerdown',e=>{
       if(e.target.closest('.lb, .lck')) return;
-      const isMouse=e.pointerType==='mouse';
+      const isMouse=e.pointerType==='mouse', isMember=row.classList.contains('member');
       const startX=e.clientX, startY=e.clientY, startScroll=host.scrollTop;
-      const unit=_unitOfRow(row); if(!unit) return;
+      const unit=isMember?null:_unitOfRow(row);
+      const memProp=isMember?_propByZ(row.dataset.z):null;
+      const groupName=(isMember&&memProp)?getG(memProp.raw):null;
+      if(!isMember && !unit) return;
+      if(isMember && !memProp) return;
+      const dropRows=()=>_dropRowsFor(row);
       let active=false, timer=null, moved=false;
       try{ row.setPointerCapture(e.pointerId); }catch(_){ }
       const activate=()=>{ active=true; timer=null; if(navigator.vibrate){try{navigator.vibrate(15);}catch(_){ }} row.classList.add('ldrag');
-        _lyrScroll=setInterval(()=>{ if(_lyrVel){ host.scrollTop+=_lyrVel; const rows=_draggableRows(); _showDrop(rows,_dropIndex(rows,_lyrPy)); } },16); };
+        _lyrScroll=setInterval(()=>{ if(_lyrVel){ host.scrollTop+=_lyrVel; const rs=dropRows(); _showDrop(rs,_dropIndex(rs,_lyrPy)); } },16); };
       if(!isMouse) timer=setTimeout(activate,170);
       const move=ev=>{ ev.preventDefault();
-        if(active){ _lyrPy=ev.clientY; const hr=host.getBoundingClientRect(); _lyrVel= ev.clientY<hr.top+44?-9: ev.clientY>hr.bottom-44?9:0; const rows=_draggableRows(); _showDrop(rows,_dropIndex(rows,ev.clientY)); return; }
+        if(active){ _lyrPy=ev.clientY; const hr=host.getBoundingClientRect(); _lyrVel= ev.clientY<hr.top+44?-9: ev.clientY>hr.bottom-44?9:0; const rs=dropRows(); _showDrop(rs,_dropIndex(rs,ev.clientY)); return; }
         const dist=Math.hypot(ev.clientX-startX,ev.clientY-startY);
         if(isMouse){ if(dist>6) activate(); return; }
         if(dist>8){ moved=true; if(timer){clearTimeout(timer);timer=null;} }
         if(moved) host.scrollTop=startScroll-(ev.clientY-startY);
       };
       const up=ev=>{ if(timer){clearTimeout(timer);timer=null;}
-        if(active){ const rows=_draggableRows(); const gap=_dropIndex(rows,_lyrPy||ev.clientY);
-          const vis=orderedUnits().reverse(); const from=vis.findIndex(u=>_sameUnit(u,unit));
-          if(from>=0){ const dragged=vis.splice(from,1)[0]; let to=gap; if(from<gap) to=gap-1; to=Math.max(0,Math.min(vis.length,to)); vis.splice(to,0,dragged); histPush(); _applyVisOrder(vis); persist(); }
+        if(active){ const rs=dropRows(); const gap=_dropIndex(rs,_lyrPy||ev.clientY);
+          if(isMember){ histPush(); _reorderMember(memProp.raw, groupName, gap); persist(); }
+          else { const vis=orderedUnits().reverse(); const from=vis.findIndex(u=>_sameUnit(u,unit)); if(from>=0){ const dragged=vis.splice(from,1)[0]; let to=gap; if(from<gap) to=gap-1; to=Math.max(0,Math.min(vis.length,to)); vis.splice(to,0,dragged); histPush(); _applyVisOrder(vis); persist(); } }
           layerDragSuppress=true; cleanup(); buildLayers(); draw(); return; }
         if(moved) layerDragSuppress=true;
         cleanup();
