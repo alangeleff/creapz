@@ -467,43 +467,41 @@ let carry=null; // {kind} from palette drag
 let carryLive=null;
 
 // palette drag start
+const _palList=document.getElementById('palList');
+function _liveHandle(kind, clientX, clientY){ const r=cv.getBoundingClientRect(); const over=clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;
+  if(over && !NO_LIVE.has(kind)){ ghost.style.display='none'; const gx=snap(wx(clientX-r.left)), gy=snap(wy(clientY-r.top));
+    if(!carryLive){ placeAt(kind,gx,gy); carryLive=sel; carry={kind,s0:JSON.parse(JSON.stringify(sel.obj)),gx,gy,lastx:gx,lasty:gy}; }
+    else if(gx!==carry.lastx||gy!==carry.lasty){ moveObj(carryLive,carry.s0,gx-carry.gx,gy-carry.gy); syncBack(carryLive); carry.lastx=gx; carry.lasty=gy; showSel(); draw(); } }
+  else { if(carryLive){ delObj(carryLive); carryLive=null; sel=null; showSel(); persist(); draw(); } showGhost(clientX,clientY); } }
 pal.querySelectorAll('.tool').forEach(el=>{
+ el.style.touchAction='none';
  el.addEventListener('pointerdown',e=>{
-   if(e.pointerType==='mouse'){ e.preventDefault(); el.classList.add('dragging'); startAssetDrag(el.dataset.k, e.pointerId, e.clientX, e.clientY); return; }
-   // touch/pen: hold briefly to pick up (a quick swipe just scrolls the list)
-   const sx0=e.clientX, sy0=e.clientY; let armed=false, timer=null;
+   const kind=el.dataset.k, isMouse=e.pointerType==='mouse';
+   const sx0=e.clientX, sy0=e.clientY, startScroll=_palList?_palList.scrollTop:0;
+   let active=false, timer=null, moved=false;
    try{ el.setPointerCapture(e.pointerId); }catch(_){ }
-   const done=()=>{ el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up); };
-   const arm=()=>{ armed=true; timer=null; if(navigator.vibrate){ try{navigator.vibrate(18);}catch(_){ } } el.classList.add('dragging'); done(); try{el.releasePointerCapture(e.pointerId);}catch(_){ } startAssetDrag(el.dataset.k, e.pointerId, e.clientX, e.clientY); };
-   const move=ev=>{ if(armed) return; if(Math.hypot(ev.clientX-sx0,ev.clientY-sy0)>9){ if(timer){clearTimeout(timer);timer=null;} done(); } };
-   const up=()=>{ if(timer){clearTimeout(timer);timer=null;} done(); };
-   timer=setTimeout(arm, 200);
-   el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
+   const cleanup=()=>{ el.classList.remove('dragging'); el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up); };
+   const activate=()=>{ active=true; timer=null; if(navigator.vibrate){ try{navigator.vibrate(18);}catch(_){ } } el.classList.add('dragging'); carry={kind}; carryLive=null; _liveHandle(kind, sx0, sy0); };
+   if(!isMouse) timer=setTimeout(activate, 180);
+   const move=ev=>{ ev.preventDefault();
+     if(active){ _liveHandle(kind, ev.clientX, ev.clientY); return; }
+     const dist=Math.hypot(ev.clientX-sx0,ev.clientY-sy0);
+     if(isMouse){ if(dist>6) activate(); return; }
+     if(dist>8){ moved=true; if(timer){clearTimeout(timer);timer=null;} }
+     if(moved && _palList){ _palList.scrollTop=startScroll-(ev.clientY-sy0); }
+   };
+   const up=ev=>{ if(timer){clearTimeout(timer);timer=null;}
+     if(active){ const r=cv.getBoundingClientRect(); const over=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;
+       if(carryLive){ if(over) persist(); else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
+       else if(over){ placeAt(kind, snap(wx(ev.clientX-r.left)), snap(wy(ev.clientY-r.top))); } }
+     ghost.style.display='none'; carry=null; carryLive=null; cleanup();
+   };
+   el.addEventListener('pointermove',move,{passive:false}); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
  });
 });
 const ghost=document.getElementById('ghost');
 function showGhost(cx,cy){ if(!carry)return; ghost.style.display='block'; ghost.textContent=LABELOF[carry.kind]; ghost.style.left=cx+'px'; ghost.style.top=cy+'px'; }
-const NO_LIVE=new Set(['goal','soul']);
-let __veil=null;
-function startAssetDrag(kind, pid, cx, cy){
-  carry={kind}; carryLive=null;
-  if(!__veil){ __veil=document.createElement('div'); __veil.style.cssText='position:fixed;inset:0;z-index:9999;touch-action:none;cursor:grabbing;background:transparent'; }
-  const v=__veil; document.body.appendChild(v); try{ v.setPointerCapture(pid); }catch(_){ }
-  const handle=(clientX,clientY)=>{ const r=cv.getBoundingClientRect(); const over=clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;
-    if(over && !NO_LIVE.has(kind)){ ghost.style.display='none'; const gx=snap(wx(clientX-r.left)), gy=snap(wy(clientY-r.top));
-      if(!carryLive){ placeAt(kind,gx,gy); carryLive=sel; carry.s0=JSON.parse(JSON.stringify(sel.obj)); carry.gx=gx; carry.gy=gy; carry.lastx=gx; carry.lasty=gy; }
-      else if(gx!==carry.lastx||gy!==carry.lasty){ moveObj(carryLive,carry.s0,gx-carry.gx,gy-carry.gy); syncBack(carryLive); carry.lastx=gx; carry.lasty=gy; showSel(); draw(); } }
-    else { if(carryLive){ delObj(carryLive); carryLive=null; sel=null; showSel(); persist(); draw(); } showGhost(clientX,clientY); } };
-  const mv=ev=>{ ev.preventDefault(); handle(ev.clientX,ev.clientY); };
-  const finish=ev=>{ const r=cv.getBoundingClientRect(); const over=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;
-    if(carryLive){ if(over){ persist(); } else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
-    else if(over){ placeAt(kind, snap(wx(ev.clientX-r.left)), snap(wy(ev.clientY-r.top))); }
-    ghost.style.display='none'; carry=null; carryLive=null;
-    document.querySelectorAll('.tool.dragging').forEach(t=>t.classList.remove('dragging'));
-    v.removeEventListener('pointermove',mv); v.removeEventListener('pointerup',finish); v.removeEventListener('pointercancel',finish); if(v.parentNode) v.parentNode.removeChild(v); };
-  v.addEventListener('pointermove',mv,{passive:false}); v.addEventListener('pointerup',finish); v.addEventListener('pointercancel',finish);
-  handle(cx,cy);
-}
+const NO_LIVE=new Set(['goal','soul']);  // assets that don't get a live preview
 
 function placeAt(kind,gx,gy){
  histPush();
