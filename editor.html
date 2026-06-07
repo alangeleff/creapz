@@ -144,7 +144,7 @@ const HAZ_COLS={spike:'#d9d2c0',rock:'#7a7280',tar:'#2a1f30',spikeshot:'#cfc8b6'
 const HAZ_LABEL={spike:'Bone Spike Pit',rock:'Rock Drop',tar:'Tar Pit',spikeshot:'Spike Cannon'};
 const OBST_COLS={grave:'#8a82a6',crate:'#b6884a',chest:'#caa05a'};
 const LOOTS=[['gold','Gold'],['soul','Soul \u00d71'],['soul5','Soul \u00d75'],['soul25','Soul \u00d725'],['soul50','Soul \u00d750'],['soul100','Soul \u00d7100'],['heart','Heart'],['stone_amethyst','Amethyst Stone'],['stone_chaos','Chaos Stone'],['stone_emerald','Emerald Stone'],['stone_fluorite','Fluorite Stone'],['stone_holy','Holy Stone'],['stone_obsidian','Obsidian Stone'],['stone_ruby','Ruby Stone'],['stone_sapphire','Sapphire Stone'],['stone_topaz','Topaz Stone'],['stone_master','Master Stone']];
-const CATS=['Background','Ground','Hazards','Enemies','Functions','Objects','Textures'];
+const CATS=['Background','Foreground','Ground','Hazards','Enemies','Functions','Objects','Textures'];
 const SOUL_COL_ED={1:'#7fe0ff',5:'#ff5a5a',25:'#5ae07a',50:'#b25aff',100:'#ffcf3c'};
 const ASSET_PV=Date.now();
 const BGE_IMG={cavebg:new Image(), cavebg2:new Image(), cryptbg:new Image(), rockwall:new Image()};
@@ -244,6 +244,9 @@ const STAMPS=[
  {k:'bg_cavebg2',label:'Cave Midground (near)',sw:'#4a3f33',cat:'Background'},
  {k:'bg_cryptbg',label:'Crypt Cavern (deep)',sw:'#1b2733',cat:'Background'},
  {k:'bg_rockwall',label:'Rock Wall Texture',sw:'#3a3050',cat:'Background'},
+ {k:'fg_rockwall',label:'Rock Wall',sw:'#3a3050',cat:'Foreground'},
+ {k:'fg_cryptbg',label:'Crypt Cavern',sw:'#1b2733',cat:'Foreground'},
+ {k:'fg_cavebg',label:'Cave',sw:'#2a3340',cat:'Foreground'},
 ];
 const LABELOF={}; STAMPS.forEach(s=>LABELOF[s.k]=s.label);
 function assetKey(s){ const r=s.raw, ty=s.type||s.kind;
@@ -308,7 +311,7 @@ function moveMemberBy(r,dx,dy){ if(Array.isArray(r)){ r[0]+=dx; r[1]+=dx; r[2]+=
 let eraseMode=false, bulkArm=false;
 let M=blankLevel();
 function blankLevel(){ return {name:'Crypt Depths',act:'I',music:'act2',theme:'crypt',world:3200,h:2900,
-  goal:3000,goalY:2480, seg:[], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[], bg:[]}; }
+  goal:3000,goalY:2480, seg:[], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[], bg:[], fg:[]}; }
 // upgrade legacy/flat levels (e.g. old Cemetery acts) to the current editor format so they render + edit
 function migrateLevel(d){ const G=360, FH=440, DEP=FH-G;
   if(Array.isArray(d.seg)) d.seg=d.seg.map((sg,i)=>{ if(Array.isArray(sg)&&sg.length<=2) return [sg[0],sg[1],G,DEP,(i+1)*10]; return sg; });
@@ -343,7 +346,7 @@ document.getElementById('mBulk').onclick=function(){ bulkArm=!bulkArm; this.clas
 // ---- selection / edit panel ----
 let sel=null;
 const selBox=document.getElementById('sel');
-const SEL_FIELDS={terrace:['x0','x1','gy','depth'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w','d'],obst:['x','gy'],tex:['x','y','w'],bg:['x','y','w','h','par']};
+const SEL_FIELDS={terrace:['x0','x1','gy','depth'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w','d'],obst:['x','gy'],tex:['x','y','w'],bg:['x','y','w','h','par'],fg:['x','y','w','h','par']};
 function showSel(){
  if(!sel){ selBox.style.display='none'; return; }
  if(sel.type==='bulkswap'){ selBox.style.display='block';
@@ -367,9 +370,9 @@ function showSel(){
  selBox.style.display='block';
  const o=sel.obj; const _ak=assetKey(sel); let html='<h4>'+(LABELOF[_ak]||LABELOF[sel.kind]||sel.type)+'</h4>';
  let _flds=(sel.type==='haz'&&o.t==='spikeshot')?['x','y','dir','tx','ty','tw','th']:(SEL_FIELDS[sel.type]||[]);
- if(sel.type==='bg') _flds=(o.w&&o.h)?['x','y','w','h']:['par'];
+ if(sel.type==='bg'||sel.type==='fg') _flds=(o.w&&o.h)?['x','y','w','h']:['par'];
  for(const f of _flds){ if(o[f]===undefined)continue; html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; }
- if(sel.type==='bg'){ const _pl=(o.w&&o.h);
+ if(sel.type==='bg'||sel.type==='fg'){ const _pl=(o.w&&o.h);
    if(_pl){ const _pon=(o.par!==undefined&&o.par!==1); const _pv=(o.par!==undefined?o.par:1);
      html+='<div style="font-size:11px;color:#9b8cff;margin:4px 0;line-height:1.4">'+(_pon?('Parallax ON \u00b7 scrolls at '+_pv+'\u00d7 world speed. Lower = looks deeper. Editor shows its anchor; it drifts in-game.'):'Parallax OFF \u00b7 world-locked. Lines up in gameplay exactly as placed here.')+'</div>';
      html+='<button class="bgpar" style="width:100%;margin-top:2px;background:'+(_pon?'#242a16':'#1d2a3a')+';border:1px solid '+(_pon?'#c8fb50':'#7b5cff')+';color:'+(_pon?'#c8fb50':'#cdbbe6')+';border-radius:6px;padding:8px;cursor:pointer">Parallax: '+(_pon?'ON':'OFF (locked)')+' \u00b7 tap to toggle</button>';
@@ -431,6 +434,7 @@ function delObj(s){
  else if(s.type==='haz'){ const i=M.hazards.indexOf(s.raw); if(i>=0)M.hazards.splice(i,1); }
  else if(s.type==='obst'){ const i=M.obst.indexOf(s.raw); if(i>=0)M.obst.splice(i,1); }
  else if(s.type==='bg'){ const i=M.bg.indexOf(s.raw); if(i>=0)M.bg.splice(i,1); }
+ else if(s.type==='fg'){ const i=M.fg.indexOf(s.raw); if(i>=0)M.fg.splice(i,1); }
  else if(s.type==='tex'){ const i=M.tex.indexOf(s.raw); if(i>=0)M.tex.splice(i,1); }
  else if(s.type==='goal'){ M.goal=0; M.goalY=0; }
 }
@@ -450,6 +454,7 @@ function hit(wxp,wyp){
    else if(pr.kind==='terrace'){ if(wxp>=r[0]&&wxp<=r[1]&&wyp>=r[2]-4&&wyp<=r[2]+(r[3]||TERRACE_DROP)) return wrap('terrace',r,['x0','x1','gy','depth'],[0,1,2,3]); }
    else if(pr.kind==='tex'){ if(r.t==='rockpile'){ const dh=ROCKPILE_IMG.naturalWidth?r.w*ROCKPILE_IMG.naturalHeight/ROCKPILE_IMG.naturalWidth:60; if(wxp>=r.x-4&&wxp<=r.x+r.w+4&&wyp>=r.y-dh-4&&wyp<=r.y+4) return {type:'tex',kind:'tex_'+r.t,obj:r,raw:r,sync(){}}; } else { const dh=CAVECEIL_IMG.naturalWidth?r.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth:60; if(wxp>=r.x-4&&wxp<=r.x+r.w+4&&wyp>=r.y-4&&wyp<=r.y+dh+4) return {type:'tex',kind:'tex_'+r.t,obj:r,raw:r,sync(){}}; } }
  }
+ for(const b of (M.fg||[])){ if(b.w&&b.h&&!locked.has(b)&&wxp>=b.x&&wxp<=b.x+b.w&&wyp>=b.y&&wyp<=b.y+b.h) return {type:'fg',kind:'fg_'+b.t,obj:b,raw:b,sync(){}}; }
  for(const b of (M.bg||[])){ if(b.w&&b.h&&!locked.has(b)&&wxp>=b.x&&wxp<=b.x+b.w&&wyp>=b.y&&wyp<=b.y+b.h) return {type:'bg',kind:'bg_'+b.t,obj:b,raw:b,sync(){}}; }
  return null;
 }
@@ -460,7 +465,7 @@ function wrap(type,raw,names,idx,kind){ const o={}; names.forEach((n,i)=>o[n]=ra
 // ---- handles for selected terrace/platform (resize) ----
 function handles(s){
  if(!s) return [];
- if(s.type==='bg'){ const o=s.obj; if(!(o.w&&o.h)) return []; return [{id:'bgtl',x:o.x,y:o.y},{id:'bgbr',x:o.x+o.w,y:o.y+o.h}]; }
+ if(s.type==='bg'||s.type==='fg'){ const o=s.obj; if(!(o.w&&o.h)) return []; return [{id:'bgtl',x:o.x,y:o.y},{id:'bgbr',x:o.x+o.w,y:o.y+o.h}]; }
  if(s.type==='terrace'){ const o=s.obj, dep=o.depth||TERRACE_DROP, cx=(o.x0+o.x1)/2, my=o.gy+dep/2;
    return [{id:'left',x:o.x0,y:my},{id:'right',x:o.x1,y:my},{id:'top',x:cx,y:o.gy},{id:'depth',x:cx,y:o.gy+dep}]; }
  if(s.type==='plat'){ const o=s.obj, x=o.x??o.x0; const hs=[{id:'pl',x:x,y:o.y},{id:'pr',x:x+o.w,y:o.y}];
@@ -529,6 +534,7 @@ function placeAt(kind,gx,gy){
  else if(kind==='bat'){ const b=[gx,Math.max(0,gx-300),gx+300,gy,-1]; M.bats.push(b); sel=wrap('bat',b,['x','min','max','y'],[0,1,2,3]); }
  else if(kind.startsWith('haz_')){ const t=kind.split('_')[1]; const h={t,x:gx,y:gy,w:240,z:topZ()+10}; if(t==='spikeshot'){ h.w=28; h.dir=-1; h.tx=gx-340; h.ty=gy-150; h.tw=220; h.th=300; } (M.hazards=M.hazards||[]).push(h); sel={type:'haz',kind,obj:h,raw:h,sync(){}}; }
  else if(kind.startsWith('bg_')){ const t=kind.split('_').slice(1).join('_'); const b={t,par:(t==='cavebg2'?0.45:0.2)}; (M.bg=M.bg||[]).push(b); sel={type:'bg',kind,obj:b,raw:b,sync(){}}; }
+ else if(kind.startsWith('fg_')){ const t=kind.split('_').slice(1).join('_'); const b={t,par:1,x:gx-300,y:gy-200,w:600,h:400}; (M.fg=M.fg||[]).push(b); sel={type:'fg',kind,obj:b,raw:b,sync(){}}; }
  else if(kind.startsWith('tex_')){ const t=kind.split('_')[1]; const tx={t,x:gx,y:gy,w:300,z:topZ()+10}; (M.tex=M.tex||[]).push(tx); sel={type:'tex',kind,obj:tx,raw:tx,sync(){}}; }
  else if(OBST_COLS[kind]){ const o={x:gx,type:kind,gy,z:topZ()+10}; if(kind==='chest')o.loot='gold'; (M.obst=M.obst||[]).push(o); sel={type:'obst',kind,obj:o,raw:o,sync(){}}; }
  else if(ENEMY_COLS[kind]){ const en=[gx,Math.max(0,gx-300),gx+300,kind,gy,-1]; M.enemies.push(en); sel=wrap('enemy',en,['x','min','max','gy'],[0,1,2,4],kind); }
@@ -718,6 +724,14 @@ function draw(){
    if(!dSprite('goal', X, Y, zoom, 'b', false)){ ctx.strokeStyle='#e0506a'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(X,Y-34*zoom,22*zoom,0,7); ctx.stroke(); ctx.fillStyle='#e0506a'; ctx.font='11px sans-serif'; ctx.fillText('EXIT',X-12,Y+12); } }
  const sp=spawnY(90); if(sp!==null){ const X=sx(90),Y=sy(sp); ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y-30*zoom,Math.max(5,9*zoom),0,7); ctx.fill();
    ctx.fillStyle='#c8fb50'; ctx.font='10px sans-serif'; ctx.fillText('START',X-14,Y-44*zoom); }
+ for(const b of (M.fg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue;
+   ctx.globalAlpha=0.72;
+   if(b.w&&b.h){ const X=sx(b.x||0), Y=sy(b.y||0), W2=b.w*zoom, H2=b.h*zoom;
+     if(b.tile){ const ts=(b.tscale||1), tw=Math.max(2,img.naturalWidth*ts*zoom), th=Math.max(2,img.naturalHeight*ts*zoom); ctx.save(); ctx.beginPath(); ctx.rect(X,Y,W2,H2); ctx.clip(); for(let yy=Y; yy<Y+H2; yy+=th) for(let xx=X; xx<X+W2; xx+=tw) ctx.drawImage(img,xx,yy,tw,th); ctx.restore(); }
+     else ctx.drawImage(img, X, Y, W2, H2);
+     if(sel&&sel.raw===b){ ctx.globalAlpha=1; ctx.strokeStyle='#ff7adf'; ctx.lineWidth=2; ctx.setLineDash([7,5]); ctx.strokeRect(X,Y,W2,H2); ctx.setLineDash([]); } }
+   else { const X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd=M.h*zoom; const sc=Math.max(Wd/img.naturalWidth,Hd/img.naturalHeight); const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc; ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Hd); ctx.clip(); for(let y=Y;y<Y+Hd;y+=dh) for(let x=X;x<X+Wd+dw;x+=dw) ctx.drawImage(img,x,y,dw,dh); ctx.restore(); }
+   ctx.globalAlpha=1; }
  // handles
  for(const h of handles(sel)){ ctx.fillStyle='#c8fb50'; ctx.strokeStyle='#10210a'; ctx.lineWidth=2;
    ctx.beginPath(); ctx.arc(sx(h.x),sy(h.y),7,0,7); ctx.fill(); ctx.stroke(); }
@@ -774,6 +788,8 @@ function buildLayers(){
    const _gn=[...new Set(allProps().map(p=>getG(p.raw)).filter(Boolean))];
    if(_gn.length) html+=`<button id="addgrpbtn">${(sel&&sel.type==='group')?('Add '+msel.size+' to “'+sel.name+'”'):('Add '+msel.size+' to folder…')}</button>`;
  }
+ if((M.fg||[]).length){ html+='<div class="cat">Foreground (front)</div>';
+   M.fg.forEach((b,k)=>{ const isSel=sel&&sel.raw===b; html+=`<div class="litem${isSel?' sel':''}" data-fg="${k}"><span class="lc" style="background:#6a4a6a"></span><span class="nm">${BG_LABEL[b.t]||b.t} \u00b7 FG</span></div>`; }); }
  if((M.bg||[]).length){ html+='<div class="cat">Background</div>';
    M.bg.forEach((b,k)=>{ const isSel=sel&&sel.raw===b; html+=`<div class="litem${isSel?' sel':''}" data-bg="${k}"><span class="lc" style="background:#3a4a5a"></span><span class="nm">${BG_LABEL[b.t]||b.t} · par ${b.par??0.3}</span></div>`; }); }
  const rowProp=(pr,member)=>{ const isSel=sel&&sel.raw===pr.raw, lk=locked.has(pr.raw), ck=msel.has(pr.raw);
@@ -821,6 +837,9 @@ function buildLayers(){
  });
  host.querySelectorAll('.litem[data-bg]').forEach(row=>{ const b=M.bg[+row.dataset.bg];
    row.onclick=()=>{ sel={type:'bg',kind:'bg_'+b.t,obj:b,raw:b,sync(){}}; showSel(); draw(); };
+ });
+ host.querySelectorAll('.litem[data-fg]').forEach(row=>{ const b=M.fg[+row.dataset.fg];
+   row.onclick=()=>{ sel={type:'fg',kind:'fg_'+b.t,obj:b,raw:b,sync(){}}; showSel(); draw(); };
  });
  setupLayerDrag();
 }
@@ -935,7 +954,7 @@ addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCas
   else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'){ e.preventDefault(); if(sel) dupSel(); } });
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
- o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[]; return o; }
+ o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; return o; }
 document.getElementById('bExport').onclick=()=>{ const idx=+v('fIdx')||2; const o=cleanLevel();
  const js='window.STAGES=window.STAGES||[];window.STAGES['+idx+']='+JSON.stringify(o,null,1)+';\n';
  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([js],{type:'text/javascript'}));
@@ -977,7 +996,7 @@ function createNew(){ const p=document.getElementById('newP');
       goal: theme==='crypt'?Math.round(w*0.85):w-120,
       goalY: theme==='crypt'?Math.max(G+200,h-180):G,
       seg:[ground], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[],
-      bg: theme==='crypt'?[{t:'cavebg',par:0.2}]:[] };
+      bg: theme==='crypt'?[{t:'cavebg',par:0.2}]:[], fg:[] };
   loadFields(); sel=null; showSel(); camx=0; camy=0; zoom=Math.min(CW/Math.min(w,1600), CH/Math.min(h,900)); persist(); draw(); closeNew(); toast('new stage “'+name+'” created'); }
 document.getElementById('bNew').onclick=()=>{ const p=document.getElementById('newP'); if(p.style.display==='block')closeNew(); else openNew(); };
 // ---- named local saves ----

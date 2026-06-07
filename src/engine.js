@@ -1,4 +1,4 @@
-const ASSET_VER='1780858923';
+const ASSET_VER='1780859478';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -48,7 +48,7 @@ const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='
 const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png?v='+ASSET_VER;
 const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+ASSET_VER;
 const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='+ASSET_VER; return i;})(), cavebg2:(()=>{const i=new Image(); i.src='./assets/cavebg2.png?v='+ASSET_VER; return i;})(), cryptbg:(()=>{const i=new Image(); i.src='./assets/cryptbg1.png?v='+ASSET_VER; return i;})(), rockwall:(()=>{const i=new Image(); i.src='./assets/rockwall1.png?v='+ASSET_VER; return i;})()};
-let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[];
+let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[];
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
@@ -156,6 +156,7 @@ function loadStage(i){
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
   TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z}));
   BG = (ST.bg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale}));
+  FG = (ST.fg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale}));
   HAZ = (ST.hazards||[]).map(h=>{
     const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0, dir:h.dir, tx:h.tx, ty:h.ty, tw:h.tw, th:h.th};
     if(h.t==='rock'){ const n=Math.max(1,Math.round(h.w/160)); const step=h.w/n; o.spawns=[]; for(let i=0;i<n;i++) o.spawns.push(Math.round(h.x+step*(i+0.5))); o.cds=o.spawns.map(()=>0); }
@@ -1688,6 +1689,20 @@ function skyBG(){
   const fy=GROUND-30;
   for (let k=0;k<2;k++){ ctx.fillStyle=k?'rgba(150,140,200,.05)':'rgba(120,120,170,.07)'; const off=(gt*(10+k*8))%(W+200); for(let fx=-off;fx<W;fx+=W+120) ctx.fillRect(fx,fy-k*16,W+200,60); }
 }
+function drawForegrounds(){
+  for(const b of FG){ const img=BG_IMGS[b.t]; if(!img||!img.complete||!img.naturalWidth) continue;
+    const par=(b.par!==undefined&&b.par!==null)?b.par:0.3;
+    ctx.globalAlpha=(b.alpha!==undefined)?b.alpha:1;
+    if(b.w&&b.h){ const pp=(b.par!==undefined&&b.par!==null)?b.par:1; const ox=(b.x||0)-camX*pp, oy=(b.y||0)-camY*pp;
+      if(b.tile){ const ts=(b.tscale||1), tw=img.naturalWidth*ts, th=img.naturalHeight*ts; ctx.save(); ctx.beginPath(); ctx.rect(ox,oy,b.w,b.h); ctx.clip(); for(let yy=oy; yy<oy+b.h; yy+=th) for(let xx=ox; xx<ox+b.w; xx+=tw) ctx.drawImage(img,xx,yy,tw,th); ctx.restore(); }
+      else ctx.drawImage(img, ox, oy, b.w, b.h);
+      ctx.globalAlpha=1; continue; }
+    const iw=img.naturalWidth, ih=img.naturalHeight, sc=Math.max(W/iw,H/ih), dw=iw*sc, dh=ih*sc;
+    let ox=(-camX*par)%dw; if(ox>0)ox-=dw; let oy=(-camY*par)%dh; if(oy>0)oy-=dh;
+    for(let y=oy; y<H; y+=dh) for(let x=ox; x<W; x+=dw) ctx.drawImage(img, x, y, dw, dh);
+    ctx.globalAlpha=1;
+  }
+}
 function drawBackgrounds(){
   for(const b of BG){ const img=BG_IMGS[b.t]; if(!img||!img.complete||!img.naturalWidth) continue;
     const par=(b.par!==undefined&&b.par!==null)?b.par:0.3;
@@ -2341,6 +2356,7 @@ function draw(){
     const dk=Math.max(0,Math.min(1,camY/(WORLDH-H)))*0.40;
     ctx.fillStyle='rgba(2,1,6,'+dk.toFixed(2)+')'; ctx.fillRect(0,0,W,H);
   }
+  drawForegrounds();   // foreground occluder layers (player passes behind — secret areas)
   // HUD
   drawPlayerHP();
   drawStoneMeter();
