@@ -205,9 +205,15 @@ const GEN_POSES={
   'a JUMP apex pose: airborne, legs tucked slightly, body at the top of the arc, arms out for balance.',
   'a JUMP landing pose: legs bent absorbing impact, body compressed low, arms forward for balance.']
 };
-function buildPrompt(pose){
-  return 'You are given a reference image of a 2D pixel-art game character. Redraw the EXACT SAME character — identical design, colors, proportions, outfit, and pixel-art style — in '+pose+
-  ' Side view (profile) facing the SAME direction as the reference image — do NOT mirror, flip, or reverse the character; keep the head, face, and body oriented exactly as in the reference. Full body with feet fully visible, character centered and the SAME overall size/scale as the reference. Background must be a FLAT SOLID magenta (#FF00FF), perfectly uniform, with NO gradient, NO shadow, NO ground line, and no extra elements. Output only the character on magenta.';
+const PROMPT_TAIL=' Side view (profile) facing the SAME direction as Image 1 — do NOT mirror, flip, or reverse the character; keep the head, face, and body oriented exactly as in Image 1. Full body with feet fully visible, character centered and the SAME overall size/scale as Image 1. Background must be a FLAT SOLID magenta (#FF00FF), perfectly uniform, NO gradient, NO shadow, NO ground line, no extra elements. Output only the character on magenta.';
+function buildPrompt(pose, mode){
+  if(mode==='chain'){
+    return 'Image 1 is the canonical character design — match its identity, colors, proportions, outfit and pixel-art style EXACTLY (use it to prevent any drift). Image 2 is the PREVIOUS frame of a walk-cycle animation. Produce the NEXT frame: continue the motion smoothly, advancing the body one step further into '+pose+' It must look like the very next frame after Image 2 — the legs and arms should clearly move forward through the stride, noticeably different from Image 2, never identical to it.'+PROMPT_TAIL;
+  }
+  if(mode==='loop'){
+    return 'Image 1 is the canonical character design — match its identity, colors, proportions and style EXACTLY. Image 2 is the previous (second-to-last) frame. Image 3 is the FIRST frame of the loop. Produce the in-between frame that smoothly BRIDGES the motion from Image 2 toward Image 3, so the animation loops seamlessly back to the start. The pose is '+pose+' Make it a natural mid-point between Image 2 and Image 3, distinct from both.'+PROMPT_TAIL;
+  }
+  return 'Image 1 is a 2D pixel-art game character. Redraw the EXACT SAME character — identical design, colors, proportions, outfit and pixel-art style — in '+pose+PROMPT_TAIL;
 }
 function downscaleToB64(img,max){ const sc=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight)); const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*sc); c.height=Math.round(img.naturalHeight*sc); c.getContext('2d').drawImage(img,0,0,c.width,c.height); return c.toDataURL('image/png').split(',')[1]; }
 function setBase(file){ const img=new Image(); img.onload=()=>{ baseRef={img, b64:downscaleToB64(img,768)}; const h=$('bthumb'); h.innerHTML=''; const cv=document.createElement('canvas'); const sc=64/Math.max(img.naturalWidth,img.naturalHeight); cv.width=img.naturalWidth*sc; cv.height=img.naturalHeight*sc; cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height); cv.style.borderRadius='8px'; cv.style.border='1px solid var(--line)'; h.appendChild(cv); $('genstat').textContent='Base frame set. Pick an animation and hit Generate.'; }; img.src=URL.createObjectURL(file); }
@@ -215,13 +221,15 @@ $('bdrop').onclick=()=>$('bfile').click();
 $('bfile').onchange=e=>{ if(e.target.files[0]) setBase(e.target.files[0]); };
 function loadB64(b64,mime){ return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src='data:'+(mime||'image/png')+';base64,'+b64; }); }
 function frameValid(img){ const pr=processImg(img); if(!pr) return false; const fill=(pr.cw*pr.ch)/(img.naturalWidth*img.naturalHeight); return fill>0.01 && fill<0.97; } // not empty, not whole-frame (keying failed)
-async function genFrame(pose){
+function imgToB64(img,max){ const sc=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight)); const c=document.createElement('canvas'); c.width=Math.round(img.naturalWidth*sc); c.height=Math.round(img.naturalHeight*sc); c.getContext('2d').drawImage(img,0,0,c.width,c.height); return c.toDataURL('image/png').split(',')[1]; }
+async function genFrame(pose, refs, mode){
   for(let attempt=0; attempt<2; attempt++){
-    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageBase64:baseRef.b64,mimeType:'image/png',prompt:buildPrompt(pose)})});
+    const images=refs.map(b=>({data:b,mimeType:'image/png'}));
+    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images,prompt:buildPrompt(pose,mode)})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok || !j.imageBase64){ if(attempt) throw new Error(j.error||('HTTP '+r.status)); continue; }
     const img=await loadB64(j.imageBase64,j.mimeType);
-    if(frameValid(img) || attempt===1) return img;
+    if(frameValid(img) || attempt===1) return { img, refB64: imgToB64(img,640) };
   }
 }
 $('gen').onclick=async()=>{
@@ -229,13 +237,20 @@ $('gen').onclick=async()=>{
   const type=$('anim').value, poses=GEN_POSES[type]; const btn=$('gen'); btn.disabled=true; btn.style.opacity=.6;
   frames=[]; buildCells();
   $('nm').value='reaperbat_'+type;
+  let firstRef=null, prevRef=null;
   try{
     for(let i=0;i<poses.length;i++){
       $('genstat').textContent='Generating frame '+(i+1)+' of '+poses.length+'…';
-      const img=await genFrame(poses[i]);
-      frames.push({img}); buildCells();
+      let refs, mode;
+      if(i===0){ refs=[baseRef.b64]; mode='single'; }
+      else if(i===poses.length-1 && firstRef){ refs=[baseRef.b64, prevRef, firstRef]; mode='loop'; }
+      else { refs=[baseRef.b64, prevRef]; mode='chain'; }
+      const out=await genFrame(poses[i], refs, mode);
+      frames.push({img:out.img}); buildCells();
+      if(i===0) firstRef=out.refB64;
+      prevRef=out.refB64;
     }
-    $('genstat').textContent='Done — '+poses.length+' frames. Scrub FPS below to check the motion, then download.';
+    $('genstat').textContent='Done — '+poses.length+' chained frames. Scrub FPS below to check the motion, then download.';
   }catch(e){ $('genstat').textContent='Error: '+e.message+' (credits/billing or model issue). Frames so far are kept.'; }
   btn.disabled=false; btn.style.opacity=1;
 };

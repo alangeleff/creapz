@@ -24,19 +24,23 @@ module.exports = async (req, res) => {
     let body = req.body;
     if (typeof body === 'string') body = JSON.parse(body || '{}');
     if (!body || typeof body !== 'object') body = {};
-    const { imageBase64, mimeType = 'image/png', prompt } = body;
-    if (!imageBase64 || !prompt) {
-      return res.status(400).json({ error: 'Body must include imageBase64 (reference frame) and prompt (pose).' });
+    const { imageBase64, mimeType = 'image/png', images, prompt } = body;
+
+    // Accept either a single reference (imageBase64) or an ordered array (images:[{data,mimeType}])
+    let refs = [];
+    if (Array.isArray(images) && images.length) {
+      refs = images.filter(im => im && im.data).map(im => ({ mimeType: im.mimeType || 'image/png', data: im.data }));
+    } else if (imageBase64) {
+      refs = [{ mimeType, data: imageBase64 }];
+    }
+    if (!refs.length || !prompt) {
+      return res.status(400).json({ error: 'Body must include a reference image (imageBase64 or images[]) and prompt.' });
     }
 
+    const reqParts = refs.map(im => ({ inlineData: { mimeType: im.mimeType, data: im.data } }));
+    reqParts.push({ text: prompt });
     const payload = {
-      contents: [{
-        role: 'user',
-        parts: [
-          { inlineData: { mimeType, data: imageBase64 } },
-          { text: prompt }
-        ]
-      }],
+      contents: [{ role: 'user', parts: reqParts }],
       generationConfig: { responseModalities: ['IMAGE'] }
     };
 
