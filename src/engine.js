@@ -1,4 +1,4 @@
-const ASSET_VER='1780849738';
+const ASSET_VER='1780850915';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1686,7 +1686,7 @@ function drawBackgrounds(){
   for(const b of BG){ const img=BG_IMGS[b.t]; if(!img||!img.complete||!img.naturalWidth) continue;
     const par=(b.par!==undefined&&b.par!==null)?b.par:0.3;
     ctx.globalAlpha=(b.alpha!==undefined)?b.alpha:1;
-    if(b.w&&b.h){ ctx.drawImage(img, (b.x||0)-camX, (b.y||0)-camY, b.w, b.h); ctx.globalAlpha=1; continue; }  // stretched bg = world-locked (matches editor)
+    if(b.w&&b.h){ const pp=(b.par!==undefined&&b.par!==null)?b.par:1; ctx.drawImage(img, (b.x||0)-camX*pp, (b.y||0)-camY*pp, b.w, b.h); ctx.globalAlpha=1; continue; }  // stretched bg: par 1 = locked, <1 = parallax
     const iw=img.naturalWidth, ih=img.naturalHeight, sc=Math.max(W/iw,H/ih), dw=iw*sc, dh=ih*sc;
     let ox=(-camX*par)%dw; if(ox>0)ox-=dw; let oy=(-camY*par)%dh; if(oy>0)oy-=dh;
     for(let y=oy; y<H; y+=dh) for(let x=ox; x<W; x+=dw) ctx.drawImage(img, x, y, dw, dh);
