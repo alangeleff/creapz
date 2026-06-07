@@ -831,7 +831,7 @@ function _unitOfRow(row){ if(row.dataset.grp!==undefined){ const name=row.datase
 function _sameUnit(a,b){ if(!a||!b)return false; if(a.group||b.group) return a.group===b.group; return !!(a.item&&b.item&&a.item.raw===b.item.raw); }
 function _applyVisOrder(vis){ const asc=vis.slice().reverse(); let k=1; for(const u of asc){ if(u.group){ for(const m of u.members) m.setZ((k++)*10); } else u.item.setZ((k++)*10); } }
 function _dropIndex(rows,py){ for(let i=0;i<rows.length;i++){ const rc=rows[i].getBoundingClientRect(); if(py < rc.top+rc.height/2) return i; } return rows.length; }
-function _showDrop(rows,idx){ const dl=_dl(); const host=document.getElementById('layers'); if(!host)return; const hr=host.getBoundingClientRect(); let y; if(idx<rows.length){ y=rows[idx].getBoundingClientRect().top; } else if(rows.length){ y=rows[rows.length-1].getBoundingClientRect().bottom; } else { y=hr.top; } y=Math.max(hr.top,Math.min(hr.bottom,y)); dl.style.display='block'; dl.style.left=hr.left+'px'; dl.style.width=hr.width+'px'; dl.style.top=(y-1)+'px'; }
+function _showDrop(rows,idx,color){ const dl=_dl(); const host=document.getElementById('layers'); if(!host)return; const hr=host.getBoundingClientRect(); let y; if(idx<rows.length){ y=rows[idx].getBoundingClientRect().top; } else if(rows.length){ y=rows[rows.length-1].getBoundingClientRect().bottom; } else { y=hr.top; } y=Math.max(hr.top,Math.min(hr.bottom,y)); dl.style.background=color||'var(--lime)'; dl.style.boxShadow='0 0 7px '+(color||'var(--lime)'); dl.style.display='block'; dl.style.left=hr.left+'px'; dl.style.width=hr.width+'px'; dl.style.top=(y-1)+'px'; }
 let _hoverHead=null;
 function _setHoverHead(host, name){ if(_hoverHead===name) return; const find=n=>[...host.querySelectorAll('.litem.ghead')].find(r=>r.dataset.grp===n); if(_hoverHead){ const r=find(_hoverHead); if(r)r.classList.remove('grouphl'); } _hoverHead=name; if(name){ const r=find(name); if(r)r.classList.add('grouphl'); } }
 function _allDragRows(){ const host=document.getElementById('layers'); return host?[...host.querySelectorAll('.litem.ghead, .litem[data-z]')]:[]; }
@@ -863,30 +863,33 @@ function setupLayerDrag(){
       let active=false, timer=null, moved=false;
       try{ row.setPointerCapture(e.pointerId); }catch(_){ }
       const activate=()=>{ active=true; timer=null; if(navigator.vibrate){try{navigator.vibrate(15);}catch(_){ }} row.classList.add('ldrag');
-        _lyrScroll=setInterval(()=>{ if(_lyrVel){ host.scrollTop+=_lyrVel; const rs=dropRows(); _showDrop(rs,_dropIndex(rs,_lyrPy)); } },16); };
+        _lyrScroll=setInterval(()=>{ if(_lyrVel){ host.scrollTop+=_lyrVel; paintDrop(_lyrPy); } },16); };
       if(!isMouse) timer=setTimeout(activate,170);
       const myGroup=()=> isMember? groupName : getG(unit.item.raw);
-      const groupAtY=(y)=>{ const hr=host.getBoundingClientRect(); const el=document.elementFromPoint(hr.left+18, y); const r=el&&el.closest&&el.closest('.litem'); if(!r) return null; if(r.dataset.grp!==undefined) return r.dataset.grp; if(r.classList.contains('member')){ const p=_propByZ(r.dataset.z); return p?getG(p.raw):null; } return null; };
+      const unitRows=()=>[...host.querySelectorAll('.litem.ghead, .litem[data-z]:not(.member)')];
+      const memberRows=(g)=>[...host.querySelectorAll('.litem.member[data-z]')].filter(r=>{const p=_propByZ(r.dataset.z);return p&&getG(p.raw)===g;});
+      const groupRegionAtY=(y)=>{ for(const gh of [...host.querySelectorAll('.litem.ghead')]){ const name=gh.dataset.grp; const mrs=memberRows(name); const top=gh.getBoundingClientRect().top; let bot=gh.getBoundingClientRect().bottom; if(mrs.length) bot=mrs[mrs.length-1].getBoundingClientRect().bottom; if(y>=top&&y<=bot) return name; } return null; };
+      const paintDrop=(y)=>{ const reg=groupRegionAtY(y), mg=myGroup();
+        if(isMember && reg===mg){ _setHoverHead(host,null); const rs=memberRows(mg); _showDrop(rs,_dropIndex(rs,y),'#b24dff'); }
+        else if(reg && reg!==mg){ _setHoverHead(host,reg); if(_dropline)_dropline.style.display='none'; }
+        else { _setHoverHead(host,null); const rs=unitRows(); _showDrop(rs,_dropIndex(rs,y),'var(--lime)'); } };
       const move=ev=>{ ev.preventDefault();
-        if(active){ _lyrPy=ev.clientY; const hr=host.getBoundingClientRect(); _lyrVel= ev.clientY<hr.top+44?-9: ev.clientY>hr.bottom-44?9:0;
-          const hd=groupAtY(ev.clientY); const mg=myGroup();
-          if(hd && hd!==mg){ _setHoverHead(host,hd); if(_dropline)_dropline.style.display='none'; }
-          else { _setHoverHead(host,null); const rs=dropRows(); _showDrop(rs,_dropIndex(rs,ev.clientY)); }
-          return; }
+        if(active){ _lyrPy=ev.clientY; const hr=host.getBoundingClientRect(); _lyrVel= ev.clientY<hr.top+44?-9: ev.clientY>hr.bottom-44?9:0; paintDrop(ev.clientY); return; }
         const dist=Math.hypot(ev.clientX-startX,ev.clientY-startY);
         if(isMouse){ if(dist>6) activate(); return; }
         if(dist>8){ moved=true; if(timer){clearTimeout(timer);timer=null;} }
         if(moved) host.scrollTop=startScroll-(ev.clientY-startY);
       };
       const up=ev=>{ if(timer){clearTimeout(timer);timer=null;}
-        if(active){ const y=_lyrPy||ev.clientY; const tgtGroup=groupAtY(y);
+        if(active){ const y=_lyrPy||ev.clientY; const reg=groupRegionAtY(y);
           const draggedRaw= isMember? memProp.raw : unit.item.raw; const curGroup=getG(draggedRaw);
-          if(tgtGroup!==curGroup){ histPush(); setG(draggedRaw, tgtGroup||null);
-            if(tgtGroup){ const ms=allProps().filter(p=>getG(p.raw)===tgtGroup && p.raw!==draggedRaw); const mz=ms.length?Math.max(...ms.map(p=>p.z)):0; const dp=allProps().find(p=>p.raw===draggedRaw); if(dp)dp.setZ(mz+5); }
-            renumberZ(); persist(); }
-          else { const rs=dropRows(); const gap=_dropIndex(rs,y);
-            if(isMember){ histPush(); _reorderMember(memProp.raw, curGroup, gap); persist(); }
-            else { const vis=orderedUnits().reverse(); const from=vis.findIndex(u=>_sameUnit(u,unit)); if(from>=0){ const dragged=vis.splice(from,1)[0]; let to=gap; if(from<gap) to=gap-1; to=Math.max(0,Math.min(vis.length,to)); vis.splice(to,0,dragged); histPush(); _applyVisOrder(vis); persist(); } } }
+          if(isMember && reg===curGroup){ const rs=memberRows(curGroup); const gap=_dropIndex(rs,y); histPush(); _reorderMember(draggedRaw, curGroup, gap); persist(); }
+          else if(reg && reg!==curGroup){ histPush(); setG(draggedRaw, reg); const ms=allProps().filter(p=>getG(p.raw)===reg && p.raw!==draggedRaw); const mz=ms.length?Math.max(...ms.map(p=>p.z)):0; const dp=allProps().find(p=>p.raw===draggedRaw); if(dp)dp.setZ(mz+5); renumberZ(); persist(); }
+          else { const rs=unitRows(); const gap=_dropIndex(rs,y); histPush();
+            if(isMember){ setG(draggedRaw,null); renumberZ(); }
+            const vis=orderedUnits().reverse(); const from=vis.findIndex(u=> isMember? (u.item&&u.item.raw===draggedRaw) : _sameUnit(u,unit));
+            if(from>=0){ const dragged=vis.splice(from,1)[0]; let to=gap; if(from<gap) to=gap-1; to=Math.max(0,Math.min(vis.length,to)); vis.splice(to,0,dragged); _applyVisOrder(vis); }
+            persist(); }
           _setHoverHead(host,null); layerDragSuppress=true; cleanup(); buildLayers(); draw(); return; }
         if(moved) layerDragSuppress=true;
         cleanup();
