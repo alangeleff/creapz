@@ -14,6 +14,7 @@
  #pal h3{font-size:10px;letter-spacing:.5px;color:var(--mut);margin:12px 6px 6px;text-transform:uppercase}
  .cat{font-size:10px;letter-spacing:.5px;color:var(--lime);margin:10px 4px 4px;text-transform:uppercase;font-weight:700}
  .litem{display:flex;align-items:center;gap:5px;padding:5px 6px;border-radius:6px;font-size:12px;cursor:pointer;margin:1px 0}
+ .litem.ldrag{opacity:.5;outline:1px solid var(--lime)}
  .litem:hover{background:#1d1838}
  .litem.sel{background:#242a16;outline:1px solid var(--lime)}
  .litem .lc{width:11px;height:11px;border-radius:2px;flex:none}
@@ -463,6 +464,7 @@ const ptrs=new Map();
 let act=null; // {mode:'pan'|'move'|'handle', ...}
 let pinch=null;
 let carry=null; // {kind} from palette drag
+let carryLive=null;
 
 // palette drag start
 pal.querySelectorAll('.tool').forEach(el=>{
@@ -480,11 +482,23 @@ pal.querySelectorAll('.tool').forEach(el=>{
 });
 const ghost=document.getElementById('ghost');
 function showGhost(cx,cy){ if(!carry)return; ghost.style.display='block'; ghost.textContent=LABELOF[carry.kind]; ghost.style.left=cx+'px'; ghost.style.top=cy+'px'; }
-addEventListener('pointermove',e=>{ if(carry){ showGhost(e.clientX,e.clientY); } });
-addEventListener('pointerup',e=>{ if(carry){ ghost.style.display='none'; document.querySelectorAll('.tool.dragging').forEach(t=>t.classList.remove('dragging'));
+const NO_LIVE=new Set(['goal','soul']);
+addEventListener('pointermove',e=>{ if(!carry) return;
+  const r=cv.getBoundingClientRect();
+  const over=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+  if(over && !NO_LIVE.has(carry.kind)){
+    ghost.style.display='none';
+    const gx=snap(wx(e.clientX-r.left)), gy=snap(wy(e.clientY-r.top));
+    if(!carryLive){ placeAt(carry.kind,gx,gy); carryLive=sel; carry.s0=JSON.parse(JSON.stringify(sel.obj)); carry.gx=gx; carry.gy=gy; carry.lastx=gx; carry.lasty=gy; }
+    else if(gx!==carry.lastx||gy!==carry.lasty){ moveObj(carryLive,carry.s0,gx-carry.gx,gy-carry.gy); syncBack(carryLive); carry.lastx=gx; carry.lasty=gy; showSel(); draw(); }
+  } else { if(carryLive){ delObj(carryLive); carryLive=null; sel=null; showSel(); persist(); draw(); } showGhost(e.clientX,e.clientY); }
+});
+addEventListener('pointerup',e=>{ if(!carry) return; ghost.style.display='none'; document.querySelectorAll('.tool.dragging').forEach(t=>t.classList.remove('dragging'));
    const r=cv.getBoundingClientRect();
-   if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){ placeAt(carry.kind, snap(wx(e.clientX-r.left)), snap(wy(e.clientY-r.top))); }
-   carry=null; } });
+   const over=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+   if(carryLive){ if(over){ persist(); } else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
+   else if(over){ placeAt(carry.kind, snap(wx(e.clientX-r.left)), snap(wy(e.clientY-r.top))); }
+   carry=null; carryLive=null; });
 
 function placeAt(kind,gx,gy){
  histPush();
@@ -806,26 +820,33 @@ function _showDrop(rows,idx){ const dl=_dl(); const host=document.getElementById
 function setupLayerDrag(){
   const host=document.getElementById('layers'); if(!host) return;
   _draggableRows().forEach(row=>{
+    row.style.touchAction='none';
     row.addEventListener('pointerdown',e=>{
       if(e.target.closest('.lb, .lck')) return;
-      const startX=e.clientX, startY=e.clientY, isMouse=e.pointerType==='mouse';
+      const isMouse=e.pointerType==='mouse';
+      const startX=e.clientX, startY=e.clientY, startScroll=host.scrollTop;
       const unit=_unitOfRow(row); if(!unit) return;
-      let active=false, timer=null;
-      const activate=()=>{ active=true; timer=null; if(navigator.vibrate){try{navigator.vibrate(15);}catch(_){ }} row.style.opacity='0.5'; try{row.setPointerCapture(e.pointerId);}catch(_){ }
+      let active=false, timer=null, moved=false;
+      try{ row.setPointerCapture(e.pointerId); }catch(_){ }
+      const activate=()=>{ active=true; timer=null; if(navigator.vibrate){try{navigator.vibrate(15);}catch(_){ }} row.classList.add('ldrag');
         _lyrScroll=setInterval(()=>{ if(_lyrVel){ host.scrollTop+=_lyrVel; const rows=_draggableRows(); _showDrop(rows,_dropIndex(rows,_lyrPy)); } },16); };
-      if(!isMouse) timer=setTimeout(activate,200);
-      const move=ev=>{
-        if(!active){ if(isMouse){ if(Math.abs(ev.clientX-startX)>6||Math.abs(ev.clientY-startY)>6) activate(); } else { if(Math.hypot(ev.clientX-startX,ev.clientY-startY)>9){ if(timer){clearTimeout(timer);timer=null;} cleanup(); } return; } }
-        if(active){ ev.preventDefault(); _lyrPy=ev.clientY; const hr=host.getBoundingClientRect(); _lyrVel= ev.clientY<hr.top+44?-8: ev.clientY>hr.bottom-44?8:0; const rows=_draggableRows(); _showDrop(rows,_dropIndex(rows,ev.clientY)); }
+      if(!isMouse) timer=setTimeout(activate,170);
+      const move=ev=>{ ev.preventDefault();
+        if(active){ _lyrPy=ev.clientY; const hr=host.getBoundingClientRect(); _lyrVel= ev.clientY<hr.top+44?-9: ev.clientY>hr.bottom-44?9:0; const rows=_draggableRows(); _showDrop(rows,_dropIndex(rows,ev.clientY)); return; }
+        const dist=Math.hypot(ev.clientX-startX,ev.clientY-startY);
+        if(isMouse){ if(dist>6) activate(); return; }
+        if(dist>8){ moved=true; if(timer){clearTimeout(timer);timer=null;} }
+        if(moved) host.scrollTop=startScroll-(ev.clientY-startY);
       };
       const up=ev=>{ if(timer){clearTimeout(timer);timer=null;}
         if(active){ const rows=_draggableRows(); const gap=_dropIndex(rows,_lyrPy||ev.clientY);
           const vis=orderedUnits().reverse(); const from=vis.findIndex(u=>_sameUnit(u,unit));
           if(from>=0){ const dragged=vis.splice(from,1)[0]; let to=gap; if(from<gap) to=gap-1; to=Math.max(0,Math.min(vis.length,to)); vis.splice(to,0,dragged); histPush(); _applyVisOrder(vis); persist(); }
-          layerDragSuppress=true; cleanup(); buildLayers(); draw(); }
-        else cleanup();
+          layerDragSuppress=true; cleanup(); buildLayers(); draw(); return; }
+        if(moved) layerDragSuppress=true;
+        cleanup();
       };
-      const cleanup=()=>{ if(_lyrScroll){clearInterval(_lyrScroll);_lyrScroll=null;} _lyrVel=0; if(_dropline)_dropline.style.display='none'; row.style.opacity=''; row.removeEventListener('pointermove',move); row.removeEventListener('pointerup',up); row.removeEventListener('pointercancel',up); };
+      const cleanup=()=>{ if(_lyrScroll){clearInterval(_lyrScroll);_lyrScroll=null;} _lyrVel=0; if(_dropline)_dropline.style.display='none'; row.classList.remove('ldrag'); row.removeEventListener('pointermove',move); row.removeEventListener('pointerup',up); row.removeEventListener('pointercancel',up); };
       row.addEventListener('pointermove',move,{passive:false}); row.addEventListener('pointerup',up); row.addEventListener('pointercancel',up);
     });
   });
