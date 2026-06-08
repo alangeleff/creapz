@@ -43,5 +43,78 @@
    "ts": 1780896453099
   }
  ],
- "worldMap": {}
+ "worldMap": {
+  "cem": {
+   "public": true,
+   "acts": [
+    null,
+    null,
+    null
+   ]
+  },
+  "witch": {
+   "public": false,
+   "acts": [
+    null,
+    null,
+    null
+   ]
+  },
+  "crypt": {
+   "public": false,
+   "acts": [
+    "stmq4rqfpr",
+    "stmq4rrlrf",
+    null
+   ]
+  },
+  "harbor": {
+   "public": false,
+   "acts": [
+    null,
+    null,
+    null
+   ]
+  },
+  "spire": {
+   "public": false,
+   "acts": [
+    null,
+    null,
+    null
+   ]
+  },
+  "plains": {
+   "public": false,
+   "acts": [
+    null,
+    null,
+    null
+   ]
+  },
+  "charnel": {
+   "public": false,
+   "acts": [
+    null,
+    null,
+    null
+   ]
+  },
+  "rift": {
+   "public": false,
+   "acts": [
+    null,
+    null,
+    null
+   ]
+  },
+  "castle": {
+   "public": false,
+   "acts": [
+    null,
+    null,
+    null
+   ]
+  }
+ }
 }
