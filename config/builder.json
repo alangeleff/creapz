@@ -34,6 +34,13 @@
    "theme": "crypt",
    "act": "I",
    "ts": 1780896398607
+  },
+  {
+   "id": "stmq4rrlrf",
+   "name": "Crypt Depths II",
+   "theme": "crypt",
+   "act": "II",
+   "ts": 1780896453099
   }
  ],
  "worldMap": {}
