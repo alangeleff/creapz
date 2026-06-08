@@ -30,6 +30,14 @@
    "params": {
     "dir": "up"
    }
+  },
+  {
+   "id": "cmq5a4qur",
+   "name": "Ethereal Plains - Backdrop",
+   "file": "assets/custom/cmq5a4qur.jpg",
+   "kind": "bg",
+   "cat": "Background",
+   "v": 1780927299315
   }
  ],
  "categories": [
@@ -82,6 +90,11 @@
    "id": "Decor",
    "name": "Decor",
    "parent": null
+  },
+  {
+   "id": "catmq5a31w3",
+   "name": "Bones",
+   "parent": "Decor"
   }
  ],
  "bench": [
@@ -176,5 +189,26 @@
  },
  "hidden": [
   "fg_cryptbg"
- ]
+ ],
+ "itemCat": {
+  "tex_bone16": "catmq5a31w3",
+  "tex_bone15": "catmq5a31w3",
+  "tex_bone14": "catmq5a31w3",
+  "tex_bone13": "catmq5a31w3",
+  "tex_bone12": "catmq5a31w3",
+  "tex_bone11": "catmq5a31w3",
+  "tex_bone10": "catmq5a31w3",
+  "tex_bone09": "catmq5a31w3",
+  "tex_bone08": "catmq5a31w3",
+  "tex_bone07": "catmq5a31w3",
+  "tex_bone06": "catmq5a31w3",
+  "tex_bone05": "catmq5a31w3",
+  "tex_bone04": "catmq5a31w3",
+  "tex_bone03": "catmq5a31w3",
+  "tex_bone02": "catmq5a31w3",
+  "tex_bone01": "catmq5a31w3",
+  "tex_skull1": "catmq5a31w3",
+  "tex_cmq4r9k0a": "catmq5a31w3",
+  "tex_cmq4robgv": "catmq5a31w3"
+ }
 }
