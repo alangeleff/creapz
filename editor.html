@@ -588,7 +588,7 @@ function handles(s){
    return [{id:'left',x:o.x0,y:my},{id:'right',x:o.x1,y:my},{id:'top',x:cx,y:o.gy},{id:'depth',x:cx,y:o.gy+dep}]; }
  if(s.type==='plat'){ const o=s.obj, x=o.x??o.x0; const hs=[{id:'pl',x:x,y:o.y},{id:'pr',x:x+o.w,y:o.y}];
    if(o.t==='m'){ const x0=o.x0??x, r=o.range||0; hs.push({id:'mstart',x:x0,y:o.y-26},{id:'mend',x:x0+r,y:o.y-26}); } return hs; }
- if(s.type==='tex'){ const o=s.obj; if(DECOR_IMG[o.t]&&DECOR_IMG[o.t].naturalWidth){ const dh=o.w*DECOR_IMG[o.t].naturalHeight/DECOR_IMG[o.t].naturalWidth; const px=o.x+o.w/2,py=o.y,rr=dh+34/zoom,rot=o.rot||0; return [{id:'txl',x:o.x,y:o.y-dh/2},{id:'txr',x:o.x+o.w,y:o.y-dh/2},{id:'rot',x:px+Math.sin(rot)*rr,y:py-Math.cos(rot)*rr}]; } const dh=CAVECEIL_IMG.naturalWidth?o.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth:60; return [{id:'txl',x:o.x,y:o.y+dh/2},{id:'txr',x:o.x+o.w,y:o.y+dh/2}]; }
+ if(s.type==='tex'){ const o=s.obj; if(DECOR_IMG[o.t]&&DECOR_IMG[o.t].naturalWidth){ const dh=o.w*DECOR_IMG[o.t].naturalHeight/DECOR_IMG[o.t].naturalWidth; const px=o.x+o.w/2,py=o.y,rr=dh+34/zoom,rot=o.rot||0; const hs=[{id:'txl',x:o.x,y:o.y-dh/2},{id:'txr',x:o.x+o.w,y:o.y-dh/2},{id:'rot',x:px+Math.sin(rot)*rr,y:py-Math.cos(rot)*rr}]; if(gameBehavior(o.t)){ const gm=o.geom||{x:0,y:0,w:1,h:1}, il=o.x, it=o.y-dh; hs.push({id:'hb_tl',x:il+gm.x*o.w,y:it+gm.y*dh},{id:'hb_br',x:il+(gm.x+gm.w)*o.w,y:it+(gm.y+gm.h)*dh}); } return hs; } const dh=CAVECEIL_IMG.naturalWidth?o.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth:60; return [{id:'txl',x:o.x,y:o.y+dh/2},{id:'txr',x:o.x+o.w,y:o.y+dh/2}]; }
  if(s.type==='haz'){ const o=s.obj; if(o.t==='spikeshot') return [{id:'trxy',x:o.tx,y:o.ty},{id:'trwh',x:o.tx+o.tw,y:o.ty+o.th}]; const my=o.y+((o.t==='tar'?(o.d||22):16))/2; const hd=[{id:'hx',x:o.x,y:my},{id:'hw',x:o.x+o.w,y:my}]; if(o.t==='tar') hd.push({id:'td',x:o.x+o.w/2,y:o.y+(o.d||22)}); return hd; }
  if(s.type==='enemy'||s.type==='bat'){ const yy=s.type==='bat'?s.obj.y:s.obj.gy; return [{id:'min',x:s.obj.min,y:yy},{id:'max',x:s.obj.max,y:yy}]; }
  return [];
@@ -733,6 +733,7 @@ function resizeH(h,start,gx,gy){
  else if(h.id==='min'){ o.min=Math.min(gx,o.x); }
  else if(h.id==='max'){ o.max=Math.max(gx,o.x); }
  else if(h.id==='rot'){ const px=o.x+o.w/2, py=o.y; let a=Math.atan2(gy-py,gx-px)+Math.PI/2; if(Math.abs(a)<0.08)a=0; o.rot=a; }
+ else if(h.id==='hb_tl'||h.id==='hb_br'){ const img=DECOR_IMG[o.t]; if(img&&img.naturalWidth){ const dh=o.w*img.naturalHeight/img.naturalWidth, il=o.x, it=o.y-dh; const gm=o.geom||{x:0,y:0,w:1,h:1}; let x1=il+gm.x*o.w, y1=it+gm.y*dh, x2=il+(gm.x+gm.w)*o.w, y2=it+(gm.y+gm.h)*dh; if(h.id==='hb_tl'){ x1=gx; y1=gy; } else { x2=gx; y2=gy; } x1=Math.max(il,Math.min(x1,x2-8)); y1=Math.max(it,Math.min(y1,y2-8)); x2=Math.min(il+o.w,Math.max(x2,x1+8)); y2=Math.min(it+dh,Math.max(y2,y1+8)); o.geom={x:(x1-il)/o.w,y:(y1-it)/dh,w:(x2-x1)/o.w,h:(y2-y1)/dh}; } }
  else if(h.id==='bgbr'){ o.w=Math.max(GRID,gx-o.x); o.h=Math.max(GRID,gy-o.y); }
  else if(h.id==='bgtl'){ const rx=o.x+o.w, ry=o.y+o.h; o.x=Math.min(gx,rx-GRID); o.y=Math.min(gy,ry-GRID); o.w=rx-o.x; o.h=ry-o.y; }
 }
@@ -806,7 +807,7 @@ function dTex(t){ const X=sx(t.x),Y=sy(t.y);
  else if(t.t==='rockpile'&&ROCKPILE_IMG.naturalWidth){ const dh=t.w*ROCKPILE_IMG.naturalHeight/ROCKPILE_IMG.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.drawImage(ROCKPILE_IMG, X, Y-dh*zoom, t.w*zoom, dh*zoom);
    if(sel&&sel.raw===t){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-dh*zoom-2,t.w*zoom+4,dh*zoom+4); } }
  else if(DECOR_IMG[t.t]&&DECOR_IMG[t.t].naturalWidth){ const img=DECOR_IMG[t.t]; const dh=t.w*img.naturalHeight/img.naturalWidth; const w2=t.w*zoom,h2=dh*zoom,px=X+w2/2,py=Y; ctx.imageSmoothingEnabled=true; ctx.save(); ctx.translate(px,py); if(t.rot)ctx.rotate(t.rot); ctx.scale(t.f===-1?-1:1,1); ctx.drawImage(img,-w2/2,-h2,w2,h2); ctx.restore();
-   if(sel&&sel.raw===t){ ctx.save(); ctx.translate(px,py); if(t.rot)ctx.rotate(t.rot); ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(-w2/2-2,-h2-2,w2+4,h2+4); ctx.restore(); } { const gb=gameBehavior(t.t); if(gb){ ctx.save(); ctx.translate(px,py); if(t.rot)ctx.rotate(t.rot); ctx.strokeStyle=behaviorColor(gb); ctx.lineWidth=1.5; ctx.setLineDash([5,4]); ctx.strokeRect(-w2/2,-h2,w2,h2); ctx.setLineDash([]); ctx.restore(); } } }
+   if(sel&&sel.raw===t){ ctx.save(); ctx.translate(px,py); if(t.rot)ctx.rotate(t.rot); ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(-w2/2-2,-h2-2,w2+4,h2+4); ctx.restore(); } { const gb=gameBehavior(t.t); if(gb){ const gm=t.geom||{x:0,y:0,w:1,h:1}; ctx.save(); ctx.translate(px,py); if(t.rot)ctx.rotate(t.rot); ctx.strokeStyle=behaviorColor(gb); ctx.lineWidth=1.5; ctx.setLineDash([5,4]); ctx.strokeRect(-w2/2+gm.x*w2,-h2+gm.y*h2,gm.w*w2,gm.h*h2); ctx.setLineDash([]); ctx.restore(); } } }
  else { ctx.fillStyle='#7a5a36'; ctx.fillRect(X,Y,t.w*zoom,30*zoom); } }
 function dObst(o){ const X=sx(o.x),Y=sy(o.gy||0);
  if(o.type==='chest'){ if(CHEST_E.naturalWidth){ const dw=96*zoom, dh=dw*CHEST_E.naturalHeight/CHEST_E.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.save(); if(o.f===-1){ctx.translate(X,0);ctx.scale(-1,1);ctx.translate(-X,0);} ctx.drawImage(CHEST_E,X-dw/2,Y-dh,dw,dh); ctx.restore(); if(sel&&sel.raw===o){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-dw/2-2,Y-dh-2,dw+4,dh+4); } }
@@ -1122,13 +1123,14 @@ function uploadAsset(){ const inp=document.createElement('input'); inp.type='fil
     fr.onload=()=>{ const im=new Image(); im.onload=async()=>{
       const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); const png=c.toDataURL('image/png');
       const name=(prompt('Asset name:', f.name.replace(/\.[^.]+$/,''))||'').trim(); if(!name) return;
-      const ty=((prompt('Type:\n  decor (no collision)\n  bg / fg (backdrop)\n  solid (block all sides)\n  platform (stand on top)\n  spikes (damage)','decor')||'decor').trim().toLowerCase());
+      const ty=((prompt('Type:\n  decor (no collision)\n  bg / fg (backdrop)\n  solid (block all sides)\n  platform (stand on top)\n  spikes (damage)\n  bounce (launch up)\n  slam (smashing pillar)','decor')||'decor').trim().toLowerCase());
       const GAMEB=['solid','platform','spikes','bounce','slam'];
       const k=(ty==='bg'||ty==='fg')?ty:(GAMEB.includes(ty)?'gameplay':'decor');
       const ar=im.naturalHeight/im.naturalWidth;
       const id='c'+Date.now().toString(36); const file='assets/custom/'+id+'.png';
       const a={id,name,file,kind:k,cat:(k==='bg'?'Background':k==='fg'?'Foreground':k==='gameplay'?'Gameplay':'Decor'),v:Date.now()};
-      if(k==='gameplay'){ a.behavior=ty; a.ar=ar; a.sw=behaviorColor(ty); }
+      if(k==='gameplay'){ a.behavior=ty; a.ar=ar; a.sw=behaviorColor(ty); a.params={};
+        if(ty==='slam'){ a.params.dir=(((prompt('Slam direction \u2014 up / down :','down')||'down').trim().toLowerCase())==='up')?'up':'down'; } }
       BCONFIG.customAssets=BCONFIG.customAssets||[]; BCONFIG.customAssets.push(a); registerCustomAsset(a, png); buildPalette(); draw();
       await commitFiles([{path:file,content:png.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}], 'builder: add asset '+name);
     }; im.src=fr.result; };

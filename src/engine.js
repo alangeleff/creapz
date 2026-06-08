@@ -1,4 +1,4 @@
-const ASSET_VER='1780899000';
+const ASSET_VER='1780901000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -69,7 +69,7 @@ fetch('./config/builder.json?cb='+ASSET_VER).then(r=>r.ok?r.json():null).then(c=
 }).catch(()=>{});
 const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+ASSET_VER;
 const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='+ASSET_VER; return i;})(), cavebg2:(()=>{const i=new Image(); i.src='./assets/cavebg2.png?v='+ASSET_VER; return i;})(), cryptbg:(()=>{const i=new Image(); i.src='./assets/cryptbg1.png?v='+ASSET_VER; return i;})(), rockwall:(()=>{const i=new Image(); i.src='./assets/rockwall1.png?v='+ASSET_VER; return i;})(), bonedirt:(()=>{const i=new Image(); i.src='./assets/bonedirt1.png?v='+ASSET_VER; return i;})()};
-let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[], GHURT=[], GSLAM=[];
+let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[], GHURT=[], GSLAM=[], GBOUNCE=[];
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
@@ -175,7 +175,7 @@ function loadStage(i){
   TSOLID = SEG.map(s => ({l:s[0], r:s[1], top:s[2], bot:s[2]+(s[3]||130)}));
   stoneCharge=0; powerActive=false; powerT=0; transformT=0;
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
-  TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z, f:t.f, rot:t.rot}));
+  TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z, f:t.f, rot:t.rot, geom:t.geom}));
   BG = (ST.bg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale, cover:b.cover}));
   FG = (ST.fg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale, cover:b.cover}));
   HAZ = (ST.hazards||[]).map(h=>{
@@ -184,12 +184,16 @@ function loadStage(i){
     return o;
   });
   // --- custom gameplay objects: a decor (tex) whose asset has a behavior gains collision ---
-  GHURT=[]; GSLAM=[];
+  GHURT=[]; GSLAM=[]; GBOUNCE=[];
   TEX.forEach(t=>{ const g=(typeof GAME_DEF!=='undefined')&&GAME_DEF[t.t]; if(!g) return;
-    const dh=t.w*(g.ar||1), l=t.x, r=t.x+t.w, top=t.y-dh, bot=t.y;
+    const dh=t.w*(g.ar||1), gm=t.geom||{x:0,y:0,w:1,h:1};
+    const l=t.x+gm.x*t.w, r=t.x+(gm.x+gm.w)*t.w, top=(t.y-dh)+gm.y*dh, bot=(t.y-dh)+(gm.y+gm.h)*dh;
     if(g.behavior==='solid'){ TSOLID.push({l,r,top,bot}); }
     else if(g.behavior==='platform'){ SOLID.push({l,r,top}); }
     else if(g.behavior==='spikes'){ GHURT.push({l,r,top,bot}); }
+    else if(g.behavior==='bounce'){ GBOUNCE.push({l,r,top, strength:(g.params&&g.params.bounce)||19}); }
+    else if(g.behavior==='slam'){ const pa=g.params||{}; const fl=t.x, fr=t.x+t.w, ft=t.y-dh, fb=t.y; const solid={l:fl,r:fr,top:ft,bot:fb}; TSOLID.push(solid);
+      GSLAM.push({tex:t, solid, restY:t.y, dh, dir:(pa.dir==='up'?-1:1), dist:(pa.dist||220), windup:(pa.windup||0.9), slamV:(pa.slamV||1500), retractV:(pa.retractV||220), dwell:(pa.dwell||0.5), trig:(pa.trig||120), dmg:(pa.dmg||1), phase:'idle', tmr:0, off:0}); }
   });
   STARS = Array.from({length:Math.ceil(WORLD/120)},()=>[Math.random()*WORLD,Math.random()*GROUND*0.8,Math.random()*1.6+0.6]);
   TREES = Array.from({length:Math.ceil(WORLD/180)},(_,k)=>({x:80+k*180+((k*53)%50), big:(k%4===0)}));
@@ -850,7 +854,18 @@ function reset(keep){
   hazReset();
 }
 function onReset(){ if (p && p.dead && !p.won) reset(true); else reset(); }
-function hazReset(){ rocks=[]; volleys=[]; loots=[]; for(const h of HAZ){ h.cd=0; if(h.cds) h.cds=h.cds.map(()=>0); } }
+function updateSlam(dt){
+  for(const s of GSLAM){ const t=s.tex;
+    if(s.phase==='idle'){ if(p.x>s.solid.l-s.trig && p.x<s.solid.r+s.trig) { s.phase='windup'; s.tmr=0; } }
+    else if(s.phase==='windup'){ s.tmr+=dt; const k=Math.min(1,s.tmr/s.windup); s.off=s.dir*14*k*k; if(s.tmr>=s.windup) s.phase='slam'; }
+    else if(s.phase==='slam'){ s.off+=s.dir*s.slamV*dt; if(Math.abs(s.off)>=s.dist){ s.off=s.dir*s.dist; s.phase='dwell'; s.tmr=0; playSfx('sfx_hurt',0.25); } }
+    else if(s.phase==='dwell'){ s.tmr+=dt; if(s.tmr>=s.dwell) s.phase='retract'; }
+    else if(s.phase==='retract'){ s.off-=s.dir*s.retractV*dt; if(s.dir>0?(s.off<=0):(s.off>=0)){ s.off=0; s.phase='idle'; } }
+    t.y=s.restY+s.off; s.solid.top=t.y-s.dh; s.solid.bot=t.y;
+    if(s.phase==='slam' && p.inv<=0 && p.x+26>s.solid.l && p.x-26<s.solid.r && p.y>s.solid.top && (p.y-PH)<s.solid.bot){ hurtPlayer((s.solid.l+s.solid.r)/2, s.dmg); }
+  }
+}
+function hazReset(){ rocks=[]; volleys=[]; loots=[]; for(const h of HAZ){ h.cd=0; if(h.cds) h.cds=h.cds.map(()=>0); } for(const s of GSLAM){ s.phase='idle'; s.off=0; s.tmr=0; if(s.tex&&s.solid){ s.tex.y=s.restY; s.solid.top=s.restY-s.dh; s.solid.bot=s.restY; } } }
 let zbits=[];
 const ZBIT_COLS=['#4a5d3a','#6b7d52','#8a8f96','#5d6168','#9aa4ab','#3a4030','#b9c0c6'];
 function zbitsBurst(z,n){
@@ -1039,6 +1054,7 @@ function update(dt){
       else if (q.ct>0){ q.ct+=dt; if (q.ct>0.55) q.falling=true; }
     }
   }
+  updateSlam(dt);
   // mover carries the player
   if (p.onGround && p.standPlat && p.standPlat.t==='m') p.x+=p.standPlat.dxf;
   // --- Aerial attack (Power Dive / Scythe Bash): melee button while midair ---
@@ -1104,10 +1120,13 @@ function update(dt){
   if (p.vy>=0){
     let cand=[]; for(const fy of segFloorsAt(p.x)) cand.push({t:fy,q:null});
     for (const s of SOLID){ if(p.x>=s.l&&p.x<=s.r) cand.push({t:s.top,q:null}); }
+    for (const b of GBOUNCE){ if(p.x>=b.l&&p.x<=b.r) cand.push({t:b.top,q:null,bounce:b}); }
     for (const q of plats){ if(q.gone) continue; if(p.x>=q.x-8&&p.x<=q.x+q.w+8) cand.push({t:q.y+q.dy,q:q}); }
     cand=cand.filter(c=>prevFeet<=c.t+1&&p.y>=c.t).sort((a,b)=>a.t-b.t);
-    if (cand.length){ p.y=cand[0].t; p.vy=0; p.onGround=true; p.standPlat=cand[0].q;
-      if (cand[0].q && cand[0].q.t==='c' && cand[0].q.ct===0) cand[0].q.ct=0.0001;
+    if (cand.length){ const c0=cand[0];
+      if (c0.bounce){ p.y=c0.t; p.vy=-c0.bounce.strength; p.onGround=false; p.standPlat=null; playSfx('sfx_jump',0.7); }
+      else { p.y=c0.t; p.vy=0; p.onGround=true; p.standPlat=c0.q;
+        if (c0.q && c0.q.t==='c' && c0.q.ct===0) c0.q.ct=0.0001; }
     } else { p.onGround=false; p.standPlat=null; }
   } else {
     p.onGround=false; p.standPlat=null;
