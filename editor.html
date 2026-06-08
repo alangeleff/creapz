@@ -663,7 +663,7 @@ function attachToolHandlers(){ pal.querySelectorAll('.tool').forEach(el=>{
    const up=ev=>{ if(timer){clearTimeout(timer);timer=null;}
      if(active){
        if(ORGANIZE){ const e2=document.elementFromPoint(ev.clientX,ev.clientY); const hd=e2&&e2.closest&&e2.closest('.pcat[data-cat]'); pal.querySelectorAll('.pcat').forEach(p=>p.classList.remove('drop'));
-         if(hd){ BCONFIG.itemCat=BCONFIG.itemCat||{}; BCONFIG.itemCat[kind]=hd.dataset.cat; const c=catModel().find(x=>x.id===hd.dataset.cat); toast('moved to '+(c?c.name:'category')); buildPalette(); } }
+         if(hd){ BCONFIG.itemCat=BCONFIG.itemCat||{}; BCONFIG.itemCat[kind]=hd.dataset.cat; const c=catModel().find(x=>x.id===hd.dataset.cat); toast('moved to '+(c?c.name:'category')); buildPalette(); } else { assetMovePicker(kind); } }
        else { const r=cv.getBoundingClientRect(); const over=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;
          if(carryLive){ if(over) persist(); else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
          else if(over){ placeAt(kind, snap(wx(ev.clientX-r.left)), snap(wy(ev.clientY-r.top))); } }
@@ -1154,21 +1154,31 @@ addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCas
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
  o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; return o; }
+function encodeAsset(im, isBg){ let scale=Math.min(1, 2400/Math.max(im.naturalWidth, im.naturalHeight));
+  for(let i=0;i<7;i++){ const cw=Math.max(1,Math.round(im.naturalWidth*scale)), ch=Math.max(1,Math.round(im.naturalHeight*scale));
+    const c=document.createElement('canvas'); c.width=cw; c.height=ch; const cx=c.getContext('2d'); cx.imageSmoothingQuality='high'; cx.drawImage(im,0,0,cw,ch);
+    const url = isBg ? c.toDataURL('image/jpeg',0.85) : c.toDataURL('image/png');
+    const bytes=Math.ceil((url.length-(url.indexOf(',')+1))*0.75);
+    if(bytes < 3.4*1024*1024 || cw<=480 || ch<=480) return {url, ext:(isBg?'.jpg':'.png'), bytes};
+    scale*=0.78; }
+  return null; }
 function uploadAsset(){ const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
   inp.onchange=()=>{ const f=inp.files[0]; if(!f) return; const fr=new FileReader();
     fr.onload=()=>{ const im=new Image(); im.onload=async()=>{
-      const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); const png=c.toDataURL('image/png');
       const name=(prompt('Asset name:', f.name.replace(/\.[^.]+$/,''))||'').trim(); if(!name) return;
       const ty=((prompt('Type:\n  decor (no collision)\n  bg / fg (backdrop)\n  solid (block all sides)\n  platform (stand on top)\n  spikes (damage)\n  bounce (launch up)\n  slam (smashing pillar)','decor')||'decor').trim().toLowerCase());
       const GAMEB=['solid','platform','spikes','bounce','slam'];
       const k=(ty==='bg'||ty==='fg')?ty:(GAMEB.includes(ty)?'gameplay':'decor');
       const ar=im.naturalHeight/im.naturalWidth;
-      const id='c'+Date.now().toString(36); const file='assets/custom/'+id+'.png';
+      const enc=encodeAsset(im, ty==='bg');
+      if(!enc){ toast('that image is too large even after shrinking \u2014 try a smaller file'); return; }
+      const id='c'+Date.now().toString(36); const file='assets/custom/'+id+enc.ext;
       const a={id,name,file,kind:k,cat:(k==='bg'?'Background':k==='fg'?'Foreground':k==='gameplay'?'Gameplay':'Decor'),v:Date.now()};
       if(k==='gameplay'){ a.behavior=ty; a.ar=ar; a.sw=behaviorColor(ty); a.params={};
         if(ty==='slam'){ a.params.dir=(((prompt('Slam direction \u2014 up / down :','down')||'down').trim().toLowerCase())==='up')?'up':'down'; } }
-      BCONFIG.customAssets=BCONFIG.customAssets||[]; BCONFIG.customAssets.push(a); registerCustomAsset(a, png); buildPalette(); draw();
-      await commitFiles([{path:file,content:png.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}], 'builder: add asset '+name);
+      BCONFIG.customAssets=BCONFIG.customAssets||[]; BCONFIG.customAssets.push(a); registerCustomAsset(a, enc.url); buildPalette(); draw();
+      const r=await commitFiles([{path:file,content:enc.url.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}], 'builder: add asset '+name);
+      if(!r){ BCONFIG.customAssets=BCONFIG.customAssets.filter(x=>x.id!==id); buildPalette(); }
     }; im.src=fr.result; };
     fr.readAsDataURL(f); };
   inp.click(); }
