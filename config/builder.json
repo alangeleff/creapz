@@ -173,5 +173,8 @@
     null
    ]
   }
- }
+ },
+ "hidden": [
+  "fg_cryptbg"
+ ]
 }
