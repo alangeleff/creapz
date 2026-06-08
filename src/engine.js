@@ -1,4 +1,4 @@
-const ASSET_VER='1780920000';
+const ASSET_VER='1780921500';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -2225,7 +2225,7 @@ function drawGoal(){
   ctx.restore(); ctx.globalAlpha=1;
 }
 function renderCrushDeath(sx, gt){
-  const t=p.deadT, TP=1.42, STEPS=4, BACK=21, DOWN=28, dir=p.tossDir||-p.facing;
+  const t=p.deadT, TP=1.42, STEPS=4, BACK=32, DOWN=12, dir=p.tossDir||-p.facing;
   const hf=Math.min(SPR.chars[chosen].hurt.frames-1, Math.floor(t*FPS.hurt));
   const endX=sx + dir*BACK, endY=p.y + DOWN;
   if (t < TP){
