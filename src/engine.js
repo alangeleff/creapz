@@ -1,4 +1,4 @@
-const ASSET_VER='1780871894';
+const ASSET_VER='1780880681';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -156,7 +156,7 @@ function loadStage(i){
   TSOLID = SEG.map(s => ({l:s[0], r:s[1], top:s[2], bot:s[2]+(s[3]||130)}));
   stoneCharge=0; powerActive=false; powerT=0; transformT=0;
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
-  TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z, f:t.f}));
+  TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z, f:t.f, rot:t.rot}));
   BG = (ST.bg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale}));
   FG = (ST.fg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale}));
   HAZ = (ST.hazards||[]).map(h=>{
@@ -1381,7 +1381,7 @@ function drawRocks(){
 function drawOneTex(t){ const x0=t.x-camX; if(x0+t.w<-30||x0>W+30) return; ctx.imageSmoothingEnabled=true;
   if(t.t==='ceiling'){ if(CAVECEIL_IMG.complete && CAVECEIL_IMG.naturalWidth){ const dh=t.w*CAVECEIL_IMG.naturalHeight/CAVECEIL_IMG.naturalWidth; ctx.drawImage(CAVECEIL_IMG, x0, t.y, t.w, dh); } return; }
   if(t.t==='rockpile'){ if(ROCKPILE_IMG.complete && ROCKPILE_IMG.naturalWidth){ const dh=t.w*ROCKPILE_IMG.naturalHeight/ROCKPILE_IMG.naturalWidth; ctx.drawImage(ROCKPILE_IMG, x0, t.y-dh, t.w, dh); } return; }
-  if(DECOR_IMG[t.t]){ const img=DECOR_IMG[t.t]; if(img.complete&&img.naturalWidth){ const dh=t.w*img.naturalHeight/img.naturalWidth; if(t.f===-1){ ctx.save(); ctx.translate(x0+t.w,0); ctx.scale(-1,1); ctx.drawImage(img,0,t.y-dh,t.w,dh); ctx.restore(); } else ctx.drawImage(img, x0, t.y-dh, t.w, dh); } return; } }
+  if(DECOR_IMG[t.t]){ const img=DECOR_IMG[t.t]; if(img.complete&&img.naturalWidth){ const dh=t.w*img.naturalHeight/img.naturalWidth; const px=x0+t.w/2, py=t.y; ctx.save(); ctx.translate(px,py); if(t.rot) ctx.rotate(t.rot); ctx.scale(t.f===-1?-1:1,1); ctx.drawImage(img,-t.w/2,-dh,t.w,dh); ctx.restore(); } return; } }
 // shared z layering for the visual prop types (default keeps legacy order)
 const ZBASE={terrace:0,tex:50000,plat:100000,haz:200000,obst:300000};
 function zEff(kind,z,idx){ return (z!==undefined&&z!==null)?z:(ZBASE[kind]+idx); }
