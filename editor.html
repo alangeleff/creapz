@@ -428,6 +428,9 @@ function showSel(){
    } else {
      const _cov=!!o.cover;
      html+='<div style="font-size:11px;color:#9b8cff;margin:4px 0;line-height:1.4">'+(_cov?'Single scene \u2014 one copy scaled across the level, scrolls with parallax. No repeating.':'Tiled \u2014 the image repeats across the level (good for seamless textures).')+'</div>';
+     const _pv2=(o.par!==undefined?o.par:0.2);
+     html+='<div class="row" style="margin-top:6px;align-items:center"><span>scroll speed</span><input class="parsl" type="range" min="0" max="1.5" step="0.05" value="'+_pv2+'" style="flex:1;margin:0 6px"><span class="parval" style="min-width:36px;text-align:right;color:#9bd0ff">'+_pv2+'\u00d7</span></div>';
+     html+='<div style="font-size:10px;color:#7a7298;margin:0 0 4px">0 = fixed to screen \u00b7 0.2 = slow far scroll \u00b7 1 = moves with the world</div>';
      html+='<button class="bgcover" style="width:100%;margin-top:2px;background:'+(_cov?'#242a16':'#1d2a3a')+';border:1px solid '+(_cov?'#c8fb50':'#7b5cff')+';color:'+(_cov?'#c8fb50':'#cdbbe6')+';border-radius:6px;padding:8px;cursor:pointer">Mode: '+(_cov?'Single scene':'Tile (repeat)')+' \u00b7 tap to toggle</button>';
      html+='<button class="bgfit" style="width:100%;margin-top:6px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Stretch \u2192 fit to view</button>';
    } }
