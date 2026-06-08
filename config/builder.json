@@ -24,9 +24,74 @@
    "kind": "decor",
    "cat": "Decor",
    "v": 1780896299791
+  },
+  {
+   "id": "cmq58wn73",
+   "name": "Crypt Pillar",
+   "file": "assets/custom/cmq58wn73.png",
+   "kind": "gameplay",
+   "cat": "Gameplay",
+   "v": 1780925241711,
+   "behavior": "slam",
+   "ar": 1.5,
+   "sw": "#ff8a3c",
+   "params": {
+    "dir": "up"
+   }
   }
  ],
- "categories": [],
+ "categories": [
+  {
+   "id": "Background",
+   "name": "Background",
+   "parent": null
+  },
+  {
+   "id": "Foreground",
+   "name": "Foreground",
+   "parent": null
+  },
+  {
+   "id": "Ground",
+   "name": "Ground",
+   "parent": null
+  },
+  {
+   "id": "Gameplay",
+   "name": "Gameplay",
+   "parent": null
+  },
+  {
+   "id": "Hazards",
+   "name": "Hazards",
+   "parent": null
+  },
+  {
+   "id": "Enemies",
+   "name": "Enemies",
+   "parent": null
+  },
+  {
+   "id": "Functions",
+   "name": "Functions",
+   "parent": null
+  },
+  {
+   "id": "Objects",
+   "name": "Objects",
+   "parent": null
+  },
+  {
+   "id": "Textures",
+   "name": "Textures",
+   "parent": null
+  },
+  {
+   "id": "Decor",
+   "name": "Decor",
+   "parent": null
+  }
+ ],
  "bench": [
   {
    "id": "stmq4rqfpr",
