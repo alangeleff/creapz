@@ -1,4 +1,4 @@
-const ASSET_VER='1780906000';
+const ASSET_VER='1780908000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -854,20 +854,25 @@ function reset(keep){
   hazReset();
 }
 function onReset(){ if (p && p.dead && !p.won) reset(true); else reset(); }
+function inTerrain(x,y){ for(const sg of TSOLID){ if(x>sg.l+1 && x<sg.r-1 && y>sg.top+1 && y<sg.bot-1) return true; } return false; }
+function floorNear(x,fy){ for(const t of segFloorsAt(x)){ if(t>=fy-4 && t<=fy+6) return true; } for(const sg of TSOLID){ if(x>sg.l&&x<sg.r && sg.top>=fy-4 && sg.top<=fy+6) return true; } return false; }
 function updateSlam(dt){
-  for(const s of GSLAM){ const t=s.tex; const prevTop=t.y+s.relTop;
+  for(const s of GSLAM){ const t=s.tex;
     if(s.phase==='idle'){ if(p.x>s.solid.l-s.trig && p.x<s.solid.r+s.trig) { s.phase='windup'; s.tmr=0; } }
     else if(s.phase==='windup'){ s.tmr+=dt; const k=Math.min(1,s.tmr/s.windup); s.off=s.dir*14*k*k; if(s.tmr>=s.windup) s.phase='slam'; }
     else if(s.phase==='slam'){ s.off+=s.dir*s.slamV*dt; if(Math.abs(s.off)>=s.dist){ s.off=s.dir*s.dist; s.phase='dwell'; s.tmr=0; playSfx('sfx_hurt',0.25); } }
     else if(s.phase==='dwell'){ s.tmr+=dt; if(s.tmr>=s.dwell) s.phase='retract'; }
     else if(s.phase==='retract'){ s.off-=s.dir*s.retractV*dt; if(s.dir>0?(s.off<=0):(s.off>=0)){ s.off=0; s.phase='idle'; } }
     t.y=s.restY+s.off; const top=t.y+s.relTop, bot=t.y+s.relBot; s.solid.top=top; s.solid.bot=bot;
-    const l=s.solid.l, r=s.solid.r; if(!(p.x+22>l && p.x-22<r)) continue;
-    // TOP = carrying platform: if the player was riding the old top, carry them to the new top (up or down)
-    const wasOnTop = Math.abs(p.y - prevTop) < 18 && p.vy > -3;
-    if(wasOnTop){ p.y=top; if(p.vy>0) p.vy=0; p.onGround=true; }
-    // CRUSH: torso caught inside a moving/extended pillar -> lethal smash
-    else if((s.phase==='slam'||s.phase==='dwell') && (p.y-PH) < bot-4 && p.y > top+4){ crushPlayer(); }
+    const l=s.solid.l, r=s.solid.r, head=p.y-PH;
+    if(!(p.x+PW/2>l && p.x-PW/2<r)) continue;
+    if(s.dir<0){ // UP-slam: rising TOP pushes the player up; if a ceiling blocks the push -> crush
+      if(top < p.y-2 && top > head){ const nh=top-PH; if(inTerrain(p.x,nh+2)||inTerrain(p.x-PW/2+3,nh+2)||inTerrain(p.x+PW/2-3,nh+2)){ crushPlayer(); } else { p.y=top; if(p.vy>0)p.vy=0; p.onGround=true; } }
+      else if(Math.abs(p.y-top)<8 && p.vy>=-1){ p.y=top; if(p.vy>0)p.vy=0; p.onGround=true; }
+    } else { // DOWN-slam: descending BOTTOM pushes the player down; if a floor blocks the push -> crush
+      if(bot > head+2 && bot < p.y){ const nf=bot+PH; if(floorNear(p.x,nf)||inTerrain(p.x,nf-2)){ crushPlayer(); } else { p.y=nf; if(p.vy<0)p.vy=0; } }
+      else if(Math.abs(p.y-top)<8 && p.vy>=-1){ p.y=top; if(p.vy>0)p.vy=0; p.onGround=true; }
+    }
   }
 }
 function hazReset(){ rocks=[]; volleys=[]; loots=[]; for(const h of HAZ){ h.cd=0; if(h.cds) h.cds=h.cds.map(()=>0); } for(const s of GSLAM){ s.phase='idle'; s.off=0; s.tmr=0; if(s.tex&&s.solid){ s.tex.y=s.restY; s.solid.top=s.restY+s.relTop; s.solid.bot=s.restY+s.relBot; } } }

@@ -650,6 +650,7 @@ let catDragSuppress=false;
 function paintCatDrop(y){ const hd=palCatAtY(y); pal.querySelectorAll('.pcat').forEach(p=>p.classList.toggle('catdrop', p===hd)); }
 function reorderCatBefore(dragId,targetId){ const cats=catModel(); if(dragId===targetId) return; const di=cats.findIndex(c=>c.id===dragId); if(di<0)return; const moved=cats.splice(di,1)[0]; let ti=cats.findIndex(c=>c.id===targetId); if(ti<0){ cats.push(moved); } else { cats.splice(ti,0,moved); } }
 function attachCatDrag(){ if(!ORGANIZE) return; pal.querySelectorAll('.pcat[data-cat]').forEach(hd=>{
+  hd.style.touchAction='none';
   hd.addEventListener('pointerdown',e=>{ if(e.target.closest&&e.target.closest('[data-org]')) return;
     const id=hd.dataset.cat, isMouse=e.pointerType==='mouse'; const sx0=e.clientX, sy0=e.clientY, startScroll=_palList?_palList.scrollTop:0;
     let active=false, timer=null, moved=false;
