@@ -1,4 +1,4 @@
-const ASSET_VER='1780914000';
+const ASSET_VER='1780916000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1454,7 +1454,7 @@ function drawWorldProps(){
   props.sort((a,b)=>a.z-b.z);
   for(const p of props) p.f();
 }
-function crushPlayer(dir){ if(p.dead||p.won||p.winning) return; gotHit=true; p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; p.vx=0; p.vy=0; p.deathHurt=true; p.tossDir=dir||-p.facing; playSfx('sfx_hurt'); playSfx('sfx_pdie'); }
+function crushPlayer(dir){ if(p.dead||p.won||p.winning) return; gotHit=true; p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; p.vx=0; p.vy=0; p.deathHurt=true; p.tossDir=-p.facing; playSfx('sfx_hurt'); playSfx('sfx_pdie'); }
 function hurtPlayer(srcX,dmg){
   if (p.diveT>0||p.diveRec>0) return;   // Power Dive i-frames (until normal stance resumes)
   gotHit=true; playSfx('sfx_hurt');
@@ -2225,14 +2225,14 @@ function drawGoal(){
   ctx.restore(); ctx.globalAlpha=1;
 }
 function renderCrushDeath(sx, gt){
-  const t=p.deadT, TP=0.72, STEPS=5, BACK=300, dir=p.tossDir||-p.facing;
+  const t=p.deadT, TP=0.95, STEPS=4, BACK=84, dir=p.tossDir||-p.facing;
   const hf=Math.min(SPR.chars[chosen].hurt.frames-1, Math.floor(t*FPS.hurt));
   const endX=sx + dir*BACK, endY=p.y;
   if (t < TP){
     const prog=Math.min(1, t/TP);
-    const step=Math.min(STEPS, Math.floor(prog*(STEPS+1)));       // discrete recoil steps
+    const step=Math.min(STEPS, Math.floor(prog*(STEPS+1)));       // discrete recoil steps (slower hold each)
     const ease=step/STEPS;
-    const tx=sx + dir*BACK*ease*ease, ty=p.y - Math.sin(ease*Math.PI)*36;  // accelerating fall-back, each step farther, gentle topple arc
+    const tx=sx + dir*BACK*Math.pow(ease,1.2), ty=p.y - Math.sin(ease*Math.PI)*18;  // slight fall-back per step, gentle arc
     const gi=0.12 + 0.55*prog;                                    // glitch slowly increases
     const redOn=(Math.floor(gt*22)%2===0);                        // flickering hurt-red hue
     ctx.globalAlpha = redOn?1:0.74;
