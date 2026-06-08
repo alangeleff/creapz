@@ -70,11 +70,6 @@
    "parent": null
   },
   {
-   "id": "Gameplay",
-   "name": "Gameplay",
-   "parent": null
-  },
-  {
    "id": "Enemies",
    "name": "Enemies",
    "parent": null
@@ -97,6 +92,11 @@
   {
    "id": "Textures",
    "name": "Textures",
+   "parent": null
+  },
+  {
+   "id": "Gameplay",
+   "name": "Gameplay",
    "parent": null
   },
   {
