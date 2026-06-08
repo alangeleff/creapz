@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
     const { secret: given, message, files } = body;
     if (given !== secret) return res.status(403).json({ error: 'Bad commit password' });
     if (!Array.isArray(files) || !files.length) return res.status(400).json({ error: 'files[] required ({path, content, encoding})' });
-    for (const f of files) if (!f || !f.path || f.content === undefined) return res.status(400).json({ error: 'each file needs {path, content}' });
+    for (const f of files) if (!f || !f.path || (f.content === undefined && !f.delete)) return res.status(400).json({ error: 'each file needs {path, content} or {path, delete:true}' });
 
     const gh = (path, opts = {}) => fetch('https://api.github.com' + path, {
       method: opts.method || 'GET',
@@ -43,6 +43,7 @@ module.exports = async (req, res) => {
     // 2) blobs for each file
     const treeItems = [];
     for (const f of files) {
+      if (f.delete) { treeItems.push({ path: f.path.replace(/^\/+/, ''), mode: '100644', type: 'blob', sha: null }); continue; }
       const enc = (f.encoding === 'base64') ? 'base64' : 'utf-8';
       const blob = await j(await gh(`/repos/${OWNER}/${REPO}/git/blobs`, { method: 'POST', body: { content: f.content, encoding: enc } }));
       treeItems.push({ path: f.path.replace(/^\/+/, ''), mode: '100644', type: 'blob', sha: blob.sha });

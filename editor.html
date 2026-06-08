@@ -21,6 +21,7 @@
  .pcat .corg{flex:none;background:none;border:none;color:#9b8cff;font-size:13px;cursor:pointer;padding:0 2px;line-height:1}
  .tool.sub{margin-left:14px}
  .pcat.drop{background:#16301d;outline:1px solid #3fbf6a;border-radius:6px}
+ .delasset{margin-left:auto;background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a;border-radius:5px;font-size:11px;line-height:1;padding:3px 7px;cursor:pointer;flex:none}
  .orgbar{display:flex;gap:6px;margin:6px 4px 2px}
  .orgbar button{flex:1;font-size:11px;padding:7px;border-radius:7px;border:1px solid var(--line);background:#1d1838;color:#cdbbe6;cursor:pointer}
  .orgbar button.on{background:#16301d;border-color:#3fbf6a;color:#a8f0c0}
@@ -410,7 +411,7 @@ async function commitFiles(files, message){ const secret=getCommitSecret(); if(!
   }catch(e){ toast('commit error: '+e.message); return null; } }
 async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb='+Date.now()); if(r.ok){ const c=await r.json(); BCONFIG=Object.assign(BCONFIG, c); (BCONFIG.customAssets||[]).forEach(a=>registerCustomAsset(a)); if(typeof buildPalette==='function') buildPalette(); if(typeof refreshMusicOptions==='function') refreshMusicOptions(); } }catch(e){} }
 loadBConfig();
-function customStamps(){ return (BCONFIG.customAssets||[]).map(a=>({k:(a.kind==='bg'?'bg_':a.kind==='fg'?'fg_':'tex_')+a.id, label:a.name, sw:a.sw||'#9a8a6a', cat:a.cat||(a.kind==='bg'?'Background':a.kind==='fg'?'Foreground':'Decor')})); }
+function customStamps(){ return (BCONFIG.customAssets||[]).map(a=>({k:(a.kind==='bg'?'bg_':a.kind==='fg'?'fg_':'tex_')+a.id, label:a.name, sw:a.sw||'#9a8a6a', cat:a.cat||(a.kind==='bg'?'Background':a.kind==='fg'?'Foreground':'Decor'), id:a.id, custom:true})); }
 function registerCustomAsset(a, src){ const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src=src||('./'+a.file+'?v='+(a.v||1)); if(a.kind==='bg'||a.kind==='fg'){ BGE_IMG[a.id]=im; BG_LABEL[a.id]=a.name; } else { DECOR_IMG[a.id]=im; TEX_LABEL[a.id]=a.name; TEX_COLS[a.id]=a.sw||'#9a8a6a'; } }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 let ORGANIZE=false;
@@ -438,6 +439,16 @@ function attachOrganizeHandlers(){
   const add=document.getElementById('orgAdd'); if(add) add.onclick=addCategory;
   const sv=document.getElementById('orgSave'); if(sv) sv.onclick=saveCategories;
   pal.querySelectorAll('.corg[data-org="menu"]').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); catMenu(b.closest('.pcat').dataset.cat); });
+  pal.querySelectorAll('.delasset').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); ev.preventDefault(); delAsset(b.dataset.del); });
+}
+function delAsset(id){ const a=(BCONFIG.customAssets||[]).find(x=>x.id===id); if(!a) return;
+  if(!confirm('Delete "'+a.name+'" from the palette and repo?\n\nNew placements won\u2019t be possible, and any spots where it\u2019s already placed in a stage will go blank. The image file is removed from the repo too.')) return;
+  BCONFIG.customAssets=(BCONFIG.customAssets||[]).filter(x=>x.id!==id);
+  const k=(a.kind==='bg'?'bg_':a.kind==='fg'?'fg_':'tex_')+id; if(BCONFIG.itemCat) delete BCONFIG.itemCat[k];
+  buildPalette();
+  const files=[{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}];
+  if(a.file) files.unshift({path:a.file, delete:true});
+  commitFiles(files,'builder: delete asset '+a.name).then(r=>{ if(r) toast('deleted "'+a.name+'"'); });
 }
 function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'+orgbarHTML(); const all=STAMPS.concat(customStamps());
   for(const cat of catOrder()){ const items=all.filter(s=>effCat(s)===cat.id);
@@ -445,7 +456,7 @@ function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'+or
     const collapsed=!!CAT_COLLAPSE[cat.id], sub=cat.parent?' sub':'';
     palHtml+='<div class="pcat'+sub+'" data-cat="'+cat.id+'"><span class="cchev">'+(collapsed?'\u25b8':'\u25be')+'</span><span class="pcname">'+esc(cat.name)+'</span>'+(ORGANIZE?'<button class="corg" data-org="menu" title="rename / subgroup / delete">\u22ef</button>':'')+'<span class="ccount">'+items.length+'</span></div>';
     if(collapsed) continue;
-    for(const t of items) palHtml+=`<div class="tool${sub}" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${esc(t.label)}</div>`; }
+    for(const t of items) palHtml+=`<div class="tool${sub}" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${esc(t.label)}${(ORGANIZE&&t.custom)?'<button class="delasset" data-del="'+t.id+'" title="delete this asset">\u2715</button>':''}</div>`; }
   palHtml+='<h3>Modes</h3><div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div><div class="modebtn" id="mBulk"><span class="sw" style="background:#3f9bdf"></span>Bulk Replace (tap an asset)</div>';
   pal.innerHTML=palHtml;
   pal.querySelectorAll('.pcat[data-cat]').forEach(hd=>hd.addEventListener('click',ev=>{ if(ev.target.closest('[data-org]')) return; const id=hd.dataset.cat; CAT_COLLAPSE[id]=!CAT_COLLAPSE[id]; saveCatCollapse(); buildPalette(); }));
@@ -612,6 +623,7 @@ function _liveHandle(kind, clientX, clientY){ const r=cv.getBoundingClientRect()
 function attachToolHandlers(){ pal.querySelectorAll('.tool').forEach(el=>{
  el.style.touchAction='none';
  el.addEventListener('pointerdown',e=>{
+   if(e.target&&e.target.closest&&e.target.closest('.delasset')) return;
    const kind=el.dataset.k, isMouse=e.pointerType==='mouse';
    const sx0=e.clientX, sy0=e.clientY, startScroll=_palList?_palList.scrollTop:0;
    let active=false, timer=null, moved=false;
