@@ -120,6 +120,7 @@
    <button class="btn" id="bRedo" title="Redo (Ctrl+Y)">↷</button>
    <button class="btn" id="bRuler" title="Measure / jump-reach ruler">📏</button>
    <button class="btn" id="bSnap" title="Magnetic edge snapping">🧲</button>
+   <button class="btn" id="bCommit" title="Commit builder data to the repo">☁ Commit</button>
    <button class="btn go" id="bPlay">▶ Play</button>
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
@@ -361,6 +362,17 @@ function cvxy(e){ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left
 
 // ---- palette (drag sources) ----
 const pal=document.getElementById('palList');
+const COMMIT_API='https://creapz.vercel.app/api/commit';
+let BCONFIG={version:1,customAssets:[],categories:[],bench:[],worldMap:{}};
+function getCommitSecret(force){ let s=localStorage.getItem('creapz_commit_secret'); if(force||!s){ s=prompt('Builder commit password (your Vercel COMMIT_SECRET):',''); if(s) localStorage.setItem('creapz_commit_secret',s); } return s; }
+async function commitFiles(files, message){ const secret=getCommitSecret(); if(!secret){ toast('commit cancelled'); return null; }
+  toast('committing\u2026');
+  try{ const r=await fetch(COMMIT_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret,message,files})}); const j=await r.json().catch(()=>({}));
+    if(!r.ok){ if(r.status===403){ localStorage.removeItem('creapz_commit_secret'); toast('wrong password \u2014 try again'); } else toast('commit failed: '+(j.error||r.status)); return null; }
+    toast('committed \u2713'); return j;
+  }catch(e){ toast('commit error: '+e.message); return null; } }
+async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb='+Date.now()); if(r.ok){ BCONFIG=Object.assign(BCONFIG, await r.json()); } }catch(e){} }
+loadBConfig();
 let palHtml='<h3>Drag a piece onto the map</h3>';
 for(const cat of CATS){ palHtml+='<div class="cat">'+cat+'</div>';
   for(const t of STAMPS.filter(s=>s.cat===cat)) palHtml+=`<div class="tool" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${t.label}</div>`;
@@ -1020,6 +1032,7 @@ addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCas
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
  o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; return o; }
+document.getElementById('bCommit').onclick=async()=>{ const r=await commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: update config'); };
 document.getElementById('bSnap').onclick=()=>{ snapOn=!snapOn; document.getElementById('bSnap').classList.toggle('go',snapOn); toast(snapOn?'Snapping ON':'Snapping OFF'); };
 document.getElementById('bRuler').onclick=()=>{ if(ruler){ ruler=null; } else { const cx=wx(CW/2),cy=wy(CH/2); ruler={x1:snap(cx-150),y1:snap(cy),x2:snap(cx+150),y2:snap(cy)}; } document.getElementById('bRuler').classList.toggle('go',!!ruler); draw(); };
 document.getElementById('bExport').onclick=()=>{ const idx=+v('fIdx')||2; const o=cleanLevel();
