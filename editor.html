@@ -121,6 +121,7 @@
    <button class="btn" id="bRuler" title="Measure / jump-reach ruler">📏</button>
    <button class="btn" id="bSnap" title="Magnetic edge snapping">🧲</button>
    <button class="btn" id="bCommit" title="Commit builder data to the repo">☁ Commit</button>
+   <button class="btn" id="bUpload" title="Upload a custom asset">⬆ Upload</button>
    <button class="btn go" id="bPlay">▶ Play</button>
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
@@ -371,16 +372,19 @@ async function commitFiles(files, message){ const secret=getCommitSecret(); if(!
     if(!r.ok){ if(r.status===403){ localStorage.removeItem('creapz_commit_secret'); toast('wrong password \u2014 try again'); } else toast('commit failed: '+(j.error||r.status)); return null; }
     toast('committed \u2713'); return j;
   }catch(e){ toast('commit error: '+e.message); return null; } }
-async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb='+Date.now()); if(r.ok){ BCONFIG=Object.assign(BCONFIG, await r.json()); } }catch(e){} }
+async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb='+Date.now()); if(r.ok){ const c=await r.json(); BCONFIG=Object.assign(BCONFIG, c); (BCONFIG.customAssets||[]).forEach(a=>registerCustomAsset(a)); if(typeof buildPalette==='function') buildPalette(); } }catch(e){} }
 loadBConfig();
-let palHtml='<h3>Drag a piece onto the map</h3>';
-for(const cat of CATS){ palHtml+='<div class="cat">'+cat+'</div>';
-  for(const t of STAMPS.filter(s=>s.cat===cat)) palHtml+=`<div class="tool" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${t.label}</div>`;
+function customStamps(){ return (BCONFIG.customAssets||[]).map(a=>({k:(a.kind==='bg'?'bg_':a.kind==='fg'?'fg_':'tex_')+a.id, label:a.name, sw:a.sw||'#9a8a6a', cat:a.cat||(a.kind==='bg'?'Background':a.kind==='fg'?'Foreground':'Decor')})); }
+function registerCustomAsset(a, src){ const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src=src||('./'+a.file+'?v='+(a.v||1)); if(a.kind==='bg'||a.kind==='fg'){ BGE_IMG[a.id]=im; BG_LABEL[a.id]=a.name; } else { DECOR_IMG[a.id]=im; TEX_LABEL[a.id]=a.name; TEX_COLS[a.id]=a.sw||'#9a8a6a'; } }
+function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'; const all=STAMPS.concat(customStamps());
+  for(const cat of CATS){ const items=all.filter(s=>s.cat===cat); if(!items.length) continue; palHtml+='<div class="cat">'+cat+'</div>';
+    for(const t of items) palHtml+=`<div class="tool" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${t.label}</div>`; }
+  palHtml+='<h3>Modes</h3><div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div><div class="modebtn" id="mBulk"><span class="sw" style="background:#3f9bdf"></span>Bulk Replace (tap an asset)</div>';
+  pal.innerHTML=palHtml;
+  document.getElementById('mErase').onclick=function(){ eraseMode=!eraseMode; this.classList.toggle('on',eraseMode); if(eraseMode){bulkArm=false; const mb=document.getElementById('mBulk'); if(mb)mb.classList.remove('on');} sel=null; showSel(); };
+  document.getElementById('mBulk').onclick=function(){ bulkArm=!bulkArm; this.classList.toggle('on',bulkArm); if(bulkArm){eraseMode=false; document.getElementById('mErase').classList.remove('on');} sel=null; showSel(); toast(bulkArm?'Bulk Replace: tap any asset to select all like it':''); };
 }
-palHtml+='<h3>Modes</h3><div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div><div class="modebtn" id="mBulk"><span class="sw" style="background:#3f9bdf"></span>Bulk Replace (tap an asset)</div>';
-pal.innerHTML=palHtml;
-document.getElementById('mErase').onclick=function(){ eraseMode=!eraseMode; this.classList.toggle('on',eraseMode); if(eraseMode){bulkArm=false; const mb=document.getElementById('mBulk'); if(mb)mb.classList.remove('on');} sel=null; showSel(); };
-document.getElementById('mBulk').onclick=function(){ bulkArm=!bulkArm; this.classList.toggle('on',bulkArm); if(bulkArm){eraseMode=false; document.getElementById('mErase').classList.remove('on');} sel=null; showSel(); toast(bulkArm?'Bulk Replace: tap any asset to select all like it':''); };
+buildPaletteHTML();
 
 // ---- selection / edit panel ----
 let sel=null;
@@ -530,7 +534,7 @@ function _liveHandle(kind, clientX, clientY){ const r=cv.getBoundingClientRect()
     if(!carryLive){ placeAt(kind,gx,gy); carryLive=sel; carry={kind,s0:JSON.parse(JSON.stringify(sel.obj)),gx,gy,lastx:gx,lasty:gy}; }
     else if(gx!==carry.lastx||gy!==carry.lasty){ moveObj(carryLive,carry.s0,gx-carry.gx,gy-carry.gy); syncBack(carryLive); carry.lastx=gx; carry.lasty=gy; showSel(); draw(); } }
   else { if(carryLive){ delObj(carryLive); carryLive=null; sel=null; showSel(); persist(); draw(); } showGhost(clientX,clientY); } }
-pal.querySelectorAll('.tool').forEach(el=>{
+function attachToolHandlers(){ pal.querySelectorAll('.tool').forEach(el=>{
  el.style.touchAction='none';
  el.addEventListener('pointerdown',e=>{
    const kind=el.dataset.k, isMouse=e.pointerType==='mouse';
@@ -555,7 +559,9 @@ pal.querySelectorAll('.tool').forEach(el=>{
    };
    el.addEventListener('pointermove',move,{passive:false}); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
  });
-});
+}); }
+function buildPalette(){ buildPaletteHTML(); attachToolHandlers(); }
+attachToolHandlers();
 const ghost=document.getElementById('ghost');
 function showGhost(cx,cy){ if(!carry)return; ghost.style.display='block'; ghost.textContent=LABELOF[carry.kind]; ghost.style.left=cx+'px'; ghost.style.top=cy+'px'; }
 const NO_LIVE=new Set(['goal','soul','soul5','soul25','soul50','soul100']);  // assets that don't get a live preview
@@ -1032,6 +1038,21 @@ addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCas
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
  o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; return o; }
+function uploadAsset(){ const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ const f=inp.files[0]; if(!f) return; const fr=new FileReader();
+    fr.onload=()=>{ const im=new Image(); im.onload=async()=>{
+      const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); const png=c.toDataURL('image/png');
+      const name=(prompt('Asset name:', f.name.replace(/\.[^.]+$/,''))||'').trim(); if(!name) return;
+      const kind=((prompt('Type — decor / bg / fg :','decor')||'decor').trim().toLowerCase());
+      const k=(kind==='bg'||kind==='fg')?kind:'decor';
+      const id='c'+Date.now().toString(36); const file='assets/custom/'+id+'.png';
+      const a={id,name,file,kind:k,cat:(k==='bg'?'Background':k==='fg'?'Foreground':'Decor'),v:Date.now()};
+      BCONFIG.customAssets=BCONFIG.customAssets||[]; BCONFIG.customAssets.push(a); registerCustomAsset(a, png); buildPalette(); draw();
+      await commitFiles([{path:file,content:png.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}], 'builder: add asset '+name);
+    }; im.src=fr.result; };
+    fr.readAsDataURL(f); };
+  inp.click(); }
+document.getElementById('bUpload').onclick=uploadAsset;
 document.getElementById('bCommit').onclick=async()=>{ const r=await commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: update config'); };
 document.getElementById('bSnap').onclick=()=>{ snapOn=!snapOn; document.getElementById('bSnap').classList.toggle('go',snapOn); toast(snapOn?'Snapping ON':'Snapping OFF'); };
 document.getElementById('bRuler').onclick=()=>{ if(ruler){ ruler=null; } else { const cx=wx(CW/2),cy=wy(CH/2); ruler={x1:snap(cx-150),y1:snap(cy),x2:snap(cx+150),y2:snap(cy)}; } document.getElementById('bRuler').classList.toggle('go',!!ruler); draw(); };
