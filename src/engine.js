@@ -1,4 +1,4 @@
-const ASSET_VER='1780908000';
+const ASSET_VER='1780910000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1162,7 +1162,7 @@ function update(dt){
     gotHit=true; playSfx('sfx_hurt');
     p.hp-=1; p.x=p.spawn; p.y=(p.spawnY!==undefined?p.spawnY:GROUND); p.vy=0; p.vx=0; p.onGround=true; p.standPlat=null;
     p.inv=1.2; p.flash=0.35; p.hurtT=0;
-    if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; playSfx('sfx_pdie'); }
+    if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.deathHurt=false; playSfx('sfx_pdie'); }
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
     camY=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
   }
@@ -1454,7 +1454,7 @@ function drawWorldProps(){
   props.sort((a,b)=>a.z-b.z);
   for(const p of props) p.f();
 }
-function crushPlayer(){ if(p.dead||p.won||p.winning) return; gotHit=true; p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; p.vx=0; p.vy=0; playSfx('sfx_pdie'); }
+function crushPlayer(){ if(p.dead||p.won||p.winning) return; gotHit=true; p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; p.vx=0; p.vy=0; p.deathHurt=true; playSfx('sfx_hurt'); playSfx('sfx_pdie'); }
 function hurtPlayer(srcX,dmg){
   if (p.diveT>0||p.diveRec>0) return;   // Power Dive i-frames (until normal stance resumes)
   gotHit=true; playSfx('sfx_hurt');
@@ -1462,7 +1462,7 @@ function hurtPlayer(srcX,dmg){
   p.hurtT=0.45;  // single retro hurt still + flicker, fixed hit-stun
   const away=(p.x<srcX)?-1:1; p.vx=away*2; p.x+=away*8;
   if(p.onGround){ p.vy=-7; p.onGround=false; }
-  if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; playSfx('sfx_pdie'); }
+  if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; p.deathHurt=false; playSfx('sfx_pdie'); }
 }
 function curFrame(){
   const a=SPR.chars[chosen][p.state], fps=pfps(p.state);
@@ -2276,6 +2276,8 @@ function drawPlayerLayer(){
     return;
   }
   const t=p.deadT, pcx=sx - p.facing*26, pcy=p.y-66;
+  const dAnim=p.deathHurt?'hurt':'kneel';
+  const dFrame=p.deathHurt?Math.min(SPR.chars[chosen].hurt.frames-1, Math.floor(p.deadT*FPS.hurt)):curFrame();
   let ps=0;
   if (t>0.45 && t<=1.0) ps=80*(t-0.45)/0.55;
   else if (t>1.0 && t<=1.7) ps=80;
@@ -2286,13 +2288,13 @@ function drawPlayerLayer(){
   const fl=(Math.floor(gt*frq)%4===0)?Math.max(0.25,1-0.9*g2):(Math.random()<0.12*g2?0.55:1);
   if (t<=1.0){
     ctx.globalAlpha=fl;
-    drawGlitchAnim(chosen,'kneel',curFrame(), sx, p.y, p.facing, 1, gi);
+    drawGlitchAnim(chosen,dAnim,dFrame, sx, p.y, p.facing, 1, gi);
     ctx.globalAlpha=1;
   } else if (t<=1.7){
     const k=(t-1.0)/0.7, s=Math.max(0.05,1-k);
     const cxp=sx+(pcx-sx)*k, fy=p.y+((pcy+58*s)-p.y)*k;
     ctx.globalAlpha=Math.max(0,1-k*0.9)*fl;
-    drawGlitchAnim(chosen,'kneel',curFrame(), cxp, fy, p.facing, s, gi);
+    drawGlitchAnim(chosen,dAnim,dFrame, cxp, fy, p.facing, s, gi);
     ctx.globalAlpha=1;
   }
 }
