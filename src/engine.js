@@ -1,4 +1,4 @@
-const ASSET_VER='1780940000';
+const ASSET_VER='1780944000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1826,7 +1826,7 @@ function drawCharSprite(ck,state,fi,cx,feetY,facing,scale,tint){
 
 let cardRects=[], dotRects=[];
 let creaperSkin='default', dingSkin='dingbat';
-const SKINC={default:'#7b5cff', green:'#3ddc5a', blue:'#2f7bff', red:'#e0504a', wraith:'#34343e', gilded:'#c49016', bone:'#ddd6c4', crimson:'#7a1a20'};
+const SKINC={default:'#5b3fd6', green:'#18a88a', blue:'#d82a2a', red:'#20c8c8', wraith:'#ff7a2a', gilded:'#2fcf55', bone:'#8a2a6a', crimson:'#d8e040'};
 const DSKINC={dingbat:'#8a5a2a', ding_onyx:'#3c3c46', ding_frost:'#8fa8c8', ding_blood:'#7a1f24'};
 const DORDER=['dingbat','ding_onyx','ding_frost','ding_blood'];
 function drawSlots(){
