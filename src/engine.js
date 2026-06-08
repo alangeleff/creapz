@@ -1,4 +1,4 @@
-const ASSET_VER='1780935000';
+const ASSET_VER='1780940000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -39,7 +39,7 @@ const PMETER=20, PDUR=7;
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
 function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
-function prettySkin(id){ const m={'default':'Default','dingbat':'Dingbat','ding_onyx':'Onyx','ding_frost':'Frost','ding_blood':'Blood'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
+function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Dingbat','ding_onyx':'Onyx','ding_frost':'Frost','ding_blood':'Blood'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 function cycleSkin(dir){ const list=isDing(chosen)?DORDER:ORDER; let i=list.indexOf(chosen); if(i<0)i=0; chosen=list[(i+dir+list.length)%list.length]; if(isDing(chosen))dingSkin=chosen; else creaperSkin=chosen; try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
@@ -205,7 +205,7 @@ function loadStage(i){
   tally=null; fading=0; fadeIn=0.5;
 }
 const ORDER = SPRITES.order;
-const LABELS = { default:'Violet', green:'Emerald', blue:'Azure', red:'Crimson' };
+const LABELS = { default:'Classic', green:'Emerald', blue:'Ruby', red:'Corruption' };
 
 const keys = {};
 const DOUBLE_TAP = 350;
