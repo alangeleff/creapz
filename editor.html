@@ -912,13 +912,14 @@ function setupLayerDrag(){
       const activate=()=>{ active=true; timer=null; if(navigator.vibrate){try{navigator.vibrate(15);}catch(_){ }} row.classList.add('ldrag');
         _lyrScroll=setInterval(()=>{ if(_lyrVel){ host.scrollTop+=_lyrVel; paintDrop(_lyrPy); } },16); };
       if(!isMouse) timer=setTimeout(activate,170);
-      const myGroup=()=> isMember? groupName : getG(unit.item.raw);
+      const isGroup = !isMember && !!(unit && unit.group);
+      const myGroup=()=> isMember? groupName : (isGroup? '\u0000g' : getG(unit.item.raw));
       const unitRows=()=>[...host.querySelectorAll('.litem.ghead, .litem[data-z]:not(.member)')];
       const memberRows=(g)=>[...host.querySelectorAll('.litem.member[data-z]')].filter(r=>{const p=_propByZ(r.dataset.z);return p&&getG(p.raw)===g;});
       const groupRegionAtY=(y)=>{ for(const gh of [...host.querySelectorAll('.litem.ghead')]){ const name=gh.dataset.grp; const mrs=memberRows(name); const top=gh.getBoundingClientRect().top; let bot=gh.getBoundingClientRect().bottom; if(mrs.length) bot=mrs[mrs.length-1].getBoundingClientRect().bottom; if(y>=top&&y<=bot) return name; } return null; };
       const paintDrop=(y)=>{ const reg=groupRegionAtY(y), mg=myGroup();
         if(isMember && reg===mg){ _setHoverHead(host,null); const rs=memberRows(mg); _showDrop(rs,_dropIndex(rs,y),'#b24dff'); }
-        else if(reg && reg!==mg){ _setHoverHead(host,reg); if(_dropline)_dropline.style.display='none'; }
+        else if(!isGroup && reg && reg!==mg){ _setHoverHead(host,reg); if(_dropline)_dropline.style.display='none'; }
         else { _setHoverHead(host,null); const rs=unitRows(); _showDrop(rs,_dropIndex(rs,y),'var(--lime)'); } };
       const move=ev=>{ ev.preventDefault();
         if(active){ _lyrPy=ev.clientY; const hr=host.getBoundingClientRect(); _lyrVel= ev.clientY<hr.top+44?-9: ev.clientY>hr.bottom-44?9:0; paintDrop(ev.clientY); return; }
@@ -929,14 +930,17 @@ function setupLayerDrag(){
       };
       const up=ev=>{ if(timer){clearTimeout(timer);timer=null;}
         if(active){ const y=_lyrPy||ev.clientY; const reg=groupRegionAtY(y);
-          const draggedRaw= isMember? memProp.raw : unit.item.raw; const curGroup=getG(draggedRaw);
-          if(isMember && reg===curGroup){ const rs=memberRows(curGroup); const gap=_dropIndex(rs,y); histPush(); _reorderMember(draggedRaw, curGroup, gap); persist(); }
-          else if(reg && reg!==curGroup){ histPush(); setG(draggedRaw, reg); const ms=allProps().filter(p=>getG(p.raw)===reg && p.raw!==draggedRaw); const mz=ms.length?Math.max(...ms.map(p=>p.z)):0; const dp=allProps().find(p=>p.raw===draggedRaw); if(dp)dp.setZ(mz+5); renumberZ(); persist(); }
-          else { const rs=unitRows(); const gap=_dropIndex(rs,y); histPush();
-            if(isMember){ setG(draggedRaw,null); renumberZ(); }
-            const vis=orderedUnits().reverse(); const from=vis.findIndex(u=> isMember? (u.item&&u.item.raw===draggedRaw) : _sameUnit(u,unit));
-            if(from>=0){ const dragged=vis.splice(from,1)[0]; let to=gap; if(from<gap) to=gap-1; to=Math.max(0,Math.min(vis.length,to)); vis.splice(to,0,dragged); _applyVisOrder(vis); }
-            persist(); }
+          const rs=unitRows(); const gap=_dropIndex(rs,y);
+          const intoGroup=(draggedRaw,g)=>{ setG(draggedRaw,g); const ms=allProps().filter(p=>getG(p.raw)===g && p.raw!==draggedRaw); const mz=ms.length?Math.max(...ms.map(p=>p.z)):0; const dp=allProps().find(p=>p.raw===draggedRaw); if(dp)dp.setZ(mz+5); renumberZ(); };
+          const unitReorder=()=>{ const vis=orderedUnits().reverse(); const from=vis.findIndex(u=> isMember? (u.item&&u.item.raw===memProp.raw) : _sameUnit(u,unit)); if(from>=0){ const dragged=vis.splice(from,1)[0]; let to=gap; if(from<gap)to=gap-1; to=Math.max(0,Math.min(vis.length,to)); vis.splice(to,0,dragged); _applyVisOrder(vis); } };
+          if(isMember){ const draggedRaw=memProp.raw, curGroup=getG(draggedRaw);
+            if(reg===curGroup){ const mr=memberRows(curGroup); const g2=_dropIndex(mr,y); histPush(); _reorderMember(draggedRaw, curGroup, g2); persist(); }
+            else if(reg){ histPush(); intoGroup(draggedRaw, reg); persist(); }
+            else { histPush(); setG(draggedRaw,null); renumberZ(); unitReorder(); persist(); } }
+          else if(isGroup){ histPush(); unitReorder(); persist(); }
+          else { const draggedRaw=unit.item.raw, curGroup=getG(draggedRaw);
+            if(reg && reg!==curGroup){ histPush(); intoGroup(draggedRaw, reg); persist(); }
+            else { histPush(); unitReorder(); persist(); } }
           _setHoverHead(host,null); layerDragSuppress=true; cleanup(); buildLayers(); draw(); return; }
         if(moved) layerDragSuppress=true;
         cleanup();
