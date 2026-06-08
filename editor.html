@@ -194,6 +194,7 @@ BGE_IMG.cavebg2.onload=()=>draw(); BGE_IMG.cavebg2.src='./assets/cavebg2.png';
 BGE_IMG.cryptbg.onload=()=>draw(); BGE_IMG.cryptbg.src='./assets/cryptbg1.png';
 BGE_IMG.rockwall.onload=()=>draw(); BGE_IMG.rockwall.src='./assets/rockwall1.png?v=2';
 BGE_IMG.bonedirt.onload=()=>draw(); BGE_IMG.bonedirt.src='./assets/bonedirt1.png?v=2';
+function bgAspect(t){ const im=BGE_IMG[t]; return (im&&im.naturalWidth)? im.naturalHeight/im.naturalWidth : null; }
 const BG_LABEL={cavebg:'Cave Background (far)', cavebg2:'Cave Midground (near)', cryptbg:'Crypt Cavern (deep)', rockwall:'Rock Wall Texture', bonedirt:'Bone Dirt'};
 const TEX_COLS={ceiling:'#7a5a36',rockpile:'#8a6a3a'}, TEX_LABEL={ceiling:'Cave Ceiling',rockpile:'Rock Pile'};
 const DECOR=['skull1', 'bone01', 'bone02', 'bone03', 'bone04', 'bone05', 'bone06', 'bone07', 'bone08', 'bone09', 'bone10', 'bone11', 'bone12', 'bone13', 'bone14', 'bone15', 'bone16'];
@@ -521,6 +522,7 @@ function showSel(){
      if(_pon) html+='<div class="row" style="margin-top:6px;align-items:center"><span>speed</span><input class="parsl" type="range" min="0" max="1.5" step="0.05" value="'+_pv+'" style="flex:1;margin:0 6px"><span class="parval" style="min-width:36px;text-align:right;color:#9bd0ff">'+_pv+'\u00d7</span></div>';
      const _til=!!o.tile;
      html+='<button class="bgfill" style="width:100%;margin-top:8px;background:'+(_til?'#242a16':'#1d2a3a')+';border:1px solid '+(_til?'#c8fb50':'#7b5cff')+';color:'+(_til?'#c8fb50':'#cdbbe6')+';border-radius:6px;padding:8px;cursor:pointer">Fill: '+(_til?'Tile (repeat pattern)':'Stretch (distort to fit)')+' \u00b7 tap to toggle</button>';
+     html+='<button class="bglock" style="width:100%;margin-top:4px;background:'+(o.lock?'#242a16':'#1d2a3a')+';border:1px solid '+(o.lock?'#c8fb50':'#7b5cff')+';color:'+(o.lock?'#c8fb50':'#cdbbe6')+';border-radius:6px;padding:8px;cursor:pointer">Ratio Lock: '+(o.lock?'ON \u00b7 keeps proportions':'OFF \u00b7 free stretch')+' \u00b7 tap to toggle</button>';
      if(_til) html+='<div class="row" style="margin-top:6px;align-items:center"><span>tile size</span><input class="tsc" type="range" min="0.2" max="3" step="0.05" value="'+(o.tscale||1)+'" style="flex:1;margin:0 6px"><span class="tscv" style="min-width:36px;text-align:right;color:#9bd0ff">'+(o.tscale||1)+'\u00d7</span></div>';
      html+='<button class="bgfit" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Refit to current view</button>';
      html+='<button class="bgtile" style="width:100%;margin-top:4px;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer">Back to full-world tile</button>';
@@ -548,6 +550,7 @@ function showSel(){
  selBox.innerHTML=html;
  const _bf=selBox.querySelector('.bgfit'); if(_bf)_bf.onclick=()=>{ histPush(); o.x=Math.round(wx(0)); o.y=Math.round(wy(0)); o.w=Math.round(CW/zoom); o.h=Math.round(CH/zoom); delete o.par; persist(); showSel(); draw(); };
  const _bfl=selBox.querySelector('.bgfill'); if(_bfl)_bfl.onclick=()=>{ histPush(); o.tile=!o.tile; if(o.tile&&!o.tscale)o.tscale=1; persist(); showSel(); draw(); };
+ const _blk=selBox.querySelector('.bglock'); if(_blk)_blk.onclick=()=>{ histPush(); o.lock=!o.lock; if(o.lock){ const ar=bgAspect(o.t); if(ar) o.h=Math.max(GRID,Math.round(o.w*ar)); } persist(); showSel(); draw(); };
  const _bcv=selBox.querySelector('.bgcover'); if(_bcv)_bcv.onclick=()=>{ histPush(); o.cover=!o.cover; persist(); showSel(); draw(); };
  const _ts=selBox.querySelector('.tsc'); if(_ts)_ts.oninput=()=>{ o.tscale=parseFloat(_ts.value); const v=selBox.querySelector('.tscv'); if(v)v.textContent=o.tscale+'\u00d7'; persist(); draw(); };
  const _bp=selBox.querySelector('.bgpar'); if(_bp)_bp.onclick=()=>{ histPush(); if(o.par!==undefined&&o.par!==1) delete o.par; else o.par=0.5; persist(); showSel(); draw(); };
@@ -767,8 +770,8 @@ function resizeH(h,start,gx,gy){
  else if(h.id==='max'){ o.max=Math.max(gx,o.x); }
  else if(h.id==='rot'){ const px=o.x+o.w/2, py=o.y; let a=Math.atan2(gy-py,gx-px)+Math.PI/2; if(Math.abs(a)<0.08)a=0; o.rot=a; }
  else if(h.id==='hb_tl'||h.id==='hb_br'){ const img=DECOR_IMG[o.t]; if(img&&img.naturalWidth){ const dh=o.w*img.naturalHeight/img.naturalWidth, il=o.x, it=o.y-dh; const gm=o.geom||{x:0,y:0,w:1,h:1}; let x1=il+gm.x*o.w, y1=it+gm.y*dh, x2=il+(gm.x+gm.w)*o.w, y2=it+(gm.y+gm.h)*dh; if(h.id==='hb_tl'){ x1=gx; y1=gy; } else { x2=gx; y2=gy; } x1=Math.max(il,Math.min(x1,x2-8)); y1=Math.max(it,Math.min(y1,y2-8)); x2=Math.min(il+o.w,Math.max(x2,x1+8)); y2=Math.min(it+dh,Math.max(y2,y1+8)); o.geom={x:(x1-il)/o.w,y:(y1-it)/dh,w:(x2-x1)/o.w,h:(y2-y1)/dh}; } }
- else if(h.id==='bgbr'){ o.w=Math.max(GRID,gx-o.x); o.h=Math.max(GRID,gy-o.y); }
- else if(h.id==='bgtl'){ const rx=o.x+o.w, ry=o.y+o.h; o.x=Math.min(gx,rx-GRID); o.y=Math.min(gy,ry-GRID); o.w=rx-o.x; o.h=ry-o.y; }
+ else if(h.id==='bgbr'){ o.w=Math.max(GRID,gx-o.x); o.h=Math.max(GRID,gy-o.y); if(o.lock){ const ar=bgAspect(o.t); if(ar) o.h=Math.max(GRID,Math.round(o.w*ar)); } }
+ else if(h.id==='bgtl'){ const rx=o.x+o.w, ry=o.y+o.h; if(o.lock){ const ar=bgAspect(o.t); if(ar){ const nw=Math.max(GRID,rx-Math.min(gx,rx-GRID)), nh=Math.max(GRID,Math.round(nw*ar)); o.w=nw; o.h=nh; o.x=rx-nw; o.y=ry-nh; } else { o.x=Math.min(gx,rx-GRID); o.y=Math.min(gy,ry-GRID); o.w=rx-o.x; o.h=ry-o.y; } } else { o.x=Math.min(gx,rx-GRID); o.y=Math.min(gy,ry-GRID); o.w=rx-o.x; o.h=ry-o.y; } }
 }
 document.getElementById('zin').onclick=()=>{ zoomAt(1.25); }; document.getElementById('zout').onclick=()=>{ zoomAt(0.8); };
 function zoomAt(f){ const bx=wx(CW/2),by=wy(CH/2); zoom=Math.max(0.12,Math.min(1.6,zoom*f)); camx=bx-(CW/2)/zoom; camy=by-(CH/2)/zoom; draw(); }
