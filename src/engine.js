@@ -1,4 +1,4 @@
-const ASSET_VER='1780916000';
+const ASSET_VER='1780918000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -811,7 +811,7 @@ function drawPauseBtn(){
   ctx.strokeStyle='rgba(150,140,255,.4)'; ctx.lineWidth=1; ctx.stroke();
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
-function menuOpen(){ return paused || (p && p.dead && p.deadT>2.3) || (p && p.won); }
+function menuOpen(){ return paused || (p && p.dead && p.deadT>(p.deathHurt?3.05:2.3)) || (p && p.won); }
 const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie'];
 function bootIntoWorld(){ primeAudio(); SFXLIST.forEach(loadSfx); banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); enterWorld(false); }
 function startGame(ck){
@@ -1033,7 +1033,7 @@ function update(dt){
   }
   if (p.dead){
     const pd0=p.deadT; p.deadT+=dt;
-    const _dpt=p.deathHurt?0.6:0.45; if (pd0<_dpt && p.deadT>=_dpt) playSfx('sfx_dportal');
+    const _dpt=p.deathHurt?1.42:0.45; if (pd0<_dpt && p.deadT>=_dpt) playSfx('sfx_dportal');
     if (p.state!=='kneel'){ p.state='kneel'; p.clock=0; }
     p.clock+=dt;
     return;
@@ -2225,7 +2225,7 @@ function drawGoal(){
   ctx.restore(); ctx.globalAlpha=1;
 }
 function renderCrushDeath(sx, gt){
-  const t=p.deadT, TP=0.95, STEPS=4, BACK=84, dir=p.tossDir||-p.facing;
+  const t=p.deadT, TP=1.42, STEPS=4, BACK=21, dir=p.tossDir||-p.facing;
   const hf=Math.min(SPR.chars[chosen].hurt.frames-1, Math.floor(t*FPS.hurt));
   const endX=sx + dir*BACK, endY=p.y;
   if (t < TP){
@@ -2469,7 +2469,7 @@ function draw(){
   ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(W-168,77,8,0,7); ctx.fill();
   ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(W-168,77,4.5,0,7); ctx.fill();
   ctx.fillStyle='#eaf6ff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='right'; ctx.fillText(soulCount+' / '+totalOrbVal, W-40, 82); ctx.textAlign='left';
-  if (p.dead && p.deadT>2.3){
+  if (p.dead && p.deadT>(p.deathHurt?3.05:2.3)){
     menuPanel('YOU DIED', [
       {label: p.spawn>90?'Rise at Checkpoint':'Try Again', action:()=>{ paused=false; onReset(); }},
       {label:'Restart Act', action:()=>{ paused=false; loadStage(stageIdx); }},
