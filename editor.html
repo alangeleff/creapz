@@ -70,6 +70,15 @@
  #savesP .sb.del{background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a}
  #savesP .savebtn{width:100%;background:#16301d;border:1px solid #3fbf6a;color:#a8f0c0;border-radius:8px;padding:11px;cursor:pointer;font-size:13px;margin-bottom:8px}
  #savesP .closebtn{width:100%;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:8px;padding:9px;cursor:pointer;margin-top:6px}
+ #benchP{position:absolute;left:50%;top:54px;transform:translateX(-50%);width:300px;max-height:74%;overflow:auto;background:#15112af6;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;display:none;z-index:30}
+ #benchP h4{margin:0 0 8px;color:var(--lime);font-size:14px}
+ #benchP .srow{display:flex;align-items:center;gap:6px;padding:7px;border-radius:7px;background:#1d1838;margin:5px 0}
+ #benchP .srow .nm{flex:1;min-width:0;overflow:hidden;line-height:1.25}
+ #benchP .sb{border:none;border-radius:6px;padding:8px 11px;font-size:12px;cursor:pointer;flex:none}
+ #benchP .sb.load{background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff}
+ #benchP .sb.del{background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a}
+ #benchP .savebtn{width:100%;background:#16301d;border:1px solid #3fbf6a;color:#a8f0c0;border-radius:8px;padding:11px;cursor:pointer;font-size:13px;margin-bottom:8px}
+ #benchP .closebtn{width:100%;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:8px;padding:9px;cursor:pointer;margin-top:6px}
  /* Larger touch targets on tablets / iPads (coarse pointer + roomy screen) */
  @media (pointer: coarse) and (min-width: 700px){
   #pal{width:272px}
@@ -127,6 +136,7 @@
    <button class="btn" id="bImport">⭱ Import</button>
    <select class="btn" id="bLoad" title="Load an existing level to edit"><option value="">Load level…</option><option value="stage1.js|0">Cemetery · Act I</option><option value="stage2.js|1">Cemetery · Act II</option><option value="crypt1.js|2">Crypt Depths · Act I</option><option value="crypt2.js|3">Crypt Depths · Act II</option></select>
    <button class="btn" id="bSaves" title="Named local saves">💾 Saves</button>
+   <button class="btn" id="bBench" title="Committed stage bench — permanent, every device">🗄 Bench</button>
    <button class="btn" id="bNew">✦ New Stage</button>
   </div>
   <div id="cvWrap">
@@ -135,6 +145,7 @@
    <div id="hint"></div>
    <div id="sel"></div>
    <div id="savesP"></div>
+   <div id="benchP"></div>
    <div id="newP"></div>
    <div id="toast"></div>
   </div>
@@ -1134,6 +1145,59 @@ function renderSaves(){ const p=document.getElementById('savesP'); const o=getSa
 function openSaves(){ document.getElementById('savesP').style.display='block'; renderSaves(); }
 function closeSaves(){ document.getElementById('savesP').style.display='none'; }
 document.getElementById('bSaves').onclick=()=>{ const p=document.getElementById('savesP'); if(p.style.display==='block')closeSaves(); else openSaves(); };
+
+// ---- Bench: committed, permanent, re-editable stages ----
+function benchEl(){ return document.getElementById('benchP'); }
+async function saveToBench(){
+  const def=(M.name||'Stage')+(M.act?' '+M.act:'');
+  const name=(prompt('Save this stage to the Bench (permanent, every device):', def)||'').trim(); if(!name)return;
+  const id = M.__benchId || ('st'+Date.now().toString(36));
+  const data=cleanLevel();
+  BCONFIG.bench=BCONFIG.bench||[];
+  let entry=BCONFIG.bench.find(b=>b.id===id);
+  if(!entry){ entry={id}; BCONFIG.bench.push(entry); }
+  entry.name=name; entry.theme=M.theme||''; entry.act=M.act||''; entry.ts=Date.now();
+  M.__benchId=id; persist();
+  const res=await commitFiles([
+    {path:'config/bench/'+id+'.json', content:JSON.stringify(data), encoding:'utf8'},
+    {path:'config/builder.json', content:JSON.stringify(BCONFIG,null,1), encoding:'utf8'}
+  ], 'bench: save '+name);
+  if(res){ toast('on the bench ✓ "'+name+'"'); renderBench(); }
+}
+async function loadFromBench(id){
+  if(!confirm('Load this bench stage into the editor? Replaces current contents.'))return;
+  try{
+    const r=await fetch('./config/bench/'+id+'.json?cb='+Date.now());
+    if(!r.ok){ toast('stage file not found'); return; }
+    const data=await r.json();
+    histPush(); M=Object.assign(blankLevel(),migrateLevel(data)); M.theme=M.theme||''; M.__benchId=id;
+    loadFields(); sel=null; showSel(); persist(); draw(); toast('loaded from bench'); closeBench();
+  }catch(e){ toast('load failed: '+e.message); }
+}
+async function removeFromBench(id){
+  if(!confirm('Remove this stage from the Bench list? (the saved file stays in the repo; this just unlists it)'))return;
+  BCONFIG.bench=(BCONFIG.bench||[]).filter(b=>b.id!==id);
+  const res=await commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'bench: remove stage');
+  if(res){ toast('removed from bench'); renderBench(); }
+}
+function renderBench(){
+  const p=benchEl(); const list=(BCONFIG.bench||[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  let h='<h4>Bench — committed stages</h4><button class="savebtn" id="bnSave">+  Save current stage to Bench…</button>';
+  if(!list.length) h+='<div style="opacity:.6;padding:8px 4px;line-height:1.4">No bench stages yet. Save a finished stage here to keep it permanently on every device, ready to assign on the World Map. Bench stays editable — load, tweak, re-save.</div>';
+  list.forEach(b=>{ const ds=b.ts?new Date(b.ts).toLocaleDateString():'';
+    h+='<div class="srow"><span class="nm">'+escH(b.name||b.id)+'<br><span style="font-size:10px;opacity:.5">'+escH(b.theme||'')+(b.act?' · Act '+escH(b.act):'')+(ds?' · '+ds:'')+'</span></span>'
+      +'<button class="sb load" data-l="'+b.id+'">Load</button>'
+      +'<button class="sb del" data-d="'+b.id+'">✕</button></div>'; });
+  h+='<button class="closebtn" id="bnClose">Close</button>';
+  p.innerHTML=h;
+  p.querySelector('#bnSave').onclick=saveToBench;
+  p.querySelector('#bnClose').onclick=closeBench;
+  p.querySelectorAll('.sb.load').forEach(x=>x.onclick=()=>loadFromBench(x.dataset.l));
+  p.querySelectorAll('.sb.del').forEach(x=>x.onclick=()=>removeFromBench(x.dataset.d));
+}
+function openBench(){ if(document.getElementById('savesP').style.display==='block')closeSaves(); benchEl().style.display='block'; renderBench(); }
+function closeBench(){ benchEl().style.display='none'; }
+document.getElementById('bBench').onclick=()=>{ const p=benchEl(); if(p.style.display==='block')closeBench(); else openBench(); };
 
 document.getElementById('bPlay').onclick=()=>{ try{ localStorage.setItem('creapz_testlevel',JSON.stringify(cleanLevel())); }catch(e){} location.href='./?test=1'; };
 
