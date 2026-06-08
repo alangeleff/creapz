@@ -79,6 +79,17 @@
  #benchP .sb.del{background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a}
  #benchP .savebtn{width:100%;background:#16301d;border:1px solid #3fbf6a;color:#a8f0c0;border-radius:8px;padding:11px;cursor:pointer;font-size:13px;margin-bottom:8px}
  #benchP .closebtn{width:100%;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:8px;padding:9px;cursor:pointer;margin-top:6px}
+ #worldP{position:absolute;left:50%;top:54px;transform:translateX(-50%);width:340px;max-height:80%;overflow:auto;background:#15112af6;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px;display:none;z-index:30}
+ #worldP h4{margin:0 0 8px;color:var(--lime);font-size:14px}
+ #worldP .wz{background:#1a1530;border:1px solid #2c2350;border-radius:9px;padding:8px;margin:7px 0}
+ #worldP .wzh{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+ #worldP .wzn{color:var(--lime);font-size:13px;font-weight:600}
+ #worldP .wzpub{font-size:11px;opacity:.85;display:flex;align-items:center;gap:4px}
+ #worldP .wzrow{display:flex;align-items:center;gap:8px;margin:3px 0}
+ #worldP .wzact{font-size:11px;opacity:.6;width:44px;flex:none}
+ #worldP .actsel{flex:1;min-width:0;background:#120f24;border:1px solid #3a2f5e;color:#dcd2f5;border-radius:6px;padding:6px;font-size:12px}
+ #worldP .savebtn{width:100%;background:#16301d;border:1px solid #3fbf6a;color:#a8f0c0;border-radius:8px;padding:11px;cursor:pointer;font-size:13px;margin:8px 0 0}
+ #worldP .closebtn{width:100%;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:8px;padding:9px;cursor:pointer;margin-top:6px}
  /* Larger touch targets on tablets / iPads (coarse pointer + roomy screen) */
  @media (pointer: coarse) and (min-width: 700px){
   #pal{width:272px}
@@ -137,6 +148,7 @@
    <select class="btn" id="bLoad" title="Load an existing level to edit"><option value="">Load level…</option><option value="stage1.js|0">Cemetery · Act I</option><option value="stage2.js|1">Cemetery · Act II</option><option value="crypt1.js|2">Crypt Depths · Act I</option><option value="crypt2.js|3">Crypt Depths · Act II</option></select>
    <button class="btn" id="bSaves" title="Named local saves">💾 Saves</button>
    <button class="btn" id="bBench" title="Committed stage bench — permanent, every device">🗄 Bench</button>
+   <button class="btn" id="bMap" title="World Map — assign bench stages to zones/acts">🗺 Map</button>
    <button class="btn" id="bNew">✦ New Stage</button>
   </div>
   <div id="cvWrap">
@@ -146,6 +158,7 @@
    <div id="sel"></div>
    <div id="savesP"></div>
    <div id="benchP"></div>
+   <div id="worldP"></div>
    <div id="newP"></div>
    <div id="toast"></div>
   </div>
@@ -1198,6 +1211,36 @@ function renderBench(){
 function openBench(){ if(document.getElementById('savesP').style.display==='block')closeSaves(); benchEl().style.display='block'; renderBench(); }
 function closeBench(){ benchEl().style.display='none'; }
 document.getElementById('bBench').onclick=()=>{ const p=benchEl(); if(p.style.display==='block')closeBench(); else openBench(); };
+
+// ---- World Map: assign bench stages to zone/act slots ----
+const WZONES=[['cem','cReapY Cemetery'],['witch','Witchwood'],['crypt','Crypt Depths'],['harbor','Drowned Harbor'],['spire','Bell Spire'],['plains','Ethereal Plains'],['charnel','Charnel Peak'],['rift','The Rift'],['castle','Blood Moon Castle']];
+function renderWorldMap(){
+  const p=document.getElementById('worldP');
+  BCONFIG.worldMap=BCONFIG.worldMap||{};
+  const bench=(BCONFIG.bench||[]);
+  const opts=(selId)=>'<option value="">— empty —</option>'+bench.map(b=>'<option value="'+b.id+'"'+(b.id===selId?' selected':'')+'>'+escH(b.name||b.id)+'</option>').join('');
+  let h='<h4>World Map — assign bench stages</h4>';
+  if(!bench.length) h+='<div style="opacity:.65;padding:6px 2px;line-height:1.45;margin-bottom:6px">Save stages to the 🗄 Bench first, then pick which act slot each one fills here. "public" makes a zone playable to everyone; leave it off to keep a zone dev-only.</div>';
+  WZONES.forEach(([zid,zname])=>{
+    let wm=BCONFIG.worldMap[zid]; if(!wm){ wm=BCONFIG.worldMap[zid]={public:(zid==='cem'),acts:[null,null,null]}; }
+    if(!Array.isArray(wm.acts)) wm.acts=[null,null,null];
+    h+='<div class="wz"><div class="wzh"><span class="wzn">'+escH(zname)+'</span>'
+      +'<label class="wzpub"><input type="checkbox" class="pubck" data-z="'+zid+'"'+(wm.public?' checked':'')+'> public</label></div>';
+    ['I','II','III'].forEach((rn,i)=>{
+      h+='<div class="wzrow"><span class="wzact">Act '+rn+'</span><select class="actsel" data-z="'+zid+'" data-i="'+i+'">'+opts(wm.acts[i])+'</select></div>';
+    });
+    h+='</div>';
+  });
+  h+='<button class="savebtn" id="wmSave">Save World Map (commit)</button><button class="closebtn" id="wmClose">Close</button>';
+  p.innerHTML=h;
+  p.querySelectorAll('.actsel').forEach(s=>s.onchange=()=>{ BCONFIG.worldMap[s.dataset.z].acts[+s.dataset.i]=s.value||null; });
+  p.querySelectorAll('.pubck').forEach(c=>c.onchange=()=>{ BCONFIG.worldMap[c.dataset.z].public=c.checked; });
+  p.querySelector('#wmSave').onclick=async()=>{ const r=await commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'worldmap: update stage assignments'); if(r){ toast('world map saved ✓'); } };
+  p.querySelector('#wmClose').onclick=closeWorld;
+}
+function openWorld(){ closeSaves(); closeBench(); document.getElementById('worldP').style.display='block'; renderWorldMap(); }
+function closeWorld(){ document.getElementById('worldP').style.display='none'; }
+document.getElementById('bMap').onclick=()=>{ const p=document.getElementById('worldP'); if(p.style.display==='block')closeWorld(); else openWorld(); };
 
 document.getElementById('bPlay').onclick=()=>{ try{ localStorage.setItem('creapz_testlevel',JSON.stringify(cleanLevel())); }catch(e){} location.href='./?test=1'; };
 

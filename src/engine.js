@@ -1,4 +1,4 @@
-const ASSET_VER='1780894560';
+const ASSET_VER='1780896000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -48,7 +48,23 @@ const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='
 const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png?v='+ASSET_VER;
 const DECOR_NAMES=['skull1', 'bone01', 'bone02', 'bone03', 'bone04', 'bone05', 'bone06', 'bone07', 'bone08', 'bone09', 'bone10', 'bone11', 'bone12', 'bone13', 'bone14', 'bone15', 'bone16'];
 const DECOR_IMG={}; DECOR_NAMES.forEach(n=>{ const i=new Image(); i.src='./assets/decor_'+n+'.png?v='+ASSET_VER; DECOR_IMG[n]=i; });
-fetch('./config/builder.json?cb='+ASSET_VER).then(r=>r.ok?r.json():null).then(c=>{ if(!c)return; (c.customAssets||[]).forEach(a=>{ const im=new Image(); im.src='./'+a.file+'?v='+ASSET_VER; if(a.kind==='bg'||a.kind==='fg') BG_IMGS[a.id]=im; else DECOR_IMG[a.id]=im; }); }).catch(()=>{});
+fetch('./config/builder.json?cb='+ASSET_VER).then(r=>r.ok?r.json():null).then(c=>{ if(!c)return;
+  (c.customAssets||[]).forEach(a=>{ const im=new Image(); im.src='./'+a.file+'?v='+ASSET_VER; if(a.kind==='bg'||a.kind==='fg') BG_IMGS[a.id]=im; else DECOR_IMG[a.id]=im; });
+  // --- World Map: merge committed bench stages into the zone/act maps (overrides only assigned slots; hardcoded levels remain the fallback) ---
+  const wm=c.worldMap||{};
+  Object.keys(wm).forEach(zid=>{ const z=wm[zid]; if(!z||!Array.isArray(z.acts))return;
+    z.acts.forEach((bid,i)=>{ if(!bid)return;
+      fetch('./config/bench/'+bid+'.json?cb='+ASSET_VER).then(r=>r.ok?r.json():null).then(data=>{ if(!data)return;
+        if(!window.STAGES) window.STAGES=[];
+        const idx=window.STAGES.length; window.STAGES[idx]=data;
+        if(!ZONE_STAGES[zid]) ZONE_STAGES[zid]=[];
+        ZONE_STAGES[zid][i]=idx; STAGE_ZONE[idx]=zid; STAGE_ACT[idx]=zid+(i+1);
+        if(z.public){ RELEASED[zid]=Math.max(RELEASED[zid]||0, ZONE_STAGES[zid].filter(v=>v!==undefined&&v!==null).length); }
+        try{ if(data.music) preloadMusic(data.music); }catch(e){}
+      }).catch(()=>{});
+    });
+  });
+}).catch(()=>{});
 const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+ASSET_VER;
 const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='+ASSET_VER; return i;})(), cavebg2:(()=>{const i=new Image(); i.src='./assets/cavebg2.png?v='+ASSET_VER; return i;})(), cryptbg:(()=>{const i=new Image(); i.src='./assets/cryptbg1.png?v='+ASSET_VER; return i;})(), rockwall:(()=>{const i=new Image(); i.src='./assets/rockwall1.png?v='+ASSET_VER; return i;})(), bonedirt:(()=>{const i=new Image(); i.src='./assets/bonedirt1.png?v='+ASSET_VER; return i;})()};
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[];
