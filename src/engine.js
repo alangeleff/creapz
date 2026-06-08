@@ -1,4 +1,4 @@
-const ASSET_VER='1780896000';
+const ASSET_VER='1780897200';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -48,8 +48,10 @@ const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='
 const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png?v='+ASSET_VER;
 const DECOR_NAMES=['skull1', 'bone01', 'bone02', 'bone03', 'bone04', 'bone05', 'bone06', 'bone07', 'bone08', 'bone09', 'bone10', 'bone11', 'bone12', 'bone13', 'bone14', 'bone15', 'bone16'];
 const DECOR_IMG={}; DECOR_NAMES.forEach(n=>{ const i=new Image(); i.src='./assets/decor_'+n+'.png?v='+ASSET_VER; DECOR_IMG[n]=i; });
+const CUSTOM_MUSIC={};
 fetch('./config/builder.json?cb='+ASSET_VER).then(r=>r.ok?r.json():null).then(c=>{ if(!c)return;
   (c.customAssets||[]).forEach(a=>{ const im=new Image(); im.src='./'+a.file+'?v='+ASSET_VER; if(a.kind==='bg'||a.kind==='fg') BG_IMGS[a.id]=im; else DECOR_IMG[a.id]=im; });
+  (c.music||[]).forEach(m=>{ if(m&&m.id&&m.file) CUSTOM_MUSIC[m.id]=m.file; });
   // --- World Map: merge committed bench stages into the zone/act maps (overrides only assigned slots; hardcoded levels remain the fallback) ---
   const wm=c.worldMap||{};
   Object.keys(wm).forEach(zid=>{ const z=wm[zid]; if(!z||!Array.isArray(z.acts))return;
@@ -536,7 +538,8 @@ function audioInit(){
 }
 function getMusicBuf(key){
   if (!musicBuf[key]){
-    musicBuf[key]=fetch('./assets/audio/'+key+'.m4a?v='+ASSET_VER)
+    const _url=(typeof CUSTOM_MUSIC!=='undefined'&&CUSTOM_MUSIC[key])?('./'+CUSTOM_MUSIC[key]+'?v='+ASSET_VER):('./assets/audio/'+key+'.m4a?v='+ASSET_VER);
+    musicBuf[key]=fetch(_url)
       .then(r=>r.arrayBuffer()).then(ab=>AC.decodeAudioData(ab)).then(b=>{ musicReady[key]=b; return b; }).catch(()=>null);
   }
   return musicBuf[key];

@@ -142,6 +142,7 @@
    <button class="btn" id="bSnap" title="Magnetic edge snapping">🧲</button>
    <button class="btn" id="bCommit" title="Commit builder data to the repo">☁ Commit</button>
    <button class="btn" id="bUpload" title="Upload a custom asset">⬆ Upload</button>
+   <button class="btn" id="bMusic" title="Upload a background music track">🎵 Music</button>
    <button class="btn go" id="bPlay">▶ Play</button>
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
@@ -396,7 +397,7 @@ async function commitFiles(files, message){ const secret=getCommitSecret(); if(!
     if(!r.ok){ if(r.status===403){ localStorage.removeItem('creapz_commit_secret'); toast('wrong password \u2014 try again'); } else toast('commit failed: '+(j.error||r.status)); return null; }
     toast('committed \u2713'); return j;
   }catch(e){ toast('commit error: '+e.message); return null; } }
-async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb='+Date.now()); if(r.ok){ const c=await r.json(); BCONFIG=Object.assign(BCONFIG, c); (BCONFIG.customAssets||[]).forEach(a=>registerCustomAsset(a)); if(typeof buildPalette==='function') buildPalette(); } }catch(e){} }
+async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb='+Date.now()); if(r.ok){ const c=await r.json(); BCONFIG=Object.assign(BCONFIG, c); (BCONFIG.customAssets||[]).forEach(a=>registerCustomAsset(a)); if(typeof buildPalette==='function') buildPalette(); if(typeof refreshMusicOptions==='function') refreshMusicOptions(); } }catch(e){} }
 loadBConfig();
 function customStamps(){ return (BCONFIG.customAssets||[]).map(a=>({k:(a.kind==='bg'?'bg_':a.kind==='fg'?'fg_':'tex_')+a.id, label:a.name, sw:a.sw||'#9a8a6a', cat:a.cat||(a.kind==='bg'?'Background':a.kind==='fg'?'Foreground':'Decor')})); }
 function registerCustomAsset(a, src){ const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src=src||('./'+a.file+'?v='+(a.v||1)); if(a.kind==='bg'||a.kind==='fg'){ BGE_IMG[a.id]=im; BG_LABEL[a.id]=a.name; } else { DECOR_IMG[a.id]=im; TEX_LABEL[a.id]=a.name; TEX_COLS[a.id]=a.sw||'#9a8a6a'; } }
@@ -853,7 +854,7 @@ function spawnY(x){ let best=null; for(const s of M.seg){ if(x>=s[0]&&x<=s[1]){ 
 function syncFields(){ M.name=v('fName'); M.act=v('fAct'); M.theme=v('fTheme'); M.music=v('fMusic'); M.world=+v('fW')||M.world; M.h=+v('fH')||M.h; }
 function v(id){return document.getElementById(id).value;}
 function loadFields(){ document.getElementById('fName').value=M.name; document.getElementById('fAct').value=M.act;
- document.getElementById('fTheme').value=M.theme||''; document.getElementById('fMusic').value=M.music; document.getElementById('fW').value=M.world; document.getElementById('fH').value=M.h; }
+ document.getElementById('fTheme').value=M.theme||''; refreshMusicOptions(); document.getElementById('fMusic').value=M.music; document.getElementById('fW').value=M.world; document.getElementById('fH').value=M.h; }
 ['fName','fAct','fTheme','fMusic','fW','fH'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{syncFields();persist();draw();}));
 
 // ---- layers panel: select / reorder / lock any placed piece ----
@@ -1084,6 +1085,28 @@ function uploadAsset(){ const inp=document.createElement('input'); inp.type='fil
     fr.readAsDataURL(f); };
   inp.click(); }
 document.getElementById('bUpload').onclick=uploadAsset;
+const BUILTIN_MUSIC=['act1','act2','crypt1','crypt2','ethereal1','ethereal2','title'];
+function allMusicOpts(selv){
+  let o=BUILTIN_MUSIC.map(m=>'<option value="'+m+'"'+(m===selv?' selected':'')+'>'+m+'</option>').join('');
+  (BCONFIG.music||[]).forEach(t=>{ o+='<option value="'+t.id+'"'+(t.id===selv?' selected':'')+'>\u266a '+escH(t.name)+'</option>'; });
+  return o;
+}
+function refreshMusicOptions(){ const s=document.getElementById('fMusic'); if(s) s.innerHTML=allMusicOpts(M.music); }
+function uploadMusic(){ const inp=document.createElement('input'); inp.type='file'; inp.accept='audio/*,.mp3,.m4a,.ogg,.wav';
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    const name=(prompt('Name this music track:', f.name.replace(/\.[^.]+$/,''))||'').trim(); if(!name) return;
+    if(f.size>15*1024*1024 && !confirm('That file is '+(f.size/1048576).toFixed(1)+'MB — large tracks bloat the repo and load slowly. Upload anyway?')) return;
+    const ext=((f.name.match(/\.[^.]+$/)||['.mp3'])[0]).toLowerCase();
+    const id='m'+Date.now().toString(36); const file='assets/music/'+id+ext;
+    const fr=new FileReader();
+    fr.onload=async()=>{ const b64=fr.result.split(',')[1];
+      BCONFIG.music=BCONFIG.music||[]; BCONFIG.music.push({id,name,file}); refreshMusicOptions();
+      const r=await commitFiles([{path:file,content:b64,encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}], 'music: add '+name);
+      if(r) toast('track added ✓ — pick "\u266a '+name+'" in the stage music dropdown');
+    };
+    fr.readAsDataURL(f); };
+  inp.click(); }
+document.getElementById('bMusic').onclick=uploadMusic;
 document.getElementById('bCommit').onclick=async()=>{ const r=await commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: update config'); };
 document.getElementById('bSnap').onclick=()=>{ snapOn=!snapOn; document.getElementById('bSnap').classList.toggle('go',snapOn); toast(snapOn?'Snapping ON':'Snapping OFF'); };
 document.getElementById('bRuler').onclick=()=>{ if(ruler){ ruler=null; } else { const cx=wx(CW/2),cy=wy(CH/2); ruler={x1:snap(cx-150),y1:snap(cy),x2:snap(cx+150),y2:snap(cy)}; } document.getElementById('bRuler').classList.toggle('go',!!ruler); draw(); };
@@ -1098,7 +1121,7 @@ document.getElementById('bLoad').onchange=function(){ const v=this.value; this.s
   if(!confirm('Load this level into the editor? Your current unsaved work will be replaced.')) return;
   fetch('./levels/'+file+'?'+Date.now()).then(r=>r.text()).then(tx=>{ try{ const i=tx.indexOf('={');
     histPush(); M=Object.assign(blankLevel(),migrateLevel(JSON.parse(tx.slice(i+1,tx.lastIndexOf('}')+1)))); M.theme=M.theme||''; loadFields(); const fi=document.getElementById('fIdx'); if(fi)fi.value=idx; sel=null; showSel(); persist(); draw(); toast('loaded '+file); }catch(err){ toast('load failed: '+err.message); } }); };
-function musicOpts(selv){ return ['act1','act2','crypt1','crypt2','ethereal1','ethereal2','title'].map(m=>'<option'+(m===selv?' selected':'')+'>'+m+'</option>').join(''); }
+function musicOpts(selv){ return allMusicOpts(selv); }
 function openNew(){ const p=document.getElementById('newP');
   p.innerHTML='<h4>✦ New Stage</h4>'
    +'<div class="nrow"><span>name</span><input id="nwName" value="New Stage"></div>'
