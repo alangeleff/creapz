@@ -48,12 +48,12 @@
    "v": 1780927997151
   },
   {
-   "id": "cmq5az7kv",
+   "id": "cmq5azofk",
    "name": "Ethereal Plains - MG",
-   "file": "assets/custom/cmq5az7kv.jpg",
+   "file": "assets/custom/cmq5azofk.jpg",
    "kind": "bg",
    "cat": "Background",
-   "v": 1780928720671
+   "v": 1780928742512
   }
  ],
  "categories": [
@@ -98,24 +98,19 @@
    "parent": null
   },
   {
-   "id": "Decor",
-   "name": "Decor",
+   "id": "Textures",
+   "name": "Textures",
    "parent": null
   },
   {
-   "id": "Textures",
-   "name": "Textures",
+   "id": "Decor",
+   "name": "Decor",
    "parent": null
   },
   {
    "id": "catmq5a31w3",
    "name": "Bones",
    "parent": "Decor"
-  },
-  {
-   "id": "catmq5ar37r",
-   "name": "Souls",
-   "parent": "Functions"
   }
  ],
  "bench": [
@@ -230,16 +225,6 @@
   "tex_bone01": "catmq5a31w3",
   "tex_skull1": "catmq5a31w3",
   "tex_cmq4r9k0a": "catmq5a31w3",
-  "tex_cmq4robgv": "catmq5a31w3",
-  "terrace": "Ground",
-  "terrace_cave": "Ground",
-  "tex_cmq58wn73": "Hazards",
-  "soul100": "catmq5ar37r",
-  "soul50": "catmq5ar37r",
-  "soul25": "catmq5ar37r",
-  "soul5": "catmq5ar37r",
-  "soul": "catmq5ar37r",
-  "tex_ceiling": "Decor",
-  "tex_rockpile": "Decor"
+  "tex_cmq4robgv": "catmq5a31w3"
  }
 }
