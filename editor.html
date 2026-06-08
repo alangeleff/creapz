@@ -184,7 +184,7 @@ const HAZ_COLS={spike:'#d9d2c0',rock:'#7a7280',tar:'#2a1f30',spikeshot:'#cfc8b6'
 const HAZ_LABEL={spike:'Bone Spike Pit',rock:'Rock Drop',tar:'Tar Pit',spikeshot:'Spike Cannon'};
 const OBST_COLS={grave:'#8a82a6',crate:'#b6884a',chest:'#caa05a'};
 const LOOTS=[['gold','Gold'],['soul','Soul \u00d71'],['soul5','Soul \u00d75'],['soul25','Soul \u00d725'],['soul50','Soul \u00d750'],['soul100','Soul \u00d7100'],['heart','Heart'],['stone_amethyst','Amethyst Stone'],['stone_chaos','Chaos Stone'],['stone_emerald','Emerald Stone'],['stone_fluorite','Fluorite Stone'],['stone_holy','Holy Stone'],['stone_obsidian','Obsidian Stone'],['stone_ruby','Ruby Stone'],['stone_sapphire','Sapphire Stone'],['stone_topaz','Topaz Stone'],['stone_master','Master Stone']];
-const CATS=['Background','Foreground','Ground','Hazards','Enemies','Functions','Objects','Textures','Decor'];
+const CATS=['Background','Foreground','Ground','Gameplay','Hazards','Enemies','Functions','Objects','Textures','Decor'];
 const SOUL_COL_ED={1:'#7fe0ff',5:'#ff5a5a',25:'#5ae07a',50:'#b25aff',100:'#ffcf3c'};
 const ASSET_PV=Date.now();
 const BGE_IMG={cavebg:new Image(), cavebg2:new Image(), cryptbg:new Image(), rockwall:new Image(), bonedirt:new Image()};
@@ -416,7 +416,9 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;',
 let ORGANIZE=false;
 let CAT_COLLAPSE={}; try{ CAT_COLLAPSE=JSON.parse(localStorage.getItem('creapz_cat_collapsed')||'{}'); }catch(e){}
 function saveCatCollapse(){ try{ localStorage.setItem('creapz_cat_collapsed',JSON.stringify(CAT_COLLAPSE)); }catch(e){} }
-function catModel(){ if(!Array.isArray(BCONFIG.categories)||!BCONFIG.categories.length){ BCONFIG.categories=CATS.map(n=>({id:n,name:n,parent:null})); } return BCONFIG.categories; }
+function catModel(){ if(!Array.isArray(BCONFIG.categories)||!BCONFIG.categories.length){ BCONFIG.categories=CATS.map(n=>({id:n,name:n,parent:null})); } else { CATS.forEach(n=>{ if(!BCONFIG.categories.some(c=>c.id===n)) BCONFIG.categories.push({id:n,name:n,parent:null}); }); } return BCONFIG.categories; }
+function gameBehavior(id){ const a=(BCONFIG.customAssets||[]).find(x=>x.id===id); return (a&&a.behavior)||null; }
+function behaviorColor(b){ return b==='solid'?'#3fbf6a':b==='platform'?'#5b9cff':b==='spikes'?'#e23b3b':b==='bounce'?'#c8fb50':b==='slam'?'#ff8a3c':'#9b8cff'; }
 function catOrder(){ const cats=catModel(); const out=[]; cats.filter(c=>!c.parent).forEach(p=>{ out.push(p); cats.filter(c=>c.parent===p.id).forEach(ch=>out.push(ch)); }); cats.forEach(c=>{ if(out.indexOf(c)<0) out.push(c); }); return out; }
 function effCat(item){ return (BCONFIG.itemCat&&BCONFIG.itemCat[item.k]) || item.cat; }
 function isBuiltinCat(id){ return CATS.indexOf(id)>=0; }
@@ -804,7 +806,7 @@ function dTex(t){ const X=sx(t.x),Y=sy(t.y);
  else if(t.t==='rockpile'&&ROCKPILE_IMG.naturalWidth){ const dh=t.w*ROCKPILE_IMG.naturalHeight/ROCKPILE_IMG.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.drawImage(ROCKPILE_IMG, X, Y-dh*zoom, t.w*zoom, dh*zoom);
    if(sel&&sel.raw===t){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-dh*zoom-2,t.w*zoom+4,dh*zoom+4); } }
  else if(DECOR_IMG[t.t]&&DECOR_IMG[t.t].naturalWidth){ const img=DECOR_IMG[t.t]; const dh=t.w*img.naturalHeight/img.naturalWidth; const w2=t.w*zoom,h2=dh*zoom,px=X+w2/2,py=Y; ctx.imageSmoothingEnabled=true; ctx.save(); ctx.translate(px,py); if(t.rot)ctx.rotate(t.rot); ctx.scale(t.f===-1?-1:1,1); ctx.drawImage(img,-w2/2,-h2,w2,h2); ctx.restore();
-   if(sel&&sel.raw===t){ ctx.save(); ctx.translate(px,py); if(t.rot)ctx.rotate(t.rot); ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(-w2/2-2,-h2-2,w2+4,h2+4); ctx.restore(); } }
+   if(sel&&sel.raw===t){ ctx.save(); ctx.translate(px,py); if(t.rot)ctx.rotate(t.rot); ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(-w2/2-2,-h2-2,w2+4,h2+4); ctx.restore(); } { const gb=gameBehavior(t.t); if(gb){ ctx.save(); ctx.translate(px,py); if(t.rot)ctx.rotate(t.rot); ctx.strokeStyle=behaviorColor(gb); ctx.lineWidth=1.5; ctx.setLineDash([5,4]); ctx.strokeRect(-w2/2,-h2,w2,h2); ctx.setLineDash([]); ctx.restore(); } } }
  else { ctx.fillStyle='#7a5a36'; ctx.fillRect(X,Y,t.w*zoom,30*zoom); } }
 function dObst(o){ const X=sx(o.x),Y=sy(o.gy||0);
  if(o.type==='chest'){ if(CHEST_E.naturalWidth){ const dw=96*zoom, dh=dw*CHEST_E.naturalHeight/CHEST_E.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.save(); if(o.f===-1){ctx.translate(X,0);ctx.scale(-1,1);ctx.translate(-X,0);} ctx.drawImage(CHEST_E,X-dw/2,Y-dh,dw,dh); ctx.restore(); if(sel&&sel.raw===o){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-dw/2-2,Y-dh-2,dw+4,dh+4); } }
@@ -1120,10 +1122,13 @@ function uploadAsset(){ const inp=document.createElement('input'); inp.type='fil
     fr.onload=()=>{ const im=new Image(); im.onload=async()=>{
       const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); const png=c.toDataURL('image/png');
       const name=(prompt('Asset name:', f.name.replace(/\.[^.]+$/,''))||'').trim(); if(!name) return;
-      const kind=((prompt('Type — decor / bg / fg :','decor')||'decor').trim().toLowerCase());
-      const k=(kind==='bg'||kind==='fg')?kind:'decor';
+      const ty=((prompt('Type:\n  decor (no collision)\n  bg / fg (backdrop)\n  solid (block all sides)\n  platform (stand on top)\n  spikes (damage)','decor')||'decor').trim().toLowerCase());
+      const GAMEB=['solid','platform','spikes','bounce','slam'];
+      const k=(ty==='bg'||ty==='fg')?ty:(GAMEB.includes(ty)?'gameplay':'decor');
+      const ar=im.naturalHeight/im.naturalWidth;
       const id='c'+Date.now().toString(36); const file='assets/custom/'+id+'.png';
-      const a={id,name,file,kind:k,cat:(k==='bg'?'Background':k==='fg'?'Foreground':'Decor'),v:Date.now()};
+      const a={id,name,file,kind:k,cat:(k==='bg'?'Background':k==='fg'?'Foreground':k==='gameplay'?'Gameplay':'Decor'),v:Date.now()};
+      if(k==='gameplay'){ a.behavior=ty; a.ar=ar; a.sw=behaviorColor(ty); }
       BCONFIG.customAssets=BCONFIG.customAssets||[]; BCONFIG.customAssets.push(a); registerCustomAsset(a, png); buildPalette(); draw();
       await commitFiles([{path:file,content:png.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}], 'builder: add asset '+name);
     }; im.src=fr.result; };

@@ -1,4 +1,4 @@
-const ASSET_VER='1780897200';
+const ASSET_VER='1780899000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -48,9 +48,9 @@ const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='
 const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png?v='+ASSET_VER;
 const DECOR_NAMES=['skull1', 'bone01', 'bone02', 'bone03', 'bone04', 'bone05', 'bone06', 'bone07', 'bone08', 'bone09', 'bone10', 'bone11', 'bone12', 'bone13', 'bone14', 'bone15', 'bone16'];
 const DECOR_IMG={}; DECOR_NAMES.forEach(n=>{ const i=new Image(); i.src='./assets/decor_'+n+'.png?v='+ASSET_VER; DECOR_IMG[n]=i; });
-const CUSTOM_MUSIC={};
+const CUSTOM_MUSIC={}, GAME_DEF={};
 fetch('./config/builder.json?cb='+ASSET_VER).then(r=>r.ok?r.json():null).then(c=>{ if(!c)return;
-  (c.customAssets||[]).forEach(a=>{ const im=new Image(); im.src='./'+a.file+'?v='+ASSET_VER; if(a.kind==='bg'||a.kind==='fg') BG_IMGS[a.id]=im; else DECOR_IMG[a.id]=im; });
+  (c.customAssets||[]).forEach(a=>{ const im=new Image(); im.src='./'+a.file+'?v='+ASSET_VER; if(a.kind==='bg'||a.kind==='fg') BG_IMGS[a.id]=im; else DECOR_IMG[a.id]=im; if(a.behavior) GAME_DEF[a.id]={behavior:a.behavior, ar:a.ar||1, params:a.params||{}}; });
   (c.music||[]).forEach(m=>{ if(m&&m.id&&m.file) CUSTOM_MUSIC[m.id]=m.file; });
   // --- World Map: merge committed bench stages into the zone/act maps (overrides only assigned slots; hardcoded levels remain the fallback) ---
   const wm=c.worldMap||{};
@@ -69,7 +69,7 @@ fetch('./config/builder.json?cb='+ASSET_VER).then(r=>r.ok?r.json():null).then(c=
 }).catch(()=>{});
 const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+ASSET_VER;
 const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='+ASSET_VER; return i;})(), cavebg2:(()=>{const i=new Image(); i.src='./assets/cavebg2.png?v='+ASSET_VER; return i;})(), cryptbg:(()=>{const i=new Image(); i.src='./assets/cryptbg1.png?v='+ASSET_VER; return i;})(), rockwall:(()=>{const i=new Image(); i.src='./assets/rockwall1.png?v='+ASSET_VER; return i;})(), bonedirt:(()=>{const i=new Image(); i.src='./assets/bonedirt1.png?v='+ASSET_VER; return i;})()};
-let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[];
+let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[], GHURT=[], GSLAM=[];
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
@@ -182,6 +182,14 @@ function loadStage(i){
     const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0, dir:h.dir, tx:h.tx, ty:h.ty, tw:h.tw, th:h.th};
     if(h.t==='rock'){ const n=Math.max(1,Math.round(h.w/160)); const step=h.w/n; o.spawns=[]; for(let i=0;i<n;i++) o.spawns.push(Math.round(h.x+step*(i+0.5))); o.cds=o.spawns.map(()=>0); }
     return o;
+  });
+  // --- custom gameplay objects: a decor (tex) whose asset has a behavior gains collision ---
+  GHURT=[]; GSLAM=[];
+  TEX.forEach(t=>{ const g=(typeof GAME_DEF!=='undefined')&&GAME_DEF[t.t]; if(!g) return;
+    const dh=t.w*(g.ar||1), l=t.x, r=t.x+t.w, top=t.y-dh, bot=t.y;
+    if(g.behavior==='solid'){ TSOLID.push({l,r,top,bot}); }
+    else if(g.behavior==='platform'){ SOLID.push({l,r,top}); }
+    else if(g.behavior==='spikes'){ GHURT.push({l,r,top,bot}); }
   });
   STARS = Array.from({length:Math.ceil(WORLD/120)},()=>[Math.random()*WORLD,Math.random()*GROUND*0.8,Math.random()*1.6+0.6]);
   TREES = Array.from({length:Math.ceil(WORLD/180)},(_,k)=>({x:80+k*180+((k*53)%50), big:(k%4===0)}));
@@ -1052,6 +1060,7 @@ function update(dt){
   const dc=dir<0?'ArrowLeft':'ArrowRight';
   const running=(dir!==0&&runHeld[dc])||keys['ShiftLeft']||keys['ShiftRight'];
   let inTar=false; for(const h of HAZ){ if(h.t==='tar' && p.onGround && p.x>=h.x && p.x<=h.x+h.w && Math.abs(p.y-h.y)<8){ inTar=true; break; } }
+  if(p.inv<=0){ for(const z of GHURT){ if(p.x+26>z.l && p.x-26<z.r && p.y>z.top && (p.y-PH)<z.bot){ hurtPlayer((z.l+z.r)/2,1); break; } } }
   const speed=(running?RUN:WALK)*(inTar?0.4:1);
   if (p.diveT<=0 && p.diveRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
   if (!kneeling && p.diveRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
