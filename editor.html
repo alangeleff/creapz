@@ -426,8 +426,10 @@ function showSel(){
      html+='<button class="bgfit" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Refit to current view</button>';
      html+='<button class="bgtile" style="width:100%;margin-top:4px;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer">Back to full-world tile</button>';
    } else {
-     html+='<div style="font-size:11px;color:#9b8cff;margin:4px 0;line-height:1.4">Filling the whole world, tiled with parallax. Stretch it to pin it to a region you can align + toggle parallax on/off.</div>';
-     html+='<button class="bgfit" style="width:100%;margin-top:2px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Stretch \u2192 fit to view</button>';
+     const _cov=!!o.cover;
+     html+='<div style="font-size:11px;color:#9b8cff;margin:4px 0;line-height:1.4">'+(_cov?'Single scene \u2014 one copy scaled across the level, scrolls with parallax. No repeating.':'Tiled \u2014 the image repeats across the level (good for seamless textures).')+'</div>';
+     html+='<button class="bgcover" style="width:100%;margin-top:2px;background:'+(_cov?'#242a16':'#1d2a3a')+';border:1px solid '+(_cov?'#c8fb50':'#7b5cff')+';color:'+(_cov?'#c8fb50':'#cdbbe6')+';border-radius:6px;padding:8px;cursor:pointer">Mode: '+(_cov?'Single scene':'Tile (repeat)')+' \u00b7 tap to toggle</button>';
+     html+='<button class="bgfit" style="width:100%;margin-top:6px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Stretch \u2192 fit to view</button>';
    } }
  if(sel.type==='obst' && o.type==='chest'){ const cur=o.loot||'gold';
    const opts=LOOTS.map(L=>'<option value="'+L[0]+'"'+(L[0]===cur?' selected':'')+'>'+L[1]+'</option>').join('');
@@ -444,6 +446,7 @@ function showSel(){
  selBox.innerHTML=html;
  const _bf=selBox.querySelector('.bgfit'); if(_bf)_bf.onclick=()=>{ histPush(); o.x=Math.round(wx(0)); o.y=Math.round(wy(0)); o.w=Math.round(CW/zoom); o.h=Math.round(CH/zoom); delete o.par; persist(); showSel(); draw(); };
  const _bfl=selBox.querySelector('.bgfill'); if(_bfl)_bfl.onclick=()=>{ histPush(); o.tile=!o.tile; if(o.tile&&!o.tscale)o.tscale=1; persist(); showSel(); draw(); };
+ const _bcv=selBox.querySelector('.bgcover'); if(_bcv)_bcv.onclick=()=>{ histPush(); o.cover=!o.cover; persist(); showSel(); draw(); };
  const _ts=selBox.querySelector('.tsc'); if(_ts)_ts.oninput=()=>{ o.tscale=parseFloat(_ts.value); const v=selBox.querySelector('.tscv'); if(v)v.textContent=o.tscale+'\u00d7'; persist(); draw(); };
  const _bp=selBox.querySelector('.bgpar'); if(_bp)_bp.onclick=()=>{ histPush(); if(o.par!==undefined&&o.par!==1) delete o.par; else o.par=0.5; persist(); showSel(); draw(); };
  const _ps=selBox.querySelector('.parsl'); if(_ps)_ps.oninput=()=>{ o.par=parseFloat(_ps.value); const pv=selBox.querySelector('.parval'); if(pv)pv.textContent=o.par+'\u00d7'; persist(); draw(); };
@@ -777,7 +780,8 @@ function draw(){
    else { const X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd=M.h*zoom;
      const sc=Math.max(Wd/img.naturalWidth,Hd/img.naturalHeight); const dw=img.naturalWidth*sc, dh=img.naturalHeight*sc;
      ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Hd); ctx.clip();
-     for(let y=Y;y<Y+Hd;y+=dh) for(let x=X;x<X+Wd+dw;x+=dw) ctx.drawImage(img,x,y,dw,dh); ctx.restore(); }
+     if(b.cover){ ctx.drawImage(img, X, Y+(Hd-dh)/2, dw, dh); }
+     else { for(let y=Y;y<Y+Hd;y+=dh) for(let x=X;x<X+Wd+dw;x+=dw) ctx.drawImage(img,x,y,dw,dh); } ctx.restore(); }
    ctx.globalAlpha=1; }
  ctx.strokeStyle='#2a2150'; ctx.lineWidth=2; ctx.strokeRect(sx(0),sy(0),M.world*zoom,M.h*zoom);
  ctx.strokeStyle='#ffffff08'; ctx.lineWidth=1; ctx.beginPath(); const g=GRID*5;
