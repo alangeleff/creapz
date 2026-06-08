@@ -427,10 +427,12 @@ function orgbarHTML(){ return '<div class="orgbar"><button id="orgTog" class="'+
 function addCategory(){ const nm=(prompt('New category name:','')||'').trim(); if(!nm) return; catModel().push({id:'cat'+Date.now().toString(36),name:nm,parent:null}); buildPalette(); }
 function catMenu(id){ const cat=catModel().find(c=>c.id===id); if(!cat) return;
   const builtin=isBuiltinCat(id);
-  const a=(prompt('"'+cat.name+'" \u2014 type:\n  R = rename\n  S = add subgroup'+(builtin?'':'\n  D = delete'),'R')||'').trim().toUpperCase();
+  const a=(prompt('"'+cat.name+'" \u2014 type:\n  R = rename\n  S = add subgroup\n  U = move up\n  N = move down (next)'+(builtin?'':'\n  X = delete'),'R')||'').trim().toUpperCase();
   if(a==='R'){ const nm=(prompt('Rename category:',cat.name)||'').trim(); if(nm){ cat.name=nm; buildPalette(); } }
   else if(a==='S'){ const nm=(prompt('New subgroup under "'+cat.name+'":','')||'').trim(); if(nm){ catModel().push({id:'cat'+Date.now().toString(36),name:nm,parent:(cat.parent||cat.id)}); buildPalette(); } }
-  else if(a==='D'){ if(builtin){ toast('built-in categories can\u2019t be deleted \u2014 rename it or move its assets out'); return; } if(confirm('Delete "'+cat.name+'"? Its assets return to their default category.')){ delCategory(id); buildPalette(); } }
+  else if(a==='U'){ moveCat(id,-1); }
+  else if(a==='N'){ moveCat(id,1); }
+  else if(a==='X'){ if(builtin){ toast('built-in categories can\u2019t be deleted \u2014 rename it or move its assets out'); return; } if(confirm('Delete "'+cat.name+'"? Its assets return to their default category.')){ delCategory(id); buildPalette(); } }
 }
 function delCategory(id){ BCONFIG.categories=catModel().filter(c=>c.id!==id); catModel().forEach(c=>{ if(c.parent===id) c.parent=null; }); if(BCONFIG.itemCat){ Object.keys(BCONFIG.itemCat).forEach(k=>{ if(BCONFIG.itemCat[k]===id) delete BCONFIG.itemCat[k]; }); } }
 async function saveCategories(){ const r=await commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: update category layout'); if(r) toast('categories saved \u2713'); }
@@ -439,7 +441,24 @@ function attachOrganizeHandlers(){
   const add=document.getElementById('orgAdd'); if(add) add.onclick=addCategory;
   const sv=document.getElementById('orgSave'); if(sv) sv.onclick=saveCategories;
   pal.querySelectorAll('.corg[data-org="menu"]').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); catMenu(b.closest('.pcat').dataset.cat); });
-  pal.querySelectorAll('.delasset').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); ev.preventDefault(); delAsset(b.dataset.del); });
+  pal.querySelectorAll('.delasset').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); ev.preventDefault(); if(b.dataset.del) delAsset(b.dataset.del); else hideBuiltin(b.dataset.delk); });
+}
+function assetMovePicker(kind){ const cats=catOrder(); if(!cats.length) return;
+  const cur=(BCONFIG.itemCat&&BCONFIG.itemCat[kind]);
+  const list=cats.map((c,i)=>(i+1)+'. '+(c.parent?'   \u21b3 ':'')+c.name+(c.id===cur?'  \u2713':'')).join('\n');
+  const ans=prompt('Move this asset to which category?\nType the number:\n\n'+list); if(ans===null) return;
+  const idx=parseInt(ans,10)-1; if(isNaN(idx)||idx<0||idx>=cats.length){ toast('cancelled'); return; }
+  BCONFIG.itemCat=BCONFIG.itemCat||{}; BCONFIG.itemCat[kind]=cats[idx].id; buildPalette(); toast('moved to '+cats[idx].name);
+}
+function hideBuiltin(k){ const lbl=((typeof STAMPS!=='undefined'&&STAMPS.find(s=>s.k===k))||{}).label||k;
+  if(!confirm('Hide built-in asset \u201c'+lbl+'\u201d from your palette?\n\nIt\u2019s a built-in, so this is a stronger action. Existing placements keep working, and hidden built-ins can be restored later.')) return;
+  if(!confirm('Are you sure? Hide \u201c'+lbl+'\u201d? (second confirmation)')) return;
+  BCONFIG.hidden=BCONFIG.hidden||[]; if(!BCONFIG.hidden.includes(k)) BCONFIG.hidden.push(k); buildPalette();
+  commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: hide '+lbl).then(r=>{ if(r) toast('hid \u201c'+lbl+'\u201d'); });
+}
+function moveCat(id,dir){ const cats=catModel(); const c=cats.find(x=>x.id===id); if(!c) return;
+  const sibs=cats.filter(x=>(x.parent||null)===(c.parent||null)); const pos=sibs.indexOf(c), np=pos+dir; if(np<0||np>=sibs.length) return;
+  const other=sibs[np], i1=cats.indexOf(c), i2=cats.indexOf(other); cats[i1]=other; cats[i2]=c; buildPalette();
 }
 function delAsset(id){ const a=(BCONFIG.customAssets||[]).find(x=>x.id===id); if(!a) return;
   if(!confirm('Delete "'+a.name+'" from the palette and repo?\n\nNew placements won\u2019t be possible, and any spots where it\u2019s already placed in a stage will go blank. The image file is removed from the repo too.')) return;
@@ -451,16 +470,16 @@ function delAsset(id){ const a=(BCONFIG.customAssets||[]).find(x=>x.id===id); if
   commitFiles(files,'builder: delete asset '+a.name).then(r=>{ if(r) toast('deleted "'+a.name+'"'); });
 }
 function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'+orgbarHTML(); const all=STAMPS.concat(customStamps());
-  for(const cat of catOrder()){ const items=all.filter(s=>effCat(s)===cat.id);
+  for(const cat of catOrder()){ const items=all.filter(s=>effCat(s)===cat.id && !((BCONFIG.hidden||[]).includes(s.k)));
     if(!items.length && !ORGANIZE) continue;
     const collapsed=!!CAT_COLLAPSE[cat.id], sub=cat.parent?' sub':'';
     palHtml+='<div class="pcat'+sub+'" data-cat="'+cat.id+'"><span class="cchev">'+(collapsed?'\u25b8':'\u25be')+'</span><span class="pcname">'+esc(cat.name)+'</span>'+(ORGANIZE?'<button class="corg" data-org="menu" title="rename / subgroup / delete">\u22ef</button>':'')+'<span class="ccount">'+items.length+'</span></div>';
     if(collapsed) continue;
-    for(const t of items) palHtml+=`<div class="tool${sub}" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${esc(t.label)}${(ORGANIZE&&t.custom)?'<button class="delasset" data-del="'+t.id+'" title="delete this asset">\u2715</button>':''}</div>`; }
+    for(const t of items) palHtml+=`<div class="tool${sub}" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${esc(t.label)}${ORGANIZE?'<button class="delasset" data-delk="'+t.k+'"'+(t.custom?' data-del="'+t.id+'"':'')+' title="remove from palette">\u2715</button>':''}</div>`; }
   palHtml+='<h3>Modes</h3><div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div><div class="modebtn" id="mBulk"><span class="sw" style="background:#3f9bdf"></span>Bulk Replace (tap an asset)</div>';
   pal.innerHTML=palHtml;
   pal.querySelectorAll('.pcat[data-cat]').forEach(hd=>hd.addEventListener('click',ev=>{ if(ev.target.closest('[data-org]')) return; const id=hd.dataset.cat; CAT_COLLAPSE[id]=!CAT_COLLAPSE[id]; saveCatCollapse(); buildPalette(); }));
-  if(typeof attachOrganizeHandlers==='function') attachOrganizeHandlers();
+  if(typeof attachOrganizeHandlers==='function'){ try{ attachOrganizeHandlers(); }catch(e){ console.warn('organize handlers',e); } }
   document.getElementById('mErase').onclick=function(){ eraseMode=!eraseMode; this.classList.toggle('on',eraseMode); if(eraseMode){bulkArm=false; const mb=document.getElementById('mBulk'); if(mb)mb.classList.remove('on');} sel=null; showSel(); };
   document.getElementById('mBulk').onclick=function(){ bulkArm=!bulkArm; this.classList.toggle('on',bulkArm); if(bulkArm){eraseMode=false; document.getElementById('mErase').classList.remove('on');} sel=null; showSel(); toast(bulkArm?'Bulk Replace: tap any asset to select all like it':''); };
 }
@@ -644,7 +663,9 @@ function attachToolHandlers(){ pal.querySelectorAll('.tool').forEach(el=>{
          if(hd){ BCONFIG.itemCat=BCONFIG.itemCat||{}; BCONFIG.itemCat[kind]=hd.dataset.cat; const c=catModel().find(x=>x.id===hd.dataset.cat); toast('moved to '+(c?c.name:'category')); buildPalette(); } }
        else { const r=cv.getBoundingClientRect(); const over=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;
          if(carryLive){ if(over) persist(); else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
-         else if(over){ placeAt(kind, snap(wx(ev.clientX-r.left)), snap(wy(ev.clientY-r.top))); } } }
+         else if(over){ placeAt(kind, snap(wx(ev.clientX-r.left)), snap(wy(ev.clientY-r.top))); } }
+       }
+     else if(ORGANIZE && !moved){ assetMovePicker(kind); }
      ghost.style.display='none'; carry=null; carryLive=null; cleanup();
    };
    el.addEventListener('pointermove',move,{passive:false}); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);

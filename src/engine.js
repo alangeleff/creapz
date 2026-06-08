@@ -1,4 +1,4 @@
-const ASSET_VER='1780901000';
+const ASSET_VER='1780903000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -192,7 +192,7 @@ function loadStage(i){
     else if(g.behavior==='platform'){ SOLID.push({l,r,top}); }
     else if(g.behavior==='spikes'){ GHURT.push({l,r,top,bot}); }
     else if(g.behavior==='bounce'){ GBOUNCE.push({l,r,top, strength:(g.params&&g.params.bounce)||19}); }
-    else if(g.behavior==='slam'){ const pa=g.params||{}; const fl=t.x, fr=t.x+t.w, ft=t.y-dh, fb=t.y; const solid={l:fl,r:fr,top:ft,bot:fb}; TSOLID.push(solid);
+    else if(g.behavior==='slam'){ const pa=g.params||{}; const fl=t.x, fr=t.x+t.w, ft=t.y-dh, fb=t.y; const solid={l:fl,r:fr,top:ft,bot:fb};
       GSLAM.push({tex:t, solid, restY:t.y, dh, dir:(pa.dir==='up'?-1:1), dist:(pa.dist||220), windup:(pa.windup||0.9), slamV:(pa.slamV||1500), retractV:(pa.retractV||220), dwell:(pa.dwell||0.5), trig:(pa.trig||120), dmg:(pa.dmg||1), phase:'idle', tmr:0, off:0}); }
   });
   STARS = Array.from({length:Math.ceil(WORLD/120)},()=>[Math.random()*WORLD,Math.random()*GROUND*0.8,Math.random()*1.6+0.6]);
@@ -855,14 +855,19 @@ function reset(keep){
 }
 function onReset(){ if (p && p.dead && !p.won) reset(true); else reset(); }
 function updateSlam(dt){
-  for(const s of GSLAM){ const t=s.tex;
+  for(const s of GSLAM){ const t=s.tex; const prevTop=t.y-s.dh;
     if(s.phase==='idle'){ if(p.x>s.solid.l-s.trig && p.x<s.solid.r+s.trig) { s.phase='windup'; s.tmr=0; } }
     else if(s.phase==='windup'){ s.tmr+=dt; const k=Math.min(1,s.tmr/s.windup); s.off=s.dir*14*k*k; if(s.tmr>=s.windup) s.phase='slam'; }
     else if(s.phase==='slam'){ s.off+=s.dir*s.slamV*dt; if(Math.abs(s.off)>=s.dist){ s.off=s.dir*s.dist; s.phase='dwell'; s.tmr=0; playSfx('sfx_hurt',0.25); } }
     else if(s.phase==='dwell'){ s.tmr+=dt; if(s.tmr>=s.dwell) s.phase='retract'; }
     else if(s.phase==='retract'){ s.off-=s.dir*s.retractV*dt; if(s.dir>0?(s.off<=0):(s.off>=0)){ s.off=0; s.phase='idle'; } }
-    t.y=s.restY+s.off; s.solid.top=t.y-s.dh; s.solid.bot=t.y;
-    if(s.phase==='slam' && p.inv<=0 && p.x+26>s.solid.l && p.x-26<s.solid.r && p.y>s.solid.top && (p.y-PH)<s.solid.bot){ hurtPlayer((s.solid.l+s.solid.r)/2, s.dmg); }
+    t.y=s.restY+s.off; const top=t.y-s.dh, bot=t.y; s.solid.top=top; s.solid.bot=bot;
+    const l=s.solid.l, r=s.solid.r; if(!(p.x+24>l && p.x-24<r)) continue;
+    // TOP = carrying platform: if the player was riding the old top, move them with it (up or down)
+    const wasOnTop = Math.abs(p.y - prevTop) < 18 && p.vy > -3;
+    if(wasOnTop){ p.y=top; if(p.vy>0) p.vy=0; p.onGround=true; }
+    // CRUSH: torso caught inside the pillar body (against floor/ceiling) -> hurt
+    else if(p.inv<=0 && (p.y-PH) < bot-8 && p.y > top+8){ hurtPlayer((l+r)/2, s.dmg); }
   }
 }
 function hazReset(){ rocks=[]; volleys=[]; loots=[]; for(const h of HAZ){ h.cd=0; if(h.cds) h.cds=h.cds.map(()=>0); } for(const s of GSLAM){ s.phase='idle'; s.off=0; s.tmr=0; if(s.tex&&s.solid){ s.tex.y=s.restY; s.solid.top=s.restY-s.dh; s.solid.bot=s.restY; } } }
@@ -1121,6 +1126,7 @@ function update(dt){
     let cand=[]; for(const fy of segFloorsAt(p.x)) cand.push({t:fy,q:null});
     for (const s of SOLID){ if(p.x>=s.l&&p.x<=s.r) cand.push({t:s.top,q:null}); }
     for (const b of GBOUNCE){ if(p.x>=b.l&&p.x<=b.r) cand.push({t:b.top,q:null,bounce:b}); }
+    for (const s of GSLAM){ if(p.x>=s.solid.l&&p.x<=s.solid.r) cand.push({t:s.solid.top,q:null}); }
     for (const q of plats){ if(q.gone) continue; if(p.x>=q.x-8&&p.x<=q.x+q.w+8) cand.push({t:q.y+q.dy,q:q}); }
     cand=cand.filter(c=>prevFeet<=c.t+1&&p.y>=c.t).sort((a,b)=>a.t-b.t);
     if (cand.length){ const c0=cand[0];
