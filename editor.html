@@ -118,6 +118,7 @@
    <label>idx</label><input id="fIdx" size="2" value="2">
    <button class="btn" id="bUndo" title="Undo (Ctrl+Z)">↶</button>
    <button class="btn" id="bRedo" title="Redo (Ctrl+Y)">↷</button>
+   <button class="btn" id="bRuler" title="Measure / jump-reach ruler">📏</button>
    <button class="btn go" id="bPlay">▶ Play</button>
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
@@ -349,6 +350,7 @@ function migrateLevel(d){ const G=360, FH=440, DEP=FH-G;
 
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let camx=-40,camy=-40,zoom=0.42, CW=0,CH=0;
+let ruler=null; const PHYS={GRAV:0.6,RUN:7.4,JUMP:-13.2};
 function fit(){ const r=document.getElementById('cvWrap').getBoundingClientRect(); CW=r.width; CH=r.height; cv.width=CW; cv.height=CH; draw(); }
 addEventListener('resize',fit);
 function sx(x){return (x-camx)*zoom;} function sy(y){return (y-camy)*zoom;}
@@ -570,6 +572,7 @@ cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.s
  if(ptrs.size===2){ const p=[...ptrs.values()]; pinch={d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),z:zoom,
    mx:(p[0].x+p[1].x)/2,my:(p[0].y+p[1].y)/2, bx:wx((p[0].x+p[1].x)/2),by:wy((p[0].y+p[1].y)/2)}; act=null; return; }
  const c=cvxy(e), wxp=wx(c.x),wyp=wy(c.y);
+ if(ruler){ const e1=Math.hypot(c.x-sx(ruler.x1),c.y-sy(ruler.y1)), e2=Math.hypot(c.x-sx(ruler.x2),c.y-sy(ruler.y2)); if(e1<18){ act={mode:'ruler',pt:1}; return; } if(e2<18){ act={mode:'ruler',pt:2}; return; } }
  if(eraseMode){ const h=hit(wxp,wyp); if(h){ histPush(); delObj(h); persist(); draw(); } return; }
  if(bulkArm){ const h=hit(wxp,wyp); bulkArm=false; const mb=document.getElementById('mBulk'); if(mb)mb.classList.remove('on');
    if(h){ const key=assetKey(h); const members=allProps().filter(p=>assetKey(p)===key).map(p=>p.raw); sel={type:'bulkswap',key,members}; } else sel=null; showSel(); draw(); return; }
@@ -593,6 +596,7 @@ cv.addEventListener('pointermove',e=>{
    const sdx=dx-act.last.dx, sdy=dy-act.last.dy; if(sdx||sdy){ for(const r of sel.members) moveMemberBy(r,sdx,sdy); act.last={dx,dy}; act.moved=true; persist(); draw(); } return; }
  if(act.mode==='move'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); moveObj(act.h,act.start,dx,dy); act.moved=true; syncBack(act.h); persist(); showSel(); draw(); return; }
  if(act.mode==='handle'){ resizeH(act.h,act.start, snap(wx(c.x)), snap(wy(c.y))); act.moved=true; syncBack(sel); persist(); showSel(); draw(); return; }
+ if(act.mode==='ruler'){ if(act.pt===1){ ruler.x1=snap(wx(c.x)); ruler.y1=snap(wy(c.y)); } else { ruler.x2=snap(wx(c.x)); ruler.y2=snap(wy(c.y)); } draw(); return; }
 });
 function endPtr(e){ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null;
  if(ptrs.size===0){ if(act&&(act.mode==='move'||act.mode==='handle'||act.mode==='gmove')&&act.moved&&act.pre){ undoStack.push(act.pre); if(undoStack.length>80)undoStack.shift(); redoStack.length=0; updHist(); } act=null; } }
@@ -712,6 +716,19 @@ function dObst(o){ const X=sx(o.x),Y=sy(o.gy||0);
  if(!dSprite(o.type,X,Y,zoom,'b',o.f===-1)){ ctx.fillStyle=OBST_COLS[o.type]||'#999';
    if(o.type==='crate'){ const ww=40*zoom; ctx.fillRect(X-ww/2,Y-ww,ww,ww); } else { const w2=34*zoom,h2=46*zoom; ctx.beginPath(); ctx.moveTo(X-w2/2,Y); ctx.lineTo(X-w2/2,Y-h2+w2/2); ctx.arc(X,Y-h2+w2/2,w2/2,Math.PI,0); ctx.lineTo(X+w2/2,Y); ctx.fill(); } }
  if(sel&&sel.raw===o){ const e=EDSPR[o.type], h=e?e.m.h*zoom:50*zoom, w=e?e.m.w*zoom:40*zoom; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-w/2-2,Y-h-2,w+4,h+4); } }
+function jumpArc(x0,y0,dir){ const pts=[[x0,y0]]; let vx=PHYS.RUN*dir, vy=PHYS.JUMP, x=x0,y=y0; for(let t=0;t<200;t++){ vy+=PHYS.GRAV; x+=vx; y+=vy; pts.push([x,y]); if(t>2&&y>=y0) break; } return pts; }
+function drawRuler(){ if(!ruler) return;
+  const X1=sx(ruler.x1),Y1=sy(ruler.y1),X2=sx(ruler.x2),Y2=sy(ruler.y2);
+  ctx.strokeStyle='rgba(120,224,180,0.5)'; ctx.lineWidth=1.5; ctx.setLineDash([5,5]);
+  for(const dir of [1,-1]){ const pts=jumpArc(ruler.x1,ruler.y1,dir); ctx.beginPath(); pts.forEach((p,i)=>{ const X=sx(p[0]),Y=sy(p[1]); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); }); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#62d0ff'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X2,Y2); ctx.stroke();
+  for(const pt of [[X1,Y1],[X2,Y2]]){ ctx.fillStyle='#62d0ff'; ctx.strokeStyle='#0a2233'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(pt[0],pt[1],7,0,7); ctx.fill(); ctx.stroke(); }
+  const dx=Math.round(ruler.x2-ruler.x1), dy=Math.round(ruler.y2-ruler.y1), dist=Math.round(Math.hypot(dx,dy));
+  const mx=(X1+X2)/2, my=(Y1+Y2)/2; const txt=dist+' px  ('+(dx>=0?'+':'')+dx+', '+(dy>=0?'+':'')+dy+')';
+  ctx.font='bold 13px sans-serif'; const tw=ctx.measureText(txt).width;
+  ctx.fillStyle='#0a2233e8'; ctx.fillRect(mx-tw/2-7,my-26,tw+14,20); ctx.fillStyle='#bfe9ff'; ctx.textAlign='center'; ctx.fillText(txt,mx,my-12); ctx.textAlign='left';
+}
 function draw(){
  syncFields(); ctx.clearRect(0,0,CW,CH);
  if(M.theme==='crypt'){ ctx.fillStyle='#0a0712'; ctx.fillRect(0,0,CW,CH); }
@@ -761,6 +778,7 @@ function draw(){
  // handles
  for(const h of handles(sel)){ ctx.fillStyle='#c8fb50'; ctx.strokeStyle='#10210a'; ctx.lineWidth=2;
    ctx.beginPath(); ctx.arc(sx(h.x),sy(h.y),7,0,7); ctx.fill(); ctx.stroke(); }
+ drawRuler();
  if(typeof buildLayers==='function') buildLayers();
 }
 function spawnY(x){ let best=null; for(const s of M.seg){ if(x>=s[0]&&x<=s[1]){ if(best===null||s[2]<best)best=s[2]; } } return best; }
@@ -985,6 +1003,7 @@ addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCas
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
  o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; return o; }
+document.getElementById('bRuler').onclick=()=>{ if(ruler){ ruler=null; } else { const cx=wx(CW/2),cy=wy(CH/2); ruler={x1:snap(cx-150),y1:snap(cy),x2:snap(cx+150),y2:snap(cy)}; } document.getElementById('bRuler').classList.toggle('go',!!ruler); draw(); };
 document.getElementById('bExport').onclick=()=>{ const idx=+v('fIdx')||2; const o=cleanLevel();
  const js='window.STAGES=window.STAGES||[];window.STAGES['+idx+']='+JSON.stringify(o,null,1)+';\n';
  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([js],{type:'text/javascript'}));
