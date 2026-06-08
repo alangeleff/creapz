@@ -1,6 +1,15 @@
 {
  "version": 1,
- "customAssets": [],
+ "customAssets": [
+  {
+   "id": "cmq4q1omg",
+   "name": "Ethereal Plains Backdrop",
+   "file": "assets/custom/cmq4q1omg.png",
+   "kind": "bg",
+   "cat": "Background",
+   "v": 1780893564136
+  }
+ ],
  "categories": [],
  "bench": [],
  "worldMap": {}
