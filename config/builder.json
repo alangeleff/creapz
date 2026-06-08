@@ -65,13 +65,13 @@
    "parent": null
   },
   {
-   "id": "Gameplay",
-   "name": "Gameplay",
+   "id": "Hazards",
+   "name": "Hazards",
    "parent": null
   },
   {
-   "id": "Hazards",
-   "name": "Hazards",
+   "id": "Gameplay",
+   "name": "Gameplay",
    "parent": null
   },
   {
@@ -90,19 +90,24 @@
    "parent": null
   },
   {
-   "id": "Textures",
-   "name": "Textures",
+   "id": "Decor",
+   "name": "Decor",
    "parent": null
   },
   {
-   "id": "Decor",
-   "name": "Decor",
+   "id": "Textures",
+   "name": "Textures",
    "parent": null
   },
   {
    "id": "catmq5a31w3",
    "name": "Bones",
    "parent": "Decor"
+  },
+  {
+   "id": "catmq5bfuxo",
+   "name": "Souls",
+   "parent": "Functions"
   }
  ],
  "bench": [
@@ -217,6 +222,14 @@
   "tex_bone01": "catmq5a31w3",
   "tex_skull1": "catmq5a31w3",
   "tex_cmq4r9k0a": "catmq5a31w3",
-  "tex_cmq4robgv": "catmq5a31w3"
+  "tex_cmq4robgv": "catmq5a31w3",
+  "soul": "catmq5bfuxo",
+  "soul100": "catmq5bfuxo",
+  "soul50": "catmq5bfuxo",
+  "soul25": "catmq5bfuxo",
+  "soul5": "catmq5bfuxo",
+  "tex_rockpile": "Decor",
+  "tex_ceiling": "Decor",
+  "tex_cmq58wn73": "Hazards"
  }
 }
