@@ -119,6 +119,7 @@
    <button class="btn" id="bUndo" title="Undo (Ctrl+Z)">↶</button>
    <button class="btn" id="bRedo" title="Redo (Ctrl+Y)">↷</button>
    <button class="btn" id="bRuler" title="Measure / jump-reach ruler">📏</button>
+   <button class="btn" id="bSnap" title="Magnetic edge snapping">🧲</button>
    <button class="btn go" id="bPlay">▶ Play</button>
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
@@ -350,7 +351,7 @@ function migrateLevel(d){ const G=360, FH=440, DEP=FH-G;
 
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let camx=-40,camy=-40,zoom=0.42, CW=0,CH=0;
-let ruler=null; const PHYS={GRAV:0.6,RUN:7.4,JUMP:-13.2};
+let ruler=null, snapOn=false; const PHYS={GRAV:0.6,RUN:7.4,JUMP:-13.2};
 function fit(){ const r=document.getElementById('cvWrap').getBoundingClientRect(); CW=r.width; CH=r.height; cv.width=CW; cv.height=CH; draw(); }
 addEventListener('resize',fit);
 function sx(x){return (x-camx)*zoom;} function sy(y){return (y-camy)*zoom;}
@@ -594,7 +595,7 @@ cv.addEventListener('pointermove',e=>{
  if(act.mode==='pan'){ camx=act.cx-(c.x-act.px)/zoom; camy=act.cy-(c.y-act.py)/zoom; draw(); return; }
  if(act.mode==='gmove'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); if(!act.last)act.last={dx:0,dy:0};
    const sdx=dx-act.last.dx, sdy=dy-act.last.dy; if(sdx||sdy){ for(const r of sel.members) moveMemberBy(r,sdx,sdy); act.last={dx,dy}; act.moved=true; persist(); draw(); } return; }
- if(act.mode==='move'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); moveObj(act.h,act.start,dx,dy); act.moved=true; syncBack(act.h); persist(); showSel(); draw(); return; }
+ if(act.mode==='move'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); moveObj(act.h,act.start,dx,dy); if(snapOn) snapMove(act.h); act.moved=true; syncBack(act.h); persist(); showSel(); draw(); return; }
  if(act.mode==='handle'){ resizeH(act.h,act.start, snap(wx(c.x)), snap(wy(c.y))); act.moved=true; syncBack(sel); persist(); showSel(); draw(); return; }
  if(act.mode==='ruler'){ if(act.pt===1){ ruler.x1=snap(wx(c.x)); ruler.y1=snap(wy(c.y)); } else { ruler.x2=snap(wx(c.x)); ruler.y2=snap(wy(c.y)); } draw(); return; }
 });
@@ -716,6 +717,21 @@ function dObst(o){ const X=sx(o.x),Y=sy(o.gy||0);
  if(!dSprite(o.type,X,Y,zoom,'b',o.f===-1)){ ctx.fillStyle=OBST_COLS[o.type]||'#999';
    if(o.type==='crate'){ const ww=40*zoom; ctx.fillRect(X-ww/2,Y-ww,ww,ww); } else { const w2=34*zoom,h2=46*zoom; ctx.beginPath(); ctx.moveTo(X-w2/2,Y); ctx.lineTo(X-w2/2,Y-h2+w2/2); ctx.arc(X,Y-h2+w2/2,w2/2,Math.PI,0); ctx.lineTo(X+w2/2,Y); ctx.fill(); } }
  if(sel&&sel.raw===o){ const e=EDSPR[o.type], h=e?e.m.h*zoom:50*zoom, w=e?e.m.w*zoom:40*zoom; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-w/2-2,Y-h-2,w+4,h+4); } }
+function objEdges(type,o){
+  if(type==='terrace') return {l:o.x0,r:o.x1,t:o.gy,b:o.gy+(o.depth||130)};
+  if(type==='plat'){ const x=o.x??o.x0; return {l:x,r:x+o.w,t:o.y,b:o.y}; }
+  if(type==='tex') return {l:o.x,r:o.x+o.w,t:o.y,b:o.y};
+  if(type==='obst') return {l:o.x-26,r:o.x+26,t:(o.gy||0)-46,b:(o.gy||0)};
+  if(type==='haz') return {l:o.x,r:o.x+(o.w||40),t:o.y-20,b:o.y}; return null; }
+function shiftObjX(type,o,dx){ if(type==='terrace'){o.x0+=dx;o.x1+=dx;} else { if(o.x0!==undefined)o.x0+=dx; if(o.x!==undefined)o.x+=dx; } }
+function shiftObjY(type,o,dy){ if(type==='terrace')o.gy+=dy; else if(o.gy!==undefined)o.gy+=dy; else if(o.y!==undefined)o.y+=dy; }
+function snapMove(hsel){ const TH=12/zoom; const me=objEdges(hsel.type,hsel.obj); if(!me) return;
+  const xs=[],ys=[];
+  for(const pr of allProps()){ if(pr.raw===hsel.raw) continue; const e=objEdges(pr.kind,pr.raw); if(!e)continue; xs.push(e.l,e.r); ys.push(e.t,e.b); }
+  let bx=null; for(const cc of xs){ for(const edge of [me.l,me.r]){ const d=cc-edge; if(Math.abs(d)<TH&&(bx===null||Math.abs(d)<Math.abs(bx))) bx=d; } }
+  let by=null; for(const cc of ys){ for(const edge of [me.t,me.b]){ const d=cc-edge; if(Math.abs(d)<TH&&(by===null||Math.abs(d)<Math.abs(by))) by=d; } }
+  if(bx) shiftObjX(hsel.type,hsel.obj,bx); if(by) shiftObjY(hsel.type,hsel.obj,by);
+}
 function jumpArc(x0,y0,dir){ const pts=[[x0,y0]]; let vx=PHYS.RUN*dir, vy=PHYS.JUMP, x=x0,y=y0; for(let t=0;t<200;t++){ vy+=PHYS.GRAV; x+=vx; y+=vy; pts.push([x,y]); if(t>2&&y>=y0) break; } return pts; }
 function drawRuler(){ if(!ruler) return;
   const X1=sx(ruler.x1),Y1=sy(ruler.y1),X2=sx(ruler.x2),Y2=sy(ruler.y2);
@@ -1003,6 +1019,7 @@ addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCas
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
  o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; return o; }
+document.getElementById('bSnap').onclick=()=>{ snapOn=!snapOn; document.getElementById('bSnap').classList.toggle('go',snapOn); toast(snapOn?'Snapping ON':'Snapping OFF'); };
 document.getElementById('bRuler').onclick=()=>{ if(ruler){ ruler=null; } else { const cx=wx(CW/2),cy=wy(CH/2); ruler={x1:snap(cx-150),y1:snap(cy),x2:snap(cx+150),y2:snap(cy)}; } document.getElementById('bRuler').classList.toggle('go',!!ruler); draw(); };
 document.getElementById('bExport').onclick=()=>{ const idx=+v('fIdx')||2; const o=cleanLevel();
  const js='window.STAGES=window.STAGES||[];window.STAGES['+idx+']='+JSON.stringify(o,null,1)+';\n';
