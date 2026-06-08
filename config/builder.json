@@ -27,6 +27,14 @@
   }
  ],
  "categories": [],
- "bench": [],
+ "bench": [
+  {
+   "id": "stmq4rqfpr",
+   "name": "Crypt Depths I",
+   "theme": "crypt",
+   "act": "I",
+   "ts": 1780896398607
+  }
+ ],
  "worldMap": {}
 }
