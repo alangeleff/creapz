@@ -1,4 +1,4 @@
-const ASSET_VER='1780910000';
+const ASSET_VER='1780912000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -867,10 +867,10 @@ function updateSlam(dt){
     const l=s.solid.l, r=s.solid.r, head=p.y-PH;
     if(!(p.x+PW/2>l && p.x-PW/2<r)) continue;
     if(s.dir<0){ // UP-slam: rising TOP pushes the player up; if a ceiling blocks the push -> crush
-      if(top < p.y-2 && top > head){ const nh=top-PH; if(inTerrain(p.x,nh+2)||inTerrain(p.x-PW/2+3,nh+2)||inTerrain(p.x+PW/2-3,nh+2)){ crushPlayer(); } else { p.y=top; if(p.vy>0)p.vy=0; p.onGround=true; } }
+      if(top < p.y-2 && top > head){ const nh=top-PH; if(inTerrain(p.x,nh+2)||inTerrain(p.x-PW/2+3,nh+2)||inTerrain(p.x+PW/2-3,nh+2)){ crushPlayer(p.x<(l+r)/2?-1:1); } else { p.y=top; if(p.vy>0)p.vy=0; p.onGround=true; } }
       else if(Math.abs(p.y-top)<8 && p.vy>=-1){ p.y=top; if(p.vy>0)p.vy=0; p.onGround=true; }
     } else { // DOWN-slam: descending BOTTOM pushes the player down; if a floor blocks the push -> crush
-      if(bot > head+2 && bot < p.y){ const nf=bot+PH; if(floorNear(p.x,nf)||inTerrain(p.x,nf-2)){ crushPlayer(); } else { p.y=nf; if(p.vy<0)p.vy=0; } }
+      if(bot > head+2 && bot < p.y){ const nf=bot+PH; if(floorNear(p.x,nf)||inTerrain(p.x,nf-2)){ crushPlayer(p.x<(l+r)/2?-1:1); } else { p.y=nf; if(p.vy<0)p.vy=0; } }
       else if(Math.abs(p.y-top)<8 && p.vy>=-1){ p.y=top; if(p.vy>0)p.vy=0; p.onGround=true; }
     }
   }
@@ -1033,7 +1033,7 @@ function update(dt){
   }
   if (p.dead){
     const pd0=p.deadT; p.deadT+=dt;
-    if (pd0<0.45 && p.deadT>=0.45) playSfx('sfx_dportal');
+    const _dpt=p.deathHurt?0.6:0.45; if (pd0<_dpt && p.deadT>=_dpt) playSfx('sfx_dportal');
     if (p.state!=='kneel'){ p.state='kneel'; p.clock=0; }
     p.clock+=dt;
     return;
@@ -1454,7 +1454,7 @@ function drawWorldProps(){
   props.sort((a,b)=>a.z-b.z);
   for(const p of props) p.f();
 }
-function crushPlayer(){ if(p.dead||p.won||p.winning) return; gotHit=true; p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; p.vx=0; p.vy=0; p.deathHurt=true; playSfx('sfx_hurt'); playSfx('sfx_pdie'); }
+function crushPlayer(dir){ if(p.dead||p.won||p.winning) return; gotHit=true; p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; p.vx=0; p.vy=0; p.deathHurt=true; p.tossDir=dir||-p.facing; playSfx('sfx_hurt'); playSfx('sfx_pdie'); }
 function hurtPlayer(srcX,dmg){
   if (p.diveT>0||p.diveRec>0) return;   // Power Dive i-frames (until normal stance resumes)
   gotHit=true; playSfx('sfx_hurt');
@@ -2224,6 +2224,33 @@ function drawGoal(){
   ctx.drawImage(g.fimg, -g.w/2, -g.h, g.w, g.h);
   ctx.restore(); ctx.globalAlpha=1;
 }
+function renderCrushDeath(sx, gt){
+  const t=p.deadT, TP=0.6, dir=p.tossDir||-p.facing;
+  const hf=Math.min(SPR.chars[chosen].hurt.frames-1, Math.floor(t*FPS.hurt));
+  const endX=sx + dir*48, endY=p.y-18;
+  if (t < TP){
+    const step=Math.max(0, Math.min(3, Math.floor((t/TP)*4)));   // 0..3 discrete recoil steps
+    const tx=sx + dir*step*16, ty=p.y - step*7;                  // slow-motion toss back + slight rise
+    const gi=0.12 + 0.55*(t/TP);                                  // glitch slowly increases
+    const redOn=(Math.floor(gt*22)%2===0);                        // flickering hurt-red hue
+    ctx.globalAlpha = redOn?1:0.74;
+    drawCharSprite(chosen,'hurt',hf,tx,ty,p.facing,1, redOn?0.65:0.28);
+    if (gi>0.3){ ctx.save(); ctx.globalAlpha=0.4; drawGlitchAnim(chosen,'hurt',hf,tx,ty,p.facing,1, gi); ctx.restore(); }
+    ctx.globalAlpha=1;
+    return;
+  }
+  const te=t-TP, pcx=endX - dir*20, pcy=endY-46;                  // portal hooks from where he landed
+  let ps=0;
+  if (te<=0.4) ps=80*(te/0.4);
+  else if (te<=1.0) ps=80;
+  else ps=Math.max(0, 80*(1-(te-1.0)/0.45));
+  if (ps>0.5) drawPortal(pcx, pcy, ps, gt);
+  const gi=Math.min(1, 0.55 + te/1.1), g2=gi*gi;
+  const frq=6+26*g2;
+  const fl=(Math.floor(gt*frq)%4===0)?Math.max(0.25,1-0.9*g2):(Math.random()<0.12*g2?0.55:1);
+  if (te<=0.4){ ctx.globalAlpha=fl; drawGlitchAnim(chosen,'hurt',hf,endX,endY,p.facing,1,gi); ctx.globalAlpha=1; }
+  else { const k=Math.min(1,(te-0.4)/0.7), s=Math.max(0.05,1-k); const cxp=endX+(pcx-endX)*k, fy=endY+((pcy+58*s)-endY)*k; ctx.globalAlpha=Math.max(0,1-k*0.9)*fl; drawGlitchAnim(chosen,'hurt',hf,cxp,fy,p.facing,s,gi); ctx.globalAlpha=1; }
+}
 function drawPlayerLayer(){
   if (p.won) return;
   const sx=p.x-camX;
@@ -2278,6 +2305,7 @@ function drawPlayerLayer(){
   const t=p.deadT, pcx=sx - p.facing*26, pcy=p.y-66;
   const dAnim=p.deathHurt?'hurt':'kneel';
   const dFrame=p.deathHurt?Math.min(SPR.chars[chosen].hurt.frames-1, Math.floor(p.deadT*FPS.hurt)):curFrame();
+  if (p.deathHurt){ renderCrushDeath(sx, gt); return; }
   let ps=0;
   if (t>0.45 && t<=1.0) ps=80*(t-0.45)/0.55;
   else if (t>1.0 && t<=1.7) ps=80;
