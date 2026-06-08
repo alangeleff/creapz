@@ -642,6 +642,11 @@ function _liveHandle(kind, clientX, clientY){ const r=cv.getBoundingClientRect()
     if(!carryLive){ placeAt(kind,gx,gy); carryLive=sel; carry={kind,s0:JSON.parse(JSON.stringify(sel.obj)),gx,gy,lastx:gx,lasty:gy}; }
     else if(gx!==carry.lastx||gy!==carry.lasty){ moveObj(carryLive,carry.s0,gx-carry.gx,gy-carry.gy); syncBack(carryLive); carry.lastx=gx; carry.lasty=gy; showSel(); draw(); } }
   else { if(carryLive){ delObj(carryLive); carryLive=null; sel=null; showSel(); persist(); draw(); } showGhost(clientX,clientY); } }
+let _palAuto=null,_palVel=0,_palPy=0;
+function palCatAtY(y){ const heads=[...pal.querySelectorAll('.pcat[data-cat]')]; if(!heads.length) return null;
+  for(let i=0;i<heads.length;i++){ const top=heads[i].getBoundingClientRect().top; const bot=(i+1<heads.length)?heads[i+1].getBoundingClientRect().top:(_palList?_palList.getBoundingClientRect().bottom:1e9); if(y>=top && y<bot) return heads[i]; }
+  return (y < heads[0].getBoundingClientRect().top) ? heads[0] : heads[heads.length-1]; }
+function paintPalDrop(y){ const hd=palCatAtY(y); pal.querySelectorAll('.pcat').forEach(p=>p.classList.toggle('drop', p===hd)); }
 function attachToolHandlers(){ pal.querySelectorAll('.tool').forEach(el=>{
  el.style.touchAction='none';
  el.addEventListener('pointerdown',e=>{
@@ -650,11 +655,11 @@ function attachToolHandlers(){ pal.querySelectorAll('.tool').forEach(el=>{
    const sx0=e.clientX, sy0=e.clientY, startScroll=_palList?_palList.scrollTop:0;
    let active=false, timer=null, moved=false;
    try{ el.setPointerCapture(e.pointerId); }catch(_){ }
-   const cleanup=()=>{ el.classList.remove('dragging'); el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up); };
-   const activate=()=>{ active=true; timer=null; if(navigator.vibrate){ try{navigator.vibrate(18);}catch(_){ } } el.classList.add('dragging'); carry={kind}; carryLive=null; if(!ORGANIZE) _liveHandle(kind, sx0, sy0); };
+   const cleanup=()=>{ el.classList.remove('dragging'); if(_palAuto){clearInterval(_palAuto);_palAuto=null;} _palVel=0; pal.querySelectorAll('.pcat').forEach(p=>p.classList.remove('drop')); el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up); };
+   const activate=()=>{ active=true; timer=null; if(navigator.vibrate){ try{navigator.vibrate(18);}catch(_){ } } el.classList.add('dragging'); carry={kind}; carryLive=null; if(!ORGANIZE){ _liveHandle(kind, sx0, sy0); } else { _palPy=sy0; if(_palAuto)clearInterval(_palAuto); _palAuto=setInterval(()=>{ if(_palVel&&_palList){ _palList.scrollTop+=_palVel; paintPalDrop(_palPy); } },16); paintPalDrop(sy0); } };
    if(!isMouse) timer=setTimeout(activate, 180);
    const move=ev=>{ ev.preventDefault();
-     if(active){ if(!ORGANIZE){ _liveHandle(kind, ev.clientX, ev.clientY); } else { const e2=document.elementFromPoint(ev.clientX,ev.clientY); pal.querySelectorAll('.pcat').forEach(p=>p.classList.remove('drop')); const hd=e2&&e2.closest&&e2.closest('.pcat[data-cat]'); if(hd) hd.classList.add('drop'); } return; }
+     if(active){ if(!ORGANIZE){ _liveHandle(kind, ev.clientX, ev.clientY); } else { _palPy=ev.clientY; const lr=_palList?_palList.getBoundingClientRect():null; _palVel=(lr&&ev.clientY<lr.top+40)?-9:(lr&&ev.clientY>lr.bottom-40)?9:0; paintPalDrop(ev.clientY); } return; }
      const dist=Math.hypot(ev.clientX-sx0,ev.clientY-sy0);
      if(isMouse){ if(dist>6) activate(); return; }
      if(dist>8){ moved=true; if(timer){clearTimeout(timer);timer=null;} }
@@ -662,13 +667,12 @@ function attachToolHandlers(){ pal.querySelectorAll('.tool').forEach(el=>{
    };
    const up=ev=>{ if(timer){clearTimeout(timer);timer=null;}
      if(active){
-       if(ORGANIZE){ const e2=document.elementFromPoint(ev.clientX,ev.clientY); const hd=e2&&e2.closest&&e2.closest('.pcat[data-cat]'); pal.querySelectorAll('.pcat').forEach(p=>p.classList.remove('drop'));
-         if(hd){ BCONFIG.itemCat=BCONFIG.itemCat||{}; BCONFIG.itemCat[kind]=hd.dataset.cat; const c=catModel().find(x=>x.id===hd.dataset.cat); toast('moved to '+(c?c.name:'category')); buildPalette(); } else { assetMovePicker(kind); } }
+       if(ORGANIZE){ const hd=palCatAtY(_palPy||ev.clientY); pal.querySelectorAll('.pcat').forEach(p=>p.classList.remove('drop'));
+         if(hd){ BCONFIG.itemCat=BCONFIG.itemCat||{}; BCONFIG.itemCat[kind]=hd.dataset.cat; const c=catModel().find(x=>x.id===hd.dataset.cat); toast('moved to '+(c?c.name:'category')); buildPalette(); } }
        else { const r=cv.getBoundingClientRect(); const over=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;
          if(carryLive){ if(over) persist(); else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
          else if(over){ placeAt(kind, snap(wx(ev.clientX-r.left)), snap(wy(ev.clientY-r.top))); } }
        }
-     else if(ORGANIZE && !moved){ assetMovePicker(kind); }
      ghost.style.display='none'; carry=null; carryLive=null; cleanup();
    };
    el.addEventListener('pointermove',move,{passive:false}); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
