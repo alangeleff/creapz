@@ -8,6 +8,14 @@
    "kind": "bg",
    "cat": "Background",
    "v": 1780893564136
+  },
+  {
+   "id": "cmq4r9k0a",
+   "name": "Death Totem",
+   "file": "assets/custom/cmq4r9k0a.png",
+   "kind": "decor",
+   "cat": "Decor",
+   "v": 1780895611018
   }
  ],
  "categories": [],
