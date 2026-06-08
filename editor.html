@@ -13,6 +13,17 @@
  #layers{flex:1 1 44%;overflow-y:auto;padding:8px}
  #pal h3{font-size:10px;letter-spacing:.5px;color:var(--mut);margin:12px 6px 6px;text-transform:uppercase}
  .cat{font-size:10px;letter-spacing:.5px;color:var(--lime);margin:10px 4px 4px;text-transform:uppercase;font-weight:700}
+ .pcat{font-size:10px;letter-spacing:.5px;color:var(--lime);margin:10px 4px 4px;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+ .pcat.sub{margin-left:14px;color:#cdb674;font-size:9px}
+ .pcat .cchev{font-size:9px;opacity:.85;width:10px;flex:none}
+ .pcat .pcname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .pcat .ccount{background:#241d44;color:#9b8cff;border-radius:8px;padding:1px 6px;font-size:9px;font-weight:600;flex:none}
+ .pcat .corg{flex:none;background:none;border:none;color:#9b8cff;font-size:13px;cursor:pointer;padding:0 2px;line-height:1}
+ .tool.sub{margin-left:14px}
+ .pcat.drop{background:#16301d;outline:1px solid #3fbf6a;border-radius:6px}
+ .orgbar{display:flex;gap:6px;margin:6px 4px 2px}
+ .orgbar button{flex:1;font-size:11px;padding:7px;border-radius:7px;border:1px solid var(--line);background:#1d1838;color:#cdbbe6;cursor:pointer}
+ .orgbar button.on{background:#16301d;border-color:#3fbf6a;color:#a8f0c0}
  .litem{display:flex;align-items:center;gap:5px;padding:5px 6px;border-radius:6px;font-size:12px;cursor:pointer;margin:1px 0}
  .litem.ldrag{opacity:.5;outline:1px solid var(--lime)}
  .litem.ghead.grouphl{outline:2px solid var(--lime);background:#26331a}
@@ -401,11 +412,42 @@ async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb
 loadBConfig();
 function customStamps(){ return (BCONFIG.customAssets||[]).map(a=>({k:(a.kind==='bg'?'bg_':a.kind==='fg'?'fg_':'tex_')+a.id, label:a.name, sw:a.sw||'#9a8a6a', cat:a.cat||(a.kind==='bg'?'Background':a.kind==='fg'?'Foreground':'Decor')})); }
 function registerCustomAsset(a, src){ const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src=src||('./'+a.file+'?v='+(a.v||1)); if(a.kind==='bg'||a.kind==='fg'){ BGE_IMG[a.id]=im; BG_LABEL[a.id]=a.name; } else { DECOR_IMG[a.id]=im; TEX_LABEL[a.id]=a.name; TEX_COLS[a.id]=a.sw||'#9a8a6a'; } }
-function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'; const all=STAMPS.concat(customStamps());
-  for(const cat of CATS){ const items=all.filter(s=>s.cat===cat); if(!items.length) continue; palHtml+='<div class="cat">'+cat+'</div>';
-    for(const t of items) palHtml+=`<div class="tool" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${t.label}</div>`; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+let ORGANIZE=false;
+let CAT_COLLAPSE={}; try{ CAT_COLLAPSE=JSON.parse(localStorage.getItem('creapz_cat_collapsed')||'{}'); }catch(e){}
+function saveCatCollapse(){ try{ localStorage.setItem('creapz_cat_collapsed',JSON.stringify(CAT_COLLAPSE)); }catch(e){} }
+function catModel(){ if(!Array.isArray(BCONFIG.categories)||!BCONFIG.categories.length){ BCONFIG.categories=CATS.map(n=>({id:n,name:n,parent:null})); } return BCONFIG.categories; }
+function catOrder(){ const cats=catModel(); const out=[]; cats.filter(c=>!c.parent).forEach(p=>{ out.push(p); cats.filter(c=>c.parent===p.id).forEach(ch=>out.push(ch)); }); cats.forEach(c=>{ if(out.indexOf(c)<0) out.push(c); }); return out; }
+function effCat(item){ return (BCONFIG.itemCat&&BCONFIG.itemCat[item.k]) || item.cat; }
+function isBuiltinCat(id){ return CATS.indexOf(id)>=0; }
+function orgbarHTML(){ return '<div class="orgbar"><button id="orgTog" class="'+(ORGANIZE?'on':'')+'">'+(ORGANIZE?'\u2713 Organizing':'\u2699 Organize')+'</button>'+(ORGANIZE?'<button id="orgAdd">+ Category</button><button id="orgSave">\u2601 Save</button>':'')+'</div>'; }
+function addCategory(){ const nm=(prompt('New category name:','')||'').trim(); if(!nm) return; catModel().push({id:'cat'+Date.now().toString(36),name:nm,parent:null}); buildPalette(); }
+function catMenu(id){ const cat=catModel().find(c=>c.id===id); if(!cat) return;
+  const builtin=isBuiltinCat(id);
+  const a=(prompt('"'+cat.name+'" \u2014 type:\n  R = rename\n  S = add subgroup'+(builtin?'':'\n  D = delete'),'R')||'').trim().toUpperCase();
+  if(a==='R'){ const nm=(prompt('Rename category:',cat.name)||'').trim(); if(nm){ cat.name=nm; buildPalette(); } }
+  else if(a==='S'){ const nm=(prompt('New subgroup under "'+cat.name+'":','')||'').trim(); if(nm){ catModel().push({id:'cat'+Date.now().toString(36),name:nm,parent:(cat.parent||cat.id)}); buildPalette(); } }
+  else if(a==='D'){ if(builtin){ toast('built-in categories can\u2019t be deleted \u2014 rename it or move its assets out'); return; } if(confirm('Delete "'+cat.name+'"? Its assets return to their default category.')){ delCategory(id); buildPalette(); } }
+}
+function delCategory(id){ BCONFIG.categories=catModel().filter(c=>c.id!==id); catModel().forEach(c=>{ if(c.parent===id) c.parent=null; }); if(BCONFIG.itemCat){ Object.keys(BCONFIG.itemCat).forEach(k=>{ if(BCONFIG.itemCat[k]===id) delete BCONFIG.itemCat[k]; }); } }
+async function saveCategories(){ const r=await commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: update category layout'); if(r) toast('categories saved \u2713'); }
+function attachOrganizeHandlers(){
+  const tog=document.getElementById('orgTog'); if(tog) tog.onclick=()=>{ ORGANIZE=!ORGANIZE; buildPalette(); if(ORGANIZE) toast('Organize: drag an asset onto a category to move it; \u22ef on a category for rename/subgroup/delete'); };
+  const add=document.getElementById('orgAdd'); if(add) add.onclick=addCategory;
+  const sv=document.getElementById('orgSave'); if(sv) sv.onclick=saveCategories;
+  pal.querySelectorAll('.corg[data-org="menu"]').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); catMenu(b.closest('.pcat').dataset.cat); });
+}
+function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'+orgbarHTML(); const all=STAMPS.concat(customStamps());
+  for(const cat of catOrder()){ const items=all.filter(s=>effCat(s)===cat.id);
+    if(!items.length && !ORGANIZE) continue;
+    const collapsed=!!CAT_COLLAPSE[cat.id], sub=cat.parent?' sub':'';
+    palHtml+='<div class="pcat'+sub+'" data-cat="'+cat.id+'"><span class="cchev">'+(collapsed?'\u25b8':'\u25be')+'</span><span class="pcname">'+esc(cat.name)+'</span>'+(ORGANIZE?'<button class="corg" data-org="menu" title="rename / subgroup / delete">\u22ef</button>':'')+'<span class="ccount">'+items.length+'</span></div>';
+    if(collapsed) continue;
+    for(const t of items) palHtml+=`<div class="tool${sub}" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${esc(t.label)}</div>`; }
   palHtml+='<h3>Modes</h3><div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div><div class="modebtn" id="mBulk"><span class="sw" style="background:#3f9bdf"></span>Bulk Replace (tap an asset)</div>';
   pal.innerHTML=palHtml;
+  pal.querySelectorAll('.pcat[data-cat]').forEach(hd=>hd.addEventListener('click',ev=>{ if(ev.target.closest('[data-org]')) return; const id=hd.dataset.cat; CAT_COLLAPSE[id]=!CAT_COLLAPSE[id]; saveCatCollapse(); buildPalette(); }));
+  if(typeof attachOrganizeHandlers==='function') attachOrganizeHandlers();
   document.getElementById('mErase').onclick=function(){ eraseMode=!eraseMode; this.classList.toggle('on',eraseMode); if(eraseMode){bulkArm=false; const mb=document.getElementById('mBulk'); if(mb)mb.classList.remove('on');} sel=null; showSel(); };
   document.getElementById('mBulk').onclick=function(){ bulkArm=!bulkArm; this.classList.toggle('on',bulkArm); if(bulkArm){eraseMode=false; document.getElementById('mErase').classList.remove('on');} sel=null; showSel(); toast(bulkArm?'Bulk Replace: tap any asset to select all like it':''); };
 }
@@ -573,19 +615,22 @@ function attachToolHandlers(){ pal.querySelectorAll('.tool').forEach(el=>{
    let active=false, timer=null, moved=false;
    try{ el.setPointerCapture(e.pointerId); }catch(_){ }
    const cleanup=()=>{ el.classList.remove('dragging'); el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); el.removeEventListener('pointercancel',up); };
-   const activate=()=>{ active=true; timer=null; if(navigator.vibrate){ try{navigator.vibrate(18);}catch(_){ } } el.classList.add('dragging'); carry={kind}; carryLive=null; _liveHandle(kind, sx0, sy0); };
+   const activate=()=>{ active=true; timer=null; if(navigator.vibrate){ try{navigator.vibrate(18);}catch(_){ } } el.classList.add('dragging'); carry={kind}; carryLive=null; if(!ORGANIZE) _liveHandle(kind, sx0, sy0); };
    if(!isMouse) timer=setTimeout(activate, 180);
    const move=ev=>{ ev.preventDefault();
-     if(active){ _liveHandle(kind, ev.clientX, ev.clientY); return; }
+     if(active){ if(!ORGANIZE){ _liveHandle(kind, ev.clientX, ev.clientY); } else { const e2=document.elementFromPoint(ev.clientX,ev.clientY); pal.querySelectorAll('.pcat').forEach(p=>p.classList.remove('drop')); const hd=e2&&e2.closest&&e2.closest('.pcat[data-cat]'); if(hd) hd.classList.add('drop'); } return; }
      const dist=Math.hypot(ev.clientX-sx0,ev.clientY-sy0);
      if(isMouse){ if(dist>6) activate(); return; }
      if(dist>8){ moved=true; if(timer){clearTimeout(timer);timer=null;} }
      if(moved && _palList){ _palList.scrollTop=startScroll-(ev.clientY-sy0); }
    };
    const up=ev=>{ if(timer){clearTimeout(timer);timer=null;}
-     if(active){ const r=cv.getBoundingClientRect(); const over=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;
-       if(carryLive){ if(over) persist(); else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
-       else if(over){ placeAt(kind, snap(wx(ev.clientX-r.left)), snap(wy(ev.clientY-r.top))); } }
+     if(active){
+       if(ORGANIZE){ const e2=document.elementFromPoint(ev.clientX,ev.clientY); const hd=e2&&e2.closest&&e2.closest('.pcat[data-cat]'); pal.querySelectorAll('.pcat').forEach(p=>p.classList.remove('drop'));
+         if(hd){ BCONFIG.itemCat=BCONFIG.itemCat||{}; BCONFIG.itemCat[kind]=hd.dataset.cat; const c=catModel().find(x=>x.id===hd.dataset.cat); toast('moved to '+(c?c.name:'category')); buildPalette(); } }
+       else { const r=cv.getBoundingClientRect(); const over=ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom;
+         if(carryLive){ if(over) persist(); else { delObj(carryLive); sel=null; showSel(); persist(); draw(); } }
+         else if(over){ placeAt(kind, snap(wx(ev.clientX-r.left)), snap(wy(ev.clientY-r.top))); } } }
      ghost.style.display='none'; carry=null; carryLive=null; cleanup();
    };
    el.addEventListener('pointermove',move,{passive:false}); el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
