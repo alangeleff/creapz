@@ -1,4 +1,4 @@
-const ASSET_VER='1780921500';
+const ASSET_VER='1780923000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -38,7 +38,7 @@ const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidi
 const PMETER=20, PDUR=7;
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
 function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
-function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} loadStage(pendingStage); mode='play'; }
+function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
 function prettySkin(id){ const m={'default':'Default','dingbat':'Dingbat','ding_onyx':'Onyx','ding_frost':'Frost','ding_blood':'Blood'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 function cycleSkin(dir){ const list=isDing(chosen)?DORDER:ORDER; let i=list.indexOf(chosen); if(i<0)i=0; chosen=list[(i+dir+list.length)%list.length]; if(isDing(chosen))dingSkin=chosen; else creaperSkin=chosen; try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
@@ -149,7 +149,7 @@ function getActs(zone){
   });
 }
 function zoneOpen(z){ return !!(ZONE_STAGES[z]&&ZONE_STAGES[z].length&&(devMode||(RELEASED[z]||0)>0)); }
-function bootTest(){ banked=0; if(!chosen) chosen=creaperSkin||'default'; pendingStage=window.__testIdx; stonePickSel=0; mode='stonepick'; }
+function bootTest(){ banked=0; if(!chosen) chosen=creaperSkin||'default'; SFXLIST.forEach(loadSfx); pendingStage=window.__testIdx; stonePickSel=0; mode='stonepick'; }
 function enterWorld(fromAct){
   if(testMode){ try{ if(history.length>1) history.back(); else location.href='editor'; }catch(e){ location.href='editor'; } return; }
   paused=false; tally=null; fading=0; fadeIn=0.5; panelSel=0;
