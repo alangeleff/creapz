@@ -1,4 +1,4 @@
-const ASSET_VER='1780918000';
+const ASSET_VER='1780920000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -2225,14 +2225,14 @@ function drawGoal(){
   ctx.restore(); ctx.globalAlpha=1;
 }
 function renderCrushDeath(sx, gt){
-  const t=p.deadT, TP=1.42, STEPS=4, BACK=21, dir=p.tossDir||-p.facing;
+  const t=p.deadT, TP=1.42, STEPS=4, BACK=21, DOWN=28, dir=p.tossDir||-p.facing;
   const hf=Math.min(SPR.chars[chosen].hurt.frames-1, Math.floor(t*FPS.hurt));
-  const endX=sx + dir*BACK, endY=p.y;
+  const endX=sx + dir*BACK, endY=p.y + DOWN;
   if (t < TP){
     const prog=Math.min(1, t/TP);
     const step=Math.min(STEPS, Math.floor(prog*(STEPS+1)));       // discrete recoil steps (slower hold each)
     const ease=step/STEPS;
-    const tx=sx + dir*BACK*Math.pow(ease,1.2), ty=p.y - Math.sin(ease*Math.PI)*18;  // slight fall-back per step, gentle arc
+    const tx=sx + dir*BACK*Math.pow(ease,1.2), ty=p.y + DOWN*ease;  // slight back + downward per step (falling)
     const gi=0.12 + 0.55*prog;                                    // glitch slowly increases
     const redOn=(Math.floor(gt*22)%2===0);                        // flickering hurt-red hue
     ctx.globalAlpha = redOn?1:0.74;
