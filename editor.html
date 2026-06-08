@@ -21,6 +21,8 @@
  .pcat .corg{flex:none;background:none;border:none;color:#9b8cff;font-size:13px;cursor:pointer;padding:0 2px;line-height:1}
  .tool.sub{margin-left:14px}
  .pcat.drop{background:#16301d;outline:1px solid #3fbf6a;border-radius:6px}
+ .pcat.catdrop{outline:2px solid var(--lime);background:#1a2410;border-radius:6px}
+ .pcat.catdrag{opacity:.45}
  .delasset{margin-left:auto;background:#3a1620;border:1px solid #e23b3b;color:#ff9a9a;border-radius:5px;font-size:11px;line-height:1;padding:3px 7px;cursor:pointer;flex:none}
  .orgbar{display:flex;gap:6px;margin:6px 4px 2px}
  .orgbar button{flex:1;font-size:11px;padding:7px;border-radius:7px;border:1px solid var(--line);background:#1d1838;color:#cdbbe6;cursor:pointer}
@@ -443,6 +445,7 @@ function attachOrganizeHandlers(){
   const sv=document.getElementById('orgSave'); if(sv) sv.onclick=saveCategories;
   pal.querySelectorAll('.corg[data-org="menu"]').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); catMenu(b.closest('.pcat').dataset.cat); });
   pal.querySelectorAll('.delasset').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); ev.preventDefault(); if(b.dataset.del) delAsset(b.dataset.del); else hideBuiltin(b.dataset.delk); });
+  attachCatDrag();
 }
 function assetMovePicker(kind){ const cats=catOrder(); if(!cats.length) return;
   const cur=(BCONFIG.itemCat&&BCONFIG.itemCat[kind]);
@@ -479,7 +482,7 @@ function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'+or
     for(const t of items) palHtml+=`<div class="tool${sub}" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${esc(t.label)}${ORGANIZE?'<button class="delasset" data-delk="'+t.k+'"'+(t.custom?' data-del="'+t.id+'"':'')+' title="remove from palette">\u2715</button>':''}</div>`; }
   palHtml+='<h3>Modes</h3><div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div><div class="modebtn" id="mBulk"><span class="sw" style="background:#3f9bdf"></span>Bulk Replace (tap an asset)</div>';
   pal.innerHTML=palHtml;
-  pal.querySelectorAll('.pcat[data-cat]').forEach(hd=>hd.addEventListener('click',ev=>{ if(ev.target.closest('[data-org]')) return; const id=hd.dataset.cat; CAT_COLLAPSE[id]=!CAT_COLLAPSE[id]; saveCatCollapse(); buildPalette(); }));
+  pal.querySelectorAll('.pcat[data-cat]').forEach(hd=>hd.addEventListener('click',ev=>{ if(ev.target.closest('[data-org]')) return; if(catDragSuppress){ catDragSuppress=false; return; } const id=hd.dataset.cat; CAT_COLLAPSE[id]=!CAT_COLLAPSE[id]; saveCatCollapse(); buildPalette(); }));
   if(typeof attachOrganizeHandlers==='function'){ try{ attachOrganizeHandlers(); }catch(e){ console.warn('organize handlers',e); } }
   document.getElementById('mErase').onclick=function(){ eraseMode=!eraseMode; this.classList.toggle('on',eraseMode); if(eraseMode){bulkArm=false; const mb=document.getElementById('mBulk'); if(mb)mb.classList.remove('on');} sel=null; showSel(); };
   document.getElementById('mBulk').onclick=function(){ bulkArm=!bulkArm; this.classList.toggle('on',bulkArm); if(bulkArm){eraseMode=false; document.getElementById('mErase').classList.remove('on');} sel=null; showSel(); toast(bulkArm?'Bulk Replace: tap any asset to select all like it':''); };
@@ -643,6 +646,31 @@ function _liveHandle(kind, clientX, clientY){ const r=cv.getBoundingClientRect()
     else if(gx!==carry.lastx||gy!==carry.lasty){ moveObj(carryLive,carry.s0,gx-carry.gx,gy-carry.gy); syncBack(carryLive); carry.lastx=gx; carry.lasty=gy; showSel(); draw(); } }
   else { if(carryLive){ delObj(carryLive); carryLive=null; sel=null; showSel(); persist(); draw(); } showGhost(clientX,clientY); } }
 let _palAuto=null,_palVel=0,_palPy=0;
+let catDragSuppress=false;
+function paintCatDrop(y){ const hd=palCatAtY(y); pal.querySelectorAll('.pcat').forEach(p=>p.classList.toggle('catdrop', p===hd)); }
+function reorderCatBefore(dragId,targetId){ const cats=catModel(); if(dragId===targetId) return; const di=cats.findIndex(c=>c.id===dragId); if(di<0)return; const moved=cats.splice(di,1)[0]; let ti=cats.findIndex(c=>c.id===targetId); if(ti<0){ cats.push(moved); } else { cats.splice(ti,0,moved); } }
+function attachCatDrag(){ if(!ORGANIZE) return; pal.querySelectorAll('.pcat[data-cat]').forEach(hd=>{
+  hd.addEventListener('pointerdown',e=>{ if(e.target.closest&&e.target.closest('[data-org]')) return;
+    const id=hd.dataset.cat, isMouse=e.pointerType==='mouse'; const sx0=e.clientX, sy0=e.clientY, startScroll=_palList?_palList.scrollTop:0;
+    let active=false, timer=null, moved=false;
+    try{ hd.setPointerCapture(e.pointerId); }catch(_){ }
+    const clean=()=>{ hd.classList.remove('catdrag'); if(_palAuto){clearInterval(_palAuto);_palAuto=null;} _palVel=0; pal.querySelectorAll('.pcat').forEach(p=>p.classList.remove('catdrop')); hd.removeEventListener('pointermove',mv); hd.removeEventListener('pointerup',up); hd.removeEventListener('pointercancel',up); };
+    const act=()=>{ active=true; timer=null; if(navigator.vibrate){try{navigator.vibrate(15);}catch(_){ }} hd.classList.add('catdrag'); _palPy=sy0; if(_palAuto)clearInterval(_palAuto); _palAuto=setInterval(()=>{ if(_palVel&&_palList){ _palList.scrollTop+=_palVel; paintCatDrop(_palPy); } },16); paintCatDrop(sy0); };
+    if(!isMouse) timer=setTimeout(act,180);
+    const mv=ev=>{ ev.preventDefault();
+      if(active){ _palPy=ev.clientY; const lr=_palList?_palList.getBoundingClientRect():null; _palVel=(lr&&ev.clientY<lr.top+40)?-9:(lr&&ev.clientY>lr.bottom-40)?9:0; paintCatDrop(ev.clientY); return; }
+      const dist=Math.hypot(ev.clientX-sx0,ev.clientY-sy0);
+      if(isMouse){ if(dist>6) act(); return; }
+      if(dist>8){ moved=true; if(timer){clearTimeout(timer);timer=null;} }
+      if(moved && _palList) _palList.scrollTop=startScroll-(ev.clientY-sy0);
+    };
+    const up=ev=>{ if(timer){clearTimeout(timer);timer=null;}
+      if(active){ const tgt=palCatAtY(_palPy||ev.clientY); if(tgt && tgt.dataset.cat!==id) reorderCatBefore(id, tgt.dataset.cat); catDragSuppress=true; clean(); buildPalette(); return; }
+      clean();
+    };
+    hd.addEventListener('pointermove',mv,{passive:false}); hd.addEventListener('pointerup',up); hd.addEventListener('pointercancel',up);
+  });
+}); }
 function palCatAtY(y){ const heads=[...pal.querySelectorAll('.pcat[data-cat]')]; if(!heads.length) return null;
   for(let i=0;i<heads.length;i++){ const top=heads[i].getBoundingClientRect().top; const bot=(i+1<heads.length)?heads[i+1].getBoundingClientRect().top:(_palList?_palList.getBoundingClientRect().bottom:1e9); if(y>=top && y<bot) return heads[i]; }
   return (y < heads[0].getBoundingClientRect().top) ? heads[0] : heads[heads.length-1]; }
