@@ -1,4 +1,4 @@
-const ASSET_VER='1780927000';
+const ASSET_VER='1780929000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1466,6 +1466,7 @@ function hurtPlayer(srcX,dmg){
 }
 function curFrame(){
   const a=SPR.chars[chosen][p.state], fps=pfps(p.state);
+  if (p.state==='kneel' && !p.dead && p.diveRec<=0) return a.frames-1;   // crouch snaps straight to the final (cleaned) pose
   if (p.state==='attack'||p.state==='hurt'||p.state==='kneel'||p.state==='cast'||p.state==='dive') return Math.min(a.frames-1, Math.floor(p.clock*fps));
   return Math.floor(p.clock*fps)%a.frames;
 }
