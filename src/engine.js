@@ -1,4 +1,4 @@
-const ASSET_VER='1780990000';
+const ASSET_VER='1780994000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1168,9 +1168,11 @@ function update(dt){
     camY=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
   }
   for (let ci=0; ci<CHK.length; ci++){
-    if (!chkOn[ci] && p.x>=CHK[ci][0]-10 && Math.abs(p.y-CHK[ci][1])<170){
-      chkOn[ci]=true; p.spawn=CHK[ci][0]; p.spawnY=CHK[ci][1];
-      chkFx.push({cx:CHK[ci][0], cgy:CHK[ci][1], t:0, hit:false}); playSfx('sfx_ignite',1.6);
+    if (chkOn[ci]) continue;
+    const cx=CHK[ci][0], cgy=CHK[ci][1];
+    if (overlap(pBodyBox(), {x:cx-42, y:cgy-150, w:84, h:162})){
+      chkOn[ci]=true; p.spawn=cx; p.spawnY=cgy;
+      chkFx.push({cx, cgy, t:0, hit:false}); playSfx('sfx_ignite',1.6);
     }
   }
   p.x=Math.max(18,Math.min(WORLD-18,p.x));
@@ -1296,7 +1298,7 @@ function update(dt){
     bo.t+=dt; bo.x+=bo.vx*dt;
     if (bo.t>1.1){ bo.dead=true; continue; }
     let hit=false;
-    for (const s of SOLID){ if (bo.x>s.l-6&&bo.x<s.r+6&&bo.y>s.top){ hit=true; break; } }
+    // projectiles pass through terrain/platforms/decor — only enemies stop them (Alan 2026-06-09)
     if (!hit) for (const z of zombies){
       if (z.dead) continue;
       const zb=zBodyBox(z);
