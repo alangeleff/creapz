@@ -1,4 +1,4 @@
-const ASSET_VER='1780994000';
+const ASSET_VER='1780998000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -19,6 +19,7 @@ cv.width = W*RS; cv.height = H*RS;
 const GROUND = 360;
 const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
 const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
+const SLAM_VY = 15.0, SLAM_REC = 0.26, SLAM_IFRAMES = 0.6, SLAM_R = 134;   // Crush Drop (down-slam)
 const BASH_VX = 11.4, BASH_VY = 12.6;   // Scythe Bash (cReaper) — snappier than the dive per Alan
 const OBJ = SPRITES.obst;
 const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VER;
@@ -213,6 +214,8 @@ const DOUBLE_TAP = 350;
 const lastRelease = { ArrowLeft:-1e9, ArrowRight:-1e9 };
 const runHeld = { ArrowLeft:false, ArrowRight:false };
 let diveReq=null, diveGhosts=[];   // Power Dive: double-tap-forward request + afterimage trail
+let slamReq=null, slamGhosts=[], slamFx=[];   // Crush Drop: down-slam request + afterimage trail + shock fx
+let shakeT=0, shakeMag=0;
 function press(code){
   if (code==='ArrowLeft'||code==='ArrowRight'){
     if (keys[code]) return; runHeld[code]=(performance.now()-lastRelease[code])<DOUBLE_TAP;
@@ -220,6 +223,8 @@ function press(code){
   // Aerial attack: melee button midair -> Power Dive (Dingbat) / Scythe Bash (cReaper)
   if (code==='KeyZ' && !keys[code] && mode==='play' && p && !p.dead && !p.onGround)
     diveReq={dir:0, t:performance.now()};   // dir resolved at trigger (held dir, else facing)
+  if (code==='ArrowDown' && !keys[code] && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && p.diveT<=0 && p.slamT<=0 && p.slamRec<=0)
+    slamReq={t:performance.now()};   // Crush Drop: down midair
   if ((code==='Space'||code==='ArrowUp') && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && equippedStone && stoneCharge>=PMETER && !powerActive) activatePower();
   keys[code]=true;
 }
@@ -832,10 +837,10 @@ function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   const sy = keep && p && p.spawnY!==undefined ? p.spawnY : (segFloorsAt(sx)[0]!==undefined?segFloorsAt(sx)[0]:GROUND);
   p = { x:sx, y:sy, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
-        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, diveT:0, diveRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
+        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, diveT:0, diveRec:0, slamT:0, slamRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
-  zbits=[]; bolts=[]; impacts=[]; chkFx=[];
+  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; shakeT=0; shakeMag=0;
   if (!keep){
     soulCount=0; soulOrbGot=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],val:(s[2]||1),got:false,pop:0,ph:i*0.31}));
@@ -937,6 +942,26 @@ function worldWeaponBox(spr, fi, x, y, facing){
   return {x:Math.min(WX0,WX1), y:WY0, w:Math.abs(WX1-WX0), h:wb[3]-wb[1]};
 }
 function pBodyBox(){ return {x:p.x-20, y:p.y-94, w:40, h:86}; }
+function addShake(m,d){ shakeMag=Math.max(shakeMag,m); shakeT=Math.max(shakeT,d); }
+function slamBoom(x,y){
+  addShake(9,0.26); slamFx.push({x,y,t:0});
+  for(let i=0;i<16;i++){ const side=i%2?1:-1; zbits.push({x:x+side*8, y:y-6, vx:side*(150+Math.random()*230), vy:-(30+Math.random()*130), sz:2+Math.random()*3.2, life:0.3+Math.random()*0.3, t:0, c:['#caa37a','#9c8260','#d8c4a0','#7a6248'][(Math.random()*4)|0]}); }
+  for (const z of zombies){ if(z.dead) continue; if(Math.abs(z.x-x)<SLAM_R && Math.abs(z.y-y)<150){ z.hp-=2; z.shown=3; if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); } } }
+  for (const b of bats){ if(b.dead) continue; if(Math.abs(b.x-x)<SLAM_R && Math.abs(b.y-y)<160){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_die',0.7); } }
+  playSfx('sfx_meleehit',0.9); playSfx('sfx_ignite',0.5);
+}
+function drawSlamFx(){
+  for(const f of slamFx){ const k=f.t/0.4; if(k>=1) continue; const sx=f.x-camX, gy=f.y;
+    ctx.save();
+    const R=22+k*118;
+    ctx.globalAlpha=(1-k)*0.8; ctx.strokeStyle='rgba(205,228,255,0.9)'; ctx.lineWidth=Math.max(0.5,3.6-2.6*k);
+    ctx.beginPath(); ctx.ellipse(sx, gy-6, R, R*0.34, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha=(1-k)*0.45; ctx.strokeStyle='rgba(150,185,255,0.7)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(sx, gy-6, R*0.62, R*0.22, 0, 0, Math.PI*2); ctx.stroke();
+    if(k<0.32){ ctx.globalAlpha=(0.32-k)/0.32*0.6; ctx.fillStyle='#dcebff'; ctx.beginPath(); ctx.ellipse(sx,gy-12,32*(1-k),21*(1-k),0,0,Math.PI*2); ctx.fill(); }
+    ctx.restore();
+  }
+}
 function zBodyBox(z){
   if (z.kw==='gob') return {x:z.x-19, y:z.y-78, w:38, h:74};
   if (z.kw==='bd')  return {x:z.x-18, y:z.y-100, w:36, h:96};
@@ -1022,6 +1047,7 @@ function update(dt){
     return;
   }
   if (p.inv>0) p.inv-=dt;
+  if (shakeT>0){ shakeT-=dt; if(shakeT<=0){ shakeT=0; shakeMag=0; } }
   if (p.flash>0) p.flash-=dt;
   if (p.hurtT>0) p.hurtT-=dt;
   p.hpShown += (p.hp-p.hpShown)*Math.min(1,dt*8);
@@ -1081,6 +1107,10 @@ function update(dt){
   if (p.diveRec>0){ p.diveRec-=dt; p.vx=0; }
   if (p.diveT>0){ diveGhosts.push({x:p.x,y:p.y}); if(diveGhosts.length>9) diveGhosts.shift(); }
   else if (diveGhosts.length) diveGhosts.shift();
+  if (slamReq){ if (performance.now()-slamReq.t<150 && !p.onGround && p.diveT<=0 && p.slamT<=0 && p.slamRec<=0){ p.slamT=1; p.vx=0; p.vy=SLAM_VY; slamGhosts=[]; playSfx('sfx_rwhoosh',1.0); } slamReq=null; }
+  if (p.slamRec>0){ p.slamRec-=dt; p.vx=0; }
+  if (p.slamT>0){ slamGhosts.push({x:p.x,y:p.y}); if(slamGhosts.length>9) slamGhosts.shift(); p.vx=0; }
+  else if (slamGhosts.length) slamGhosts.shift();
   const kneeling = p.onGround && (keys['ArrowDown']||keys['KeyS']) && p.attackT<=0 && p.castT<=0 && p.hurtT<=0;
   let dir=0;
   if (!kneeling){ if (keys['ArrowLeft']) dir=-1; else if (keys['ArrowRight']) dir=1; }
@@ -1089,9 +1119,9 @@ function update(dt){
   let inTar=false; for(const h of HAZ){ if(h.t==='tar' && p.onGround && p.x>=h.x && p.x<=h.x+h.w && Math.abs(p.y-h.y)<8){ inTar=true; break; } }
   if(p.inv<=0){ for(const z of GHURT){ if(p.x+26>z.l && p.x-26<z.r && p.y>z.top && (p.y-PH)<z.bot){ hurtPlayer((z.l+z.r)/2,1); break; } } }
   const speed=(running?RUN:WALK)*(inTar?0.4:1);
-  if (p.diveT<=0 && p.diveRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
-  if (!kneeling && p.diveRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
-  if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.onGround&&SPR.chars[chosen].attack.weapon){
+  if (p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
+  if (!kneeling && p.diveRec<=0 && p.slamRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
+  if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamRec<=0&&p.onGround&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
     playSfx(isDing(chosen)?'sfx_wing':'sfx_slash');
   }
@@ -1104,7 +1134,7 @@ function update(dt){
   }
   if (p.castCd>0) p.castCd-=dt;
   if (p.muzzleT>0) p.muzzleT-=dt;
-  if (keys['KeyX']&&p.castT<=0&&p.castCd<=0&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0){
+  if (keys['KeyX']&&p.castT<=0&&p.castCd<=0&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamT<=0&&p.slamRec<=0){
     p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false;
   }
   if (p.castT>0){
@@ -1127,7 +1157,7 @@ function update(dt){
     }
   }
   p.x=nx;
-  const prevFeet=p.y; if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else p.vy+=GRAV; p.y+=p.vy;
+  const prevFeet=p.y; if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else if (p.slamT>0) p.vy=SLAM_VY; else p.vy+=GRAV; p.y+=p.vy;
   if (p.vy>=0){
     let cand=[]; for(const fy of segFloorsAt(p.x)) cand.push({t:fy,q:null});
     for (const s of SOLID){ if(p.x>=s.l&&p.x<=s.r) cand.push({t:s.top,q:null}); }
@@ -1178,8 +1208,10 @@ function update(dt){
   p.x=Math.max(18,Math.min(WORLD-18,p.x));
   if (p.x>=GOAL_X-24 && Math.abs(p.y-GOALY)<120 && p.onGround && !p.won && !p.winning){ p.winning=true; p.winT=0; p.vx=0; p.vy=0; playSfx('sfx_wportal'); }
   if (p.onGround && p.diveT>0){ p.diveT=0; p.diveRec=DIVE_REC; p.vx=0; p.clock=0; playSfx('sfx_meleehit',0.45); }
+  if (p.onGround && p.slamT>0){ p.slamT=0; p.slamRec=SLAM_REC; p.vx=0; p.clock=0; p.inv=Math.max(p.inv,SLAM_IFRAMES); slamBoom(p.x, p.y); }
   let st;
   if (p.diveT>0) st='dive';
+  else if (p.slamT>0||p.slamRec>0) st='kneel';
   else if (p.diveRec>0) st='kneel';
   else if (p.hurtT>0) st='hurt';
   else if (p.attackT>0) st='attack'; else if (p.castT>0) st='cast'; else if (kneeling && p.onGround) st='kneel'; else if(!p.onGround) st='jump';
@@ -1233,7 +1265,7 @@ function update(dt){
       else if (z.kw==='zombie'||z.kw==='zgen') playSfx('sfx_ksee',0.7);
     } else if (z.aggro && ad>420) z.aggro=false;
     // player weapon strikes zombie body
-    if (p.diveT>0 && z.hitCd<=0 && overlap(pBodyBox(), zBodyBox(z))){
+    if ((p.diveT>0||p.slamT>0) && z.hitCd<=0 && overlap(pBodyBox(), zBodyBox(z))){
       z.hp-=1; z.hitCd=0.6; z.shown=3; playSfx('sfx_meleehit',0.6);
       if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); continue; }
     }
@@ -1290,7 +1322,7 @@ function update(dt){
     let bb=batBox(b);
     if (b.state==='bite' && b.bt>8/BITE_FPS && b.bt<23/BITE_FPS){ bb={x:bb.x+(b.facing<0?-30:0), y:bb.y-4, w:bb.w+30, h:bb.h+8}; }
     if (p.inv<=0 && !p.dead && overlap(pBodyBox(), bb)) hurtPlayer(b.x);
-    if (p.diveT>0 && overlap(pBodyBox(), bb)){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_meleehit',0.6); playSfx('sfx_die',0.7); continue; }
+    if ((p.diveT>0||p.slamT>0) && overlap(pBodyBox(), bb)){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_meleehit',0.6); playSfx('sfx_die',0.7); continue; }
     if (pwb && overlap(pwb, batBox(b))){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_meleehit',0.6); playSfx('sfx_die',0.7); }
   }
   for (const bo of bolts){
@@ -1327,6 +1359,8 @@ function update(dt){
   }
   for (const im of impacts) im.t+=dt;
   impacts=impacts.filter(im=>im.t<0.32);
+  for (const f of slamFx) f.t+=dt;
+  slamFx=slamFx.filter(f=>f.t<0.42);
   for (const fx of chkFx){
     fx.t+=dt;
     if (!fx.hit && fx.t>0.62){ fx.hit=true; p.hp=Math.min(PMAXHP, p.hp+1); playSfx('sfx_healthup'); }
@@ -2406,7 +2440,18 @@ function drawPlayerLayer(){
     return;
   }
   if (!p.dead){
-    if (p.state==='dive'){
+    if (p.slamT>0){
+      for (let gi3=0; gi3<slamGhosts.length; gi3+=2){
+        const g3=slamGhosts[gi3], gsx3=g3.x-camX;
+        ctx.save(); ctx.globalAlpha=0.05+0.13*(gi3/Math.max(1,slamGhosts.length));
+        drawCharSprite(chosen,'kneel',0,gsx3,g3.y,p.facing,1,0); ctx.restore();
+      }
+      ctx.save(); ctx.strokeStyle='rgba(185,212,255,0.55)'; ctx.lineWidth=2;
+      for(let s3=0;s3<5;s3++){ const ox=sx-26+s3*13+(Math.random()*4-2); ctx.beginPath(); ctx.moveTo(ox,p.y-152); ctx.lineTo(ox,p.y-152+34+Math.random()*20); ctx.stroke(); }
+      ctx.restore();
+      drawCharSprite(chosen,'kneel',0,sx,p.y,p.facing,1,0);
+    }
+    else if (p.state==='dive'){
       for (let gi2=0; gi2<diveGhosts.length; gi2+=2){
         const g2=diveGhosts[gi2], gsx=g2.x-camX;
         ctx.save(); ctx.globalAlpha=0.05+0.12*(gi2/Math.max(1,diveGhosts.length));
@@ -2468,7 +2513,8 @@ function drawPlayerLayer(){
   }
 }
 function draw(){
-  ctx.setTransform(RS,0,0,RS,0,0);
+  let _shx=0,_shy=0; if(shakeT>0){ const m=shakeMag*Math.min(1,shakeT/0.13); _shx=(Math.random()*2-1)*m; _shy=(Math.random()*2-1)*m; }
+  ctx.setTransform(RS,0,0,RS,_shx*RS,_shy*RS);
   if (ST.theme==='crypt') caveBG(); else if (ST.theme==='plains') etherealBG(); else if (ST.theme==='witch') witchBG(); else if (ST.theme==='harbor') harborBG(); else if (ST.theme==='spire') spireBG(); else if (ST.theme==='charnel') charnelBG(); else if (ST.theme==='rift') riftBG(); else if (ST.theme==='castle') castleBG(); else { skyBG(); drawFence(); }
   drawBackgrounds();   // parallax background image layers (cover the base when present)
   vignette();
@@ -2489,6 +2535,7 @@ function draw(){
     drawSoulFx(sx, s.y, 13*sc, alpha, s.ph*19, s.val);
   }
   drawPlayerLayer();
+  drawSlamFx();
   drawPower();
   for (const fx of chkFx){
     const st=SPR.chkst; if(!st) break;
