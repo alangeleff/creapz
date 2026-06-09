@@ -341,6 +341,13 @@
    "base": "assets/custom/gmq6ybwhi_base.png",
    "top": "assets/custom/gmq6ybwhi_top.png",
    "v": 1781028410237
+  },
+  {
+   "id": "gmq6yhk33",
+   "name": "Ethereal Ground (fill)",
+   "base": "assets/custom/gmq6yhk33_base.png",
+   "top": "assets/custom/gmq6yhk33_top.png",
+   "v": 1781028674140
   }
  ]
 }
