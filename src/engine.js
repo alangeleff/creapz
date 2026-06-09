@@ -1,4 +1,4 @@
-const ASSET_VER='1780982000';
+const ASSET_VER='1780986000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1616,7 +1616,7 @@ function drawOneTerrace(s){
       ctx.save(); ctx.beginPath(); ctx.rect(x0,sgy,x1-x0,bot-sgy); ctx.clip();
       if(b&&b.complete&&b.naturalWidth) tileImage(b,sgy,bot-sgy,1); else { ctx.fillStyle='#4a3a28'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy); }
       ctx.restore();
-      if(t&&t.complete&&t.naturalWidth){ const TH=70, tw=TH*t.naturalWidth/t.naturalHeight, topY=sgy-0.40*TH; ctx.save(); ctx.beginPath(); ctx.rect(x0,topY,x1-x0,TH); ctx.clip(); ctx.imageSmoothingEnabled=true; const off=((camX%tw)+tw)%tw; for(let x=-off;x<W+tw;x+=tw) ctx.drawImage(t,x,topY,tw,TH); ctx.restore(); }
+      if(t&&t.complete&&t.naturalWidth){ const TH=70, tw=TH*t.naturalWidth/t.naturalHeight, topY=sgy-0.85*TH; ctx.save(); ctx.beginPath(); ctx.rect(x0,topY,x1-x0,TH); ctx.clip(); ctx.imageSmoothingEnabled=true; const off=((camX%tw)+tw)%tw; for(let x=-off;x<W+tw;x+=tw) ctx.drawImage(t,x,topY,tw,TH); ctx.restore(); }
       ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fillRect(x0,sgy,3,bot-sgy); ctx.fillRect(x1-3,sgy,3,bot-sgy);
       return;
     }

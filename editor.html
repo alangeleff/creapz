@@ -820,7 +820,7 @@ function dTerr(s){ const dep=(s[3]||TERRACE_DROP), crypt=M.theme==='crypt', kind
  const X=sx(s[0]),Y=sy(s[2]),Wd=(s[1]-s[0])*zoom,Dp=dep*zoom;
  if(kind.indexOf('g:')===0){ const gid=kind.slice(2), b=GROUND_BASE[gid], t=GROUND_TOP[gid];
    if(b&&b.naturalWidth){ const T=84*zoom; ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Dp); ctx.clip(); for(let yy=Y;yy<Y+Dp;yy+=T) for(let xx=X;xx<X+Wd+T;xx+=T) ctx.drawImage(b,xx,yy,T,T); ctx.restore(); } else { ctx.fillStyle='#4a3a28'; ctx.fillRect(X,Y,Wd,Dp); }
-   if(t&&t.naturalWidth){ const TH=70*zoom, tw=TH*t.naturalWidth/t.naturalHeight, topY=Y-0.40*TH; ctx.save(); ctx.beginPath(); ctx.rect(X,topY,Wd,TH); ctx.clip(); ctx.imageSmoothingEnabled=true; for(let xx=X;xx<X+Wd+tw;xx+=tw) ctx.drawImage(t,xx,topY,tw,TH); ctx.restore(); }
+   if(t&&t.naturalWidth){ const TH=70*zoom, tw=TH*t.naturalWidth/t.naturalHeight, topY=Y-0.85*TH; ctx.save(); ctx.beginPath(); ctx.rect(X,topY,Wd,TH); ctx.clip(); ctx.imageSmoothingEnabled=true; for(let xx=X;xx<X+Wd+tw;xx+=tw) ctx.drawImage(t,xx,topY,tw,TH); ctx.restore(); }
    if(sel&&sel.raw===s){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-2,Wd+4,Dp+4); }
    return;
  }
@@ -1237,9 +1237,10 @@ function uploadGround(){
   inp.click();
 }
 function groundFinish(imgs){
-  // topper = the SHORTER image (Alan: shorter=topper); base = the taller/square one
-  let base,top; if(imgs[0].naturalHeight<=imgs[1].naturalHeight){ top=imgs[0]; base=imgs[1]; } else { top=imgs[1]; base=imgs[0]; }
-  const name=(prompt('Ground name (the shorter image becomes the topper):','Ground')||'').trim(); if(!name) return;
+  const dim=im=>im.naturalWidth+'x'+im.naturalHeight;
+  const ans=(prompt('Which file is the TOPPER (the thin top edge strip)?\n  1 = '+dim(imgs[0])+'\n  2 = '+dim(imgs[1])+'\n\n(the other one is the base tile)','1')||'').trim();
+  let top,base; if(ans==='2'){ top=imgs[1]; base=imgs[0]; } else { top=imgs[0]; base=imgs[1]; }
+  const name=(prompt('Ground name:','Ground')||'').trim(); if(!name) return;
   const id='g'+Date.now().toString(36);
   const enc=(im,maxd)=>{ const sc=Math.min(1,maxd/Math.max(im.naturalWidth,im.naturalHeight)); const cw=Math.max(1,Math.round(im.naturalWidth*sc)), ch=Math.max(1,Math.round(im.naturalHeight*sc)); const c=document.createElement('canvas'); c.width=cw; c.height=ch; const cx=c.getContext('2d'); cx.imageSmoothingQuality='high'; cx.drawImage(im,0,0,cw,ch); return c.toDataURL('image/png'); };
   const bP=enc(base,640), tP=enc(top,1024), bf='assets/custom/'+id+'_base.png', tf='assets/custom/'+id+'_top.png';
