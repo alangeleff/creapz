@@ -157,6 +157,7 @@
    <button class="btn" id="bCommit" title="Commit builder data to the repo">☁ Commit</button>
    <button class="btn" id="bUpload" title="Upload a custom asset">⬆ Upload</button>
    <button class="btn" id="bMusic" title="Upload a background music track">🎵 Music</button>
+   <button class="btn" id="bGround" title="Upload a custom ground (base tile + topper)">▦ Ground</button>
    <button class="btn go" id="bPlay">▶ Play</button>
    <button class="btn" id="bExport">⭳ Export</button>
    <button class="btn" id="bImport">⭱ Import</button>
@@ -234,6 +235,9 @@ function drawCemeteryBackdrop(){ const G=360, X=sx(0),Y=sy(0),Wd=M.world*zoom,Hd
   ctx.restore(); }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.onload=()=>draw(); CAVECEIL_IMG.src='./assets/caveceil2.png';
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.onload=()=>draw(); CAVEGND_IMG.src='./assets/caveground_dirt1.png';
+const GROUND_BASE={}, GROUND_TOP={};
+function registerGround(g,bsrc,tsrc){ const b=new Image(); b.onload=()=>{try{draw();}catch(e){}}; b.src=bsrc||('./'+g.base+'?v='+(g.v||1)); GROUND_BASE[g.id]=b; const t=new Image(); t.onload=()=>{try{draw();}catch(e){}}; t.src=tsrc||('./'+g.top+'?v='+(g.v||1)); GROUND_TOP[g.id]=t; }
+function groundStamps(){ return (BCONFIG.grounds||[]).map(g=>({k:'gnd_'+g.id, label:g.name, sw:'#7a5a36', cat:'Ground', id:g.id})); }
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.onload=()=>draw(); CAVETOP_IMG.src='./assets/caveground_top1.png';
 const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.onload=()=>draw(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png';
 // ---- real game art for WYSIWYG editor ----
@@ -412,7 +416,7 @@ async function commitFiles(files, message){ const secret=getCommitSecret(); if(!
     if(!r.ok){ if(r.status===403){ localStorage.removeItem('creapz_commit_secret'); toast('wrong password \u2014 try again'); } else toast('commit failed: '+(j.error||r.status)); return null; }
     toast('committed \u2713'); return j;
   }catch(e){ toast('commit error: '+e.message); return null; } }
-async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb='+Date.now()); if(r.ok){ const c=await r.json(); BCONFIG=Object.assign(BCONFIG, c); (BCONFIG.customAssets||[]).forEach(a=>registerCustomAsset(a)); if(typeof buildPalette==='function') buildPalette(); if(typeof refreshMusicOptions==='function') refreshMusicOptions(); } }catch(e){} }
+async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb='+Date.now()); if(r.ok){ const c=await r.json(); BCONFIG=Object.assign(BCONFIG, c); (BCONFIG.customAssets||[]).forEach(a=>registerCustomAsset(a)); (BCONFIG.grounds||[]).forEach(g=>registerGround(g)); if(typeof buildPalette==='function') buildPalette(); if(typeof refreshMusicOptions==='function') refreshMusicOptions(); } }catch(e){} }
 loadBConfig();
 function customStamps(){ return (BCONFIG.customAssets||[]).map(a=>({k:(a.kind==='bg'?'bg_':a.kind==='fg'?'fg_':'tex_')+a.id, label:a.name, sw:a.sw||'#9a8a6a', cat:a.cat||(a.kind==='bg'?'Background':a.kind==='fg'?'Foreground':'Decor'), id:a.id, custom:true})); }
 function registerCustomAsset(a, src){ const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src=src||('./'+a.file+'?v='+(a.v||1)); if(a.kind==='bg'||a.kind==='fg'){ BGE_IMG[a.id]=im; BG_LABEL[a.id]=a.name; } else { DECOR_IMG[a.id]=im; TEX_LABEL[a.id]=a.name; TEX_COLS[a.id]=a.sw||'#9a8a6a'; } }
@@ -473,7 +477,7 @@ function delAsset(id){ const a=(BCONFIG.customAssets||[]).find(x=>x.id===id); if
   if(a.file) files.unshift({path:a.file, delete:true});
   commitFiles(files,'builder: delete asset '+a.name).then(r=>{ if(r) toast('deleted "'+a.name+'"'); });
 }
-function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'+orgbarHTML(); const all=STAMPS.concat(customStamps());
+function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'+orgbarHTML(); const all=STAMPS.concat(customStamps()).concat(groundStamps());
   for(const cat of catOrder()){ const items=all.filter(s=>effCat(s)===cat.id && !((BCONFIG.hidden||[]).includes(s.k)));
     if(!items.length && !ORGANIZE) continue;
     const collapsed=!!CAT_COLLAPSE[cat.id], sub=cat.parent?' sub':'';
@@ -717,7 +721,8 @@ function placeAt(kind,gx,gy){
  histPush();
  const _prevSel=sel; let _insertZ=null, _grp=null;
  if(_prevSel){ if(_prevSel.type==='group'&&_prevSel.members){ const ms=allProps().filter(p=>_prevSel.members.includes(p.raw)); if(ms.length){_insertZ=Math.max(...ms.map(p=>p.z)); _grp=_prevSel.name;} } else if(_prevSel.raw){ const _p=allProps().find(p=>p.raw===_prevSel.raw); if(_p){_insertZ=_p.z; _grp=getG(_prevSel.raw);} } }
- if(kind==='terrace'){ const s=[gx,gx+DEF_TERR,gy,TERRACE_DROP,topZ()+10]; M.seg.push(s); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
+ if(kind.indexOf('gnd_')===0){ const gid=kind.slice(4); const s=[gx,gx+DEF_TERR,gy,TERRACE_DROP,topZ()+10,null,'g:'+gid]; M.seg.push(s); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
+ else if(kind==='terrace'){ const s=[gx,gx+DEF_TERR,gy,TERRACE_DROP,topZ()+10]; M.seg.push(s); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
  else if(kind==='terrace_cave'){ const s=[gx,gx+DEF_TERR,gy,TERRACE_DROP,topZ()+10,null,'cave']; M.seg.push(s); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
  else if(kind.startsWith('plat_')){ const parts=kind.split('_'); let skin,t; if(parts[1]==='cave'){skin='cave';t=parts[2];}else{t=parts[1];} const p={x:gx,y:gy,w:120,t,z:topZ()+10}; if(skin)p.skin=skin; if(t==='m'){p.x0=gx;p.range=180;p.spd=0.3;} M.plats.push(p); sel={type:'plat',kind,obj:p,raw:p,sync(){}}; }
  else if(kind==='chk'){ const c=[gx,gy]; M.chk.push(c); sel=wrap('chk',c,['x','gy'],[0,1]); }
@@ -813,6 +818,12 @@ cv.addEventListener('wheel',e=>{ e.preventDefault(); const c=cvxy(e),bx=wx(c.x),
 // ---- draw ----
 function dTerr(s){ const dep=(s[3]||TERRACE_DROP), crypt=M.theme==='crypt', kind=(s[6]||'cemetery');
  const X=sx(s[0]),Y=sy(s[2]),Wd=(s[1]-s[0])*zoom,Dp=dep*zoom;
+ if(kind.indexOf('g:')===0){ const gid=kind.slice(2), b=GROUND_BASE[gid], t=GROUND_TOP[gid];
+   if(b&&b.naturalWidth){ const T=84*zoom; ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Dp); ctx.clip(); for(let yy=Y;yy<Y+Dp;yy+=T) for(let xx=X;xx<X+Wd+T;xx+=T) ctx.drawImage(b,xx,yy,T,T); ctx.restore(); } else { ctx.fillStyle='#4a3a28'; ctx.fillRect(X,Y,Wd,Dp); }
+   if(t&&t.naturalWidth){ const TH=70*zoom, tw=TH*t.naturalWidth/t.naturalHeight, topY=Y-0.40*TH; ctx.save(); ctx.beginPath(); ctx.rect(X,topY,Wd,TH); ctx.clip(); ctx.imageSmoothingEnabled=true; for(let xx=X;xx<X+Wd+tw;xx+=tw) ctx.drawImage(t,xx,topY,tw,TH); ctx.restore(); }
+   if(sel&&sel.raw===s){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-2,Wd+4,Dp+4); }
+   return;
+ }
  if(kind==='cave'){
    if(CAVEGND_IMG.naturalWidth){ const T=84*zoom; ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Dp); ctx.clip(); for(let y=Y;y<Y+Dp;y+=T) for(let x=X;x<X+Wd+T;x+=T) ctx.drawImage(CAVEGND_IMG,x,y,T,T); ctx.restore(); }
    else { ctx.fillStyle='#4a3a28'; ctx.fillRect(X,Y,Wd,Dp); }
@@ -1217,6 +1228,23 @@ function uploadAsset(){ const inp=document.createElement('input'); inp.type='fil
     fr.readAsDataURL(f); };
   inp.click(); }
 document.getElementById('bUpload').onclick=uploadAsset;
+function uploadGround(){
+  const pick=(cb)=>{ const inp=document.createElement('input'); inp.type='image/*'; inp.type='file'; inp.accept='image/*'; inp.onchange=()=>{ const f=inp.files[0]; if(!f){cb(null);return;} const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>cb(im); im.src=fr.result; }; fr.readAsDataURL(f); }; inp.click(); };
+  alert('Pick the BASE tile next (a square, seamlessly-tileable texture).');
+  pick(base=>{ if(!base) return;
+    alert('Now pick the TOPPER (the top edge strip, e.g. the grass/surface).');
+    pick(top=>{ if(!top) return;
+      const name=(prompt('Ground name:','Ground')||'').trim(); if(!name) return;
+      const id='g'+Date.now().toString(36);
+      const toPng=(im)=>{ const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); return c.toDataURL('image/png'); };
+      const bP=toPng(base), tP=toPng(top), bf='assets/custom/'+id+'_base.png', tf='assets/custom/'+id+'_top.png';
+      const g={id,name,base:bf,top:tf,v:Date.now()};
+      BCONFIG.grounds=BCONFIG.grounds||[]; BCONFIG.grounds.push(g); registerGround(g,bP,tP); buildPalette(); draw();
+      commitFiles([{path:bf,content:bP.split(',')[1],encoding:'base64'},{path:tf,content:tP.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: add ground '+name).then(r=>{ if(r) toast('ground added \u2713 \u2014 find "'+name+'" under Ground'); });
+    });
+  });
+}
+document.getElementById('bGround').onclick=uploadGround;
 const BUILTIN_MUSIC=['act1','act2','crypt1','crypt2','ethereal1','ethereal2','title'];
 function allMusicOpts(selv){
   let o=BUILTIN_MUSIC.map(m=>'<option value="'+m+'"'+(m===selv?' selected':'')+'>'+m+'</option>').join('');

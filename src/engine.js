@@ -1,4 +1,4 @@
-const ASSET_VER='1780978000';
+const ASSET_VER='1780982000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -48,10 +48,11 @@ const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='
 const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png?v='+ASSET_VER;
 const DECOR_NAMES=['skull1', 'bone01', 'bone02', 'bone03', 'bone04', 'bone05', 'bone06', 'bone07', 'bone08', 'bone09', 'bone10', 'bone11', 'bone12', 'bone13', 'bone14', 'bone15', 'bone16'];
 const DECOR_IMG={}; DECOR_NAMES.forEach(n=>{ const i=new Image(); i.src='./assets/decor_'+n+'.png?v='+ASSET_VER; DECOR_IMG[n]=i; });
-const CUSTOM_MUSIC={}, GAME_DEF={};
+const CUSTOM_MUSIC={}, GAME_DEF={}, GROUND_BASE={}, GROUND_TOP={};
 fetch('./config/builder.json?cb='+ASSET_VER).then(r=>r.ok?r.json():null).then(c=>{ if(!c)return;
   (c.customAssets||[]).forEach(a=>{ const im=new Image(); im.src='./'+a.file+'?v='+ASSET_VER; if(a.kind==='bg'||a.kind==='fg') BG_IMGS[a.id]=im; else DECOR_IMG[a.id]=im; if(a.behavior) GAME_DEF[a.id]={behavior:a.behavior, ar:a.ar||1, params:a.params||{}}; });
   (c.music||[]).forEach(m=>{ if(m&&m.id&&m.file) CUSTOM_MUSIC[m.id]=m.file; });
+  (c.grounds||[]).forEach(g=>{ if(g&&g.id){ const b=new Image(); b.src='./'+g.base+'?v='+ASSET_VER; GROUND_BASE[g.id]=b; const t=new Image(); t.src='./'+g.top+'?v='+ASSET_VER; GROUND_TOP[g.id]=t; } });
   // --- World Map: merge committed bench stages into the zone/act maps (overrides only assigned slots; hardcoded levels remain the fallback) ---
   const wm=c.worldMap||{};
   Object.keys(wm).forEach(zid=>{ const z=wm[zid]; if(!z||!Array.isArray(z.acts))return;
@@ -1611,6 +1612,14 @@ function drawOneTerrace(s){
     const sgy=s.length>2?s[2]:GROUND;
     const bot=s.length>2?sgy+(s[3]||130):H;
     if (sgy-camY>H+40 || bot-camY<-40) return;
+    if (kind.indexOf('g:')===0){ const gid=kind.slice(2), b=GROUND_BASE[gid], t=GROUND_TOP[gid];
+      ctx.save(); ctx.beginPath(); ctx.rect(x0,sgy,x1-x0,bot-sgy); ctx.clip();
+      if(b&&b.complete&&b.naturalWidth) tileImage(b,sgy,bot-sgy,1); else { ctx.fillStyle='#4a3a28'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy); }
+      ctx.restore();
+      if(t&&t.complete&&t.naturalWidth){ const TH=70, tw=TH*t.naturalWidth/t.naturalHeight, topY=sgy-0.40*TH; ctx.save(); ctx.beginPath(); ctx.rect(x0,topY,x1-x0,TH); ctx.clip(); ctx.imageSmoothingEnabled=true; const off=((camX%tw)+tw)%tw; for(let x=-off;x<W+tw;x+=tw) ctx.drawImage(t,x,topY,tw,TH); ctx.restore(); }
+      ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fillRect(x0,sgy,3,bot-sgy); ctx.fillRect(x1-3,sgy,3,bot-sgy);
+      return;
+    }
     ctx.save(); ctx.beginPath(); ctx.rect(x0,sgy,x1-x0,bot-sgy); ctx.clip();
     if (kind==='cave' && CAVEGND_IMG.complete && CAVEGND_IMG.naturalWidth){
       tileImage(CAVEGND_IMG, sgy, bot-sgy, 1);
