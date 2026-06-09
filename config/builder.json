@@ -334,6 +334,13 @@
    "base": "assets/custom/gmq6wf61u_base.png",
    "top": "assets/custom/gmq6wf61u_top.png",
    "v": 1781025203408
+  },
+  {
+   "id": "gmq6ybwhi",
+   "name": "Ethereal Ground (Holes)",
+   "base": "assets/custom/gmq6ybwhi_base.png",
+   "top": "assets/custom/gmq6ybwhi_top.png",
+   "v": 1781028410237
   }
  ]
 }
