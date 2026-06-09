@@ -1237,15 +1237,15 @@ function uploadGround(){
   inp.click();
 }
 function groundFinish(imgs){
-  const ar=im=>im.naturalWidth/im.naturalHeight;
-  let base,top; if(ar(imgs[0])>=ar(imgs[1])){ top=imgs[0]; base=imgs[1]; } else { top=imgs[1]; base=imgs[0]; }
-  const name=(prompt('Ground name (the wider image becomes the topper):','Ground')||'').trim(); if(!name) return;
+  // topper = the SHORTER image (Alan: shorter=topper); base = the taller/square one
+  let base,top; if(imgs[0].naturalHeight<=imgs[1].naturalHeight){ top=imgs[0]; base=imgs[1]; } else { top=imgs[1]; base=imgs[0]; }
+  const name=(prompt('Ground name (the shorter image becomes the topper):','Ground')||'').trim(); if(!name) return;
   const id='g'+Date.now().toString(36);
-  const toPng=(im)=>{ const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); return c.toDataURL('image/png'); };
-  const bP=toPng(base), tP=toPng(top), bf='assets/custom/'+id+'_base.png', tf='assets/custom/'+id+'_top.png';
+  const enc=(im,maxd)=>{ const sc=Math.min(1,maxd/Math.max(im.naturalWidth,im.naturalHeight)); const cw=Math.max(1,Math.round(im.naturalWidth*sc)), ch=Math.max(1,Math.round(im.naturalHeight*sc)); const c=document.createElement('canvas'); c.width=cw; c.height=ch; const cx=c.getContext('2d'); cx.imageSmoothingQuality='high'; cx.drawImage(im,0,0,cw,ch); return c.toDataURL('image/png'); };
+  const bP=enc(base,640), tP=enc(top,1024), bf='assets/custom/'+id+'_base.png', tf='assets/custom/'+id+'_top.png';
   const g={id,name,base:bf,top:tf,v:Date.now()};
   BCONFIG.grounds=BCONFIG.grounds||[]; BCONFIG.grounds.push(g); registerGround(g,bP,tP); buildPalette(); draw();
-  commitFiles([{path:bf,content:bP.split(',')[1],encoding:'base64'},{path:tf,content:tP.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: add ground '+name).then(r=>{ if(r) toast('ground added \u2713 \u2014 find "'+name+'" under Ground'); });
+  commitFiles([{path:bf,content:bP.split(',')[1],encoding:'base64'},{path:tf,content:tP.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: add ground '+name).then(r=>{ if(!r){ BCONFIG.grounds=BCONFIG.grounds.filter(x=>x.id!==id); buildPalette(); } else toast('ground added \u2713 \u2014 find "'+name+'" under Ground'); });
 }
 document.getElementById('bGround').onclick=uploadGround;
 const BUILTIN_MUSIC=['act1','act2','crypt1','crypt2','ethereal1','ethereal2','title'];
