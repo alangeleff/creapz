@@ -1228,19 +1228,28 @@ function uploadAsset(){ const inp=document.createElement('input'); inp.type='fil
     fr.readAsDataURL(f); };
   inp.click(); }
 document.getElementById('bUpload').onclick=uploadAsset;
+let _gndBase=null,_gndTop=null;
 function uploadGround(){
-  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.multiple=true;
-  inp.onchange=()=>{ const files=[...(inp.files||[])]; if(files.length<2){ alert('Select BOTH images at once \u2014 the square BASE tile and the TOPPER strip (pick 2 files).'); return; }
-    let loaded=0; const imgs=[];
-    files.slice(0,2).forEach((f,i)=>{ const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>{ imgs[i]=im; if(++loaded===2) groundFinish(imgs); }; im.src=fr.result; }; fr.readAsDataURL(f); });
-  };
-  inp.click();
+  _gndBase=null;_gndTop=null;
+  let m=document.getElementById('gndModal');
+  if(!m){
+    m=document.createElement('div'); m.id='gndModal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:99999;';
+    m.innerHTML='<div style="background:#1b1b22;border:1px solid #3a3a46;border-radius:12px;padding:18px;width:300px;max-width:90vw;color:#e8e8ee;font:14px sans-serif;">'
+      +'<div style="font-weight:600;margin-bottom:12px;font-size:15px;">Add Ground</div>'
+      +'<label style="display:block;margin-bottom:8px;background:#2a2a34;padding:11px;border-radius:8px;cursor:pointer;">1) Base tile (square) <span id="gndBaseChk" style="float:right;color:#8aa;">choose</span><input id="gndBaseInp" type="file" accept="image/*" style="display:none;"></label>'
+      +'<label style="display:block;margin-bottom:8px;background:#2a2a34;padding:11px;border-radius:8px;cursor:pointer;">2) Topper strip <span id="gndTopChk" style="float:right;color:#8aa;">choose</span><input id="gndTopInp" type="file" accept="image/*" style="display:none;"></label>'
+      +'<input id="gndName" placeholder="Ground name" style="width:100%;box-sizing:border-box;margin:4px 0 12px;padding:9px;background:#11111a;border:1px solid #3a3a46;border-radius:6px;color:#fff;">'
+      +'<div style="display:flex;gap:8px;"><button id="gndAdd" style="flex:1;padding:10px;background:#c8fb50;border:0;border-radius:6px;font-weight:700;cursor:pointer;">Add</button><button id="gndCancel" style="flex:1;padding:10px;background:#33333d;color:#fff;border:0;border-radius:6px;cursor:pointer;">Cancel</button></div></div>';
+    document.body.appendChild(m);
+    const rd=(inp,which,chk)=>{ inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f)return; const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>{ if(which==='base')_gndBase=im; else _gndTop=im; const el=document.getElementById(chk); el.textContent='\u2713 '+im.naturalWidth+'\u00d7'+im.naturalHeight; el.style.color='#c8fb50'; }; im.src=fr.result; }; fr.readAsDataURL(f); }; };
+    rd(m.querySelector('#gndBaseInp'),'base','gndBaseChk');
+    rd(m.querySelector('#gndTopInp'),'top','gndTopChk');
+    m.querySelector('#gndCancel').onclick=()=>{ m.style.display='none'; };
+    m.querySelector('#gndAdd').onclick=()=>{ if(!_gndBase||!_gndTop){ alert('Pick both a base tile and a topper strip.'); return; } const name=(m.querySelector('#gndName').value||'').trim(); if(!name){ alert('Give it a name.'); return; } m.style.display='none'; groundCommit(_gndBase,_gndTop,name); };
+  } else { m.style.display='flex'; const a=document.getElementById('gndBaseChk'),b=document.getElementById('gndTopChk'); a.textContent='choose';a.style.color='#8aa';b.textContent='choose';b.style.color='#8aa'; document.getElementById('gndName').value=''; document.getElementById('gndBaseInp').value='';document.getElementById('gndTopInp').value=''; }
 }
-function groundFinish(imgs){
-  const dim=im=>im.naturalWidth+'x'+im.naturalHeight;
-  const ans=(prompt('Which file is the TOPPER (the thin top edge strip)?\n  1 = '+dim(imgs[0])+'\n  2 = '+dim(imgs[1])+'\n\n(the other one is the base tile)','1')||'').trim();
-  let top,base; if(ans==='2'){ top=imgs[1]; base=imgs[0]; } else { top=imgs[0]; base=imgs[1]; }
-  const name=(prompt('Ground name:','Ground')||'').trim(); if(!name) return;
+function groundCommit(base,top,name){
   const id='g'+Date.now().toString(36);
   const enc=(im,maxd)=>{ const sc=Math.min(1,maxd/Math.max(im.naturalWidth,im.naturalHeight)); const cw=Math.max(1,Math.round(im.naturalWidth*sc)), ch=Math.max(1,Math.round(im.naturalHeight*sc)); const c=document.createElement('canvas'); c.width=cw; c.height=ch; const cx=c.getContext('2d'); cx.imageSmoothingQuality='high'; cx.drawImage(im,0,0,cw,ch); return c.toDataURL('image/png'); };
   const bP=enc(base,640), tP=enc(top,1024), bf='assets/custom/'+id+'_base.png', tf='assets/custom/'+id+'_top.png';
