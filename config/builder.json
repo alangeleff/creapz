@@ -325,5 +325,14 @@
   "tex_rockpile": "Decor",
   "tex_ceiling": "Decor",
   "tex_cmq58wn73": "Hazards"
- }
+ },
+ "grounds": [
+  {
+   "id": "gmq6wf61u",
+   "name": "Ethereal Ground",
+   "base": "assets/custom/gmq6wf61u_base.png",
+   "top": "assets/custom/gmq6wf61u_top.png",
+   "v": 1781025203408
+  }
+ ]
 }
