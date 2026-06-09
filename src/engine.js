@@ -1,4 +1,4 @@
-const ASSET_VER='1780964000';
+const ASSET_VER='1780966000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1800,6 +1800,66 @@ function caveBG(){
     ctx.fillStyle=gr2; ctx.beginPath(); ctx.arc(wx,sy2,r,0,7); ctx.fill();
   }
 }
+function etherealBG(){
+  const horizon=H*0.60;
+  // gloomy storm gradient
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#161a26'); g.addColorStop(0.40,'#28313f'); g.addColorStop(0.64,'#46525f'); g.addColorStop(0.84,'#68758a'); g.addColorStop(1,'#7e8b98');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // distant peaks + spire silhouettes (far parallax)
+  ctx.fillStyle='rgba(40,49,61,0.7)';
+  ctx.beginPath(); ctx.moveTo(0,horizon+1);
+  for(let i=0;i<=22;i++){ const x=pxf(i*470,0.06); const h=28+((i*167)%55)+((i*71)%24); ctx.lineTo(x,horizon-h*0.45); }
+  ctx.lineTo(W,horizon+1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(30,38,50,0.78)';
+  for(const sx0 of [900,3300,6400,9600,12800]){ const x=pxf(sx0,0.06); if(x>-40&&x<W+40){ const hh=80+((sx0*7)%55); ctx.fillRect(x-6,horizon-hh,12,hh); ctx.beginPath(); ctx.moveTo(x-7,horizon-hh); ctx.lineTo(x,horizon-hh-24); ctx.lineTo(x+7,horizon-hh); ctx.fill(); } }
+  // far storm clouds (medium gray, drifting)
+  const drawCloudRow=(yBase,par,drift,col,a,n,rr)=>{
+    const span=W+560;
+    for(let i=0;i<n;i++){ let x=((i*(span/n) - gt*drift - camX*par)%span+span)%span-280;
+      const y=yBase+((i*89)%46); const r=rr+((i*61)%60);
+      const gr=ctx.createRadialGradient(x,y,2,x,y,r);
+      gr.addColorStop(0,col+a+')'); gr.addColorStop(1,col+'0)');
+      ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill(); }
+  };
+  drawCloudRow(36,0.10,5,'rgba(74,85,98,',0.5,13,96);
+  // god-ray beam through the crack (additive)
+  const bx=pxf(1300,0.14), flick=0.82+0.18*Math.sin(gt*1.4);
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const beam=ctx.createLinearGradient(0,-10,0,horizon+20);
+  beam.addColorStop(0,'rgba(196,216,250,'+(0.34*flick).toFixed(3)+')');
+  beam.addColorStop(0.5,'rgba(168,192,232,'+(0.15*flick).toFixed(3)+')');
+  beam.addColorStop(1,'rgba(150,175,215,0)');
+  ctx.fillStyle=beam; ctx.beginPath(); ctx.moveTo(bx-24,-10); ctx.lineTo(bx+24,-10); ctx.lineTo(bx+150,horizon+20); ctx.lineTo(bx-150,horizon+20); ctx.closePath(); ctx.fill();
+  const gl=ctx.createRadialGradient(bx,34,4,bx,34,100);
+  gl.addColorStop(0,'rgba(222,236,255,'+(0.5*flick).toFixed(3)+')'); gl.addColorStop(1,'rgba(222,236,255,0)');
+  ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(bx,34,100,0,7); ctx.fill();
+  ctx.restore();
+  // near storm clouds (darker, frame the crack)
+  drawCloudRow(20,0.18,8,'rgba(20,25,33,',0.62,12,104);
+  // floating land chunks (mid parallax, gentle bob)
+  for(let i=0;i<7;i++){ const wx=500+i*1500+((i*331)%420); const x=pxf(wx,0.27); if(x<-130||x>W+130) continue;
+    const y=120+((i*97)%96)+Math.sin(gt*0.5+i*1.7)*6; const w=58+((i*53)%56), h=20+((i*37)%16);
+    ctx.fillStyle='rgba(25,31,41,0.92)';
+    ctx.beginPath(); ctx.ellipse(x,y,w,h*0.7,0,0,7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x-w*0.8,y); ctx.lineTo(x-w*0.2,y+h*1.9); ctx.lineTo(x+w*0.1,y+h*1.3); ctx.lineTo(x+w*0.7,y+h*0.4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(84,102,86,0.55)'; ctx.beginPath(); ctx.ellipse(x,y-h*0.45,w*0.9,h*0.4,0,Math.PI,0); ctx.fill();
+  }
+  // horizon mist (subtle)
+  for(let k=0;k<3;k++){ const off=(gt*(7+k*5))%(W+320); ctx.fillStyle='rgba(172,185,200,'+(0.04+k*0.015).toFixed(3)+')'; for(let fx=-off;fx<W;fx+=W+280) ctx.fillRect(fx,horizon-22-k*16,W+320,42); }
+  // rainfall (screen-space diagonal streaks)
+  ctx.strokeStyle='rgba(186,200,220,0.20)'; ctx.lineWidth=1; ctx.beginPath();
+  for(let i=0;i<95;i++){ const sp=540+(i%5)*130; let x=((i*149)%(W+160))-80 - gt*30; x=((x%(W+160))+(W+160))%(W+160)-80; const y=((i*47+gt*sp)%(H+40))-20; ctx.moveTo(x,y); ctx.lineTo(x-5,y+15); }
+  ctx.stroke();
+  // occasional lightning (deterministic per ~8s segment + jitter)
+  const seg=Math.floor(gt/8), jit=((seg*2654435761)%1000)/1000*3.5, fs=seg*8+1.2+jit, ft=gt-fs;
+  if(ft>=0 && ft<0.4){ const a=ft<0.07?ft/0.07:Math.max(0,1-(ft-0.07)/0.33);
+    ctx.fillStyle='rgba(206,222,255,'+(0.30*a).toFixed(3)+')'; ctx.fillRect(0,0,W,H);
+    const rr=((seg*48271)%1000)/1000; let bxl=70+rr*(W-140), yy=-4;
+    ctx.strokeStyle='rgba(235,244,255,'+(0.75*a).toFixed(2)+')'; ctx.lineWidth=2.3; ctx.beginPath(); ctx.moveTo(bxl,yy);
+    while(yy<horizon){ yy+=22+((Math.floor(yy*1.7)*7)%20); bxl+=((Math.floor(yy*1.3)*13)%34)-17; ctx.lineTo(bxl,yy); } ctx.stroke();
+  }
+}
 function vignette(){
   const vg=ctx.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,H*0.85);
   vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.45)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
@@ -2330,7 +2390,7 @@ function drawPlayerLayer(){
 }
 function draw(){
   ctx.setTransform(RS,0,0,RS,0,0);
-  if (ST.theme==='crypt') caveBG(); else { skyBG(); drawFence(); }
+  if (ST.theme==='crypt') caveBG(); else if (ST.theme==='plains') etherealBG(); else { skyBG(); drawFence(); }
   drawBackgrounds();   // parallax background image layers (cover the base when present)
   vignette();
   ctx.save(); ctx.translate(0,-camY);
