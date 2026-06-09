@@ -32,12 +32,16 @@
    }
   },
   {
-   "id": "cmq5a4qur",
-   "name": "Ethereal Plains - Backdrop",
-   "file": "assets/custom/cmq5a4qur.jpg",
-   "kind": "bg",
-   "cat": "Background",
-   "v": 1780927299315
+   "id": "cmq6u81ke",
+   "name": "Ethereal Path",
+   "file": "assets/custom/cmq6u81ke.png",
+   "kind": "gameplay",
+   "cat": "Gameplay",
+   "v": 1781021511662,
+   "behavior": "solid",
+   "ar": 1,
+   "sw": "#3fbf6a",
+   "params": {}
   }
  ],
  "categories": [
