@@ -1,4 +1,4 @@
-const ASSET_VER='1780998000';
+const ASSET_VER='1781002000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -19,7 +19,7 @@ cv.width = W*RS; cv.height = H*RS;
 const GROUND = 360;
 const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
 const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
-const SLAM_VY = 15.0, SLAM_REC = 0.26, SLAM_IFRAMES = 0.6, SLAM_R = 134;   // Crush Drop (down-slam)
+const SLAM_VY = 19.0, SLAM_REC = 0.26, SLAM_IFRAMES = 0.6, SLAM_R = 134;   // Crush Drop (down-slam)
 const BASH_VX = 11.4, BASH_VY = 12.6;   // Scythe Bash (cReaper) — snappier than the dive per Alan
 const OBJ = SPRITES.obst;
 const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VER;
@@ -223,8 +223,6 @@ function press(code){
   // Aerial attack: melee button midair -> Power Dive (Dingbat) / Scythe Bash (cReaper)
   if (code==='KeyZ' && !keys[code] && mode==='play' && p && !p.dead && !p.onGround)
     diveReq={dir:0, t:performance.now()};   // dir resolved at trigger (held dir, else facing)
-  if (code==='ArrowDown' && !keys[code] && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && p.diveT<=0 && p.slamT<=0 && p.slamRec<=0)
-    slamReq={t:performance.now()};   // Crush Drop: down midair
   if ((code==='Space'||code==='ArrowUp') && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && equippedStone && stoneCharge>=PMETER && !powerActive) activatePower();
   keys[code]=true;
 }
@@ -414,6 +412,8 @@ const SPR = { chars:{} };
 let loaded=0, total=0, titleReady=false;
 function L(d){ const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src;
   return {img,sw:d.sw,sh:d.sh,w:d.w,h:d.h,frames:d.frames,foots:d.foots,cxs:d.cxs,weapon:d.weapon}; }
+// loading-screen runners load FIRST so they appear above the bar right away
+['default','dingbat'].forEach(ck=>{ const c=SPRITES.chars[ck]; if(c&&c.run){ SPR.chars[ck]=SPR.chars[ck]||{}; SPR.chars[ck].run=L(c.run); if(c.fps) SPR.chars[ck].fps=c.fps; } });
 SPR.obst = {};
 for (const k in SPRITES.obst){ const d=SPRITES.obst[k]; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.obst[k]={img,w:d.w,h:d.h}; }
 SPR.trees={}; for (const k in SPRITES.trees){ const d=SPRITES.trees[k]; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.trees[k]={img,w:d.w,h:d.h}; }
@@ -435,9 +435,10 @@ SPR.hpicon={}; for (const k in SPRITES.hpicon){ const d=SPRITES.hpicon[k]; const
   const vimg=new Image(); total++; vimg.onload=()=>loaded++; vimg.src=d.vortex;
   SPR.goal={img,fimg,vimg,w:d.w,h:d.h,fpts:d.fpts,vc:d.vc,vr:d.vr,vsz:d.vsz}; }
 { const d=SPRITES.grass; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.grass={img,w:d.w,h:d.h}; }
-for (const ck in SPRITES.chars){ SPR.chars[ck]={};
+for (const ck in SPRITES.chars){ SPR.chars[ck]=SPR.chars[ck]||{};
   for (const an in SPRITES.chars[ck]){
     if (an==='fps'){ SPR.chars[ck].fps=SPRITES.chars[ck].fps; continue; }
+    if (SPR.chars[ck][an]) continue;   // already preloaded (run sprites for the loading screen)
     SPR.chars[ck][an]=L(SPRITES.chars[ck][an]);
   } }
 const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, cast:32, dive:1 };
@@ -1107,7 +1108,9 @@ function update(dt){
   if (p.diveRec>0){ p.diveRec-=dt; p.vx=0; }
   if (p.diveT>0){ diveGhosts.push({x:p.x,y:p.y}); if(diveGhosts.length>9) diveGhosts.shift(); }
   else if (diveGhosts.length) diveGhosts.shift();
-  if (slamReq){ if (performance.now()-slamReq.t<150 && !p.onGround && p.diveT<=0 && p.slamT<=0 && p.slamRec<=0){ p.slamT=1; p.vx=0; p.vy=SLAM_VY; slamGhosts=[]; playSfx('sfx_rwhoosh',1.0); } slamReq=null; }
+  { const _down=(keys['ArrowDown']||keys['KeyS']);
+    if (_down && !p._downPrev && !p.onGround && !p.dead && !p.won && !p.winning && p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ p.slamT=1; p.vx=0; p.vy=SLAM_VY; slamGhosts=[]; playSfx('sfx_rwhoosh',1.0); }
+    p._downPrev=_down; }
   if (p.slamRec>0){ p.slamRec-=dt; p.vx=0; }
   if (p.slamT>0){ slamGhosts.push({x:p.x,y:p.y}); if(slamGhosts.length>9) slamGhosts.shift(); p.vx=0; }
   else if (slamGhosts.length) slamGhosts.shift();
