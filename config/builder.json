@@ -1,1 +1,325 @@
-{"version": 1, "customAssets": [{"id": "cmq4r9k0a", "name": "Death Totem", "file": "assets/custom/cmq4r9k0a.png", "kind": "decor", "cat": "Decor", "v": 1780895611018}, {"id": "cmq4robgv", "name": "Dare Sign", "file": "assets/custom/cmq4robgv.png", "kind": "decor", "cat": "Decor", "v": 1780896299791}, {"id": "cmq58wn73", "name": "Crypt Pillar", "file": "assets/custom/cmq58wn73.png", "kind": "gameplay", "cat": "Gameplay", "v": 1780925241711, "behavior": "slam", "ar": 1.5, "sw": "#ff8a3c", "params": {"dir": "up"}}, {"id": "cmq5a4qur", "name": "Ethereal Plains - Backdrop", "file": "assets/custom/cmq5a4qur.jpg", "kind": "bg", "cat": "Background", "v": 1780927299315}, {"id": "cmq5ajpb3", "name": "Ethereal Plains - Backdrop 3", "file": "assets/custom/cmq5ajpb3.jpg", "kind": "bg", "cat": "Background", "v": 1780927997151}], "categories": [{"id": "Background", "name": "Background", "parent": null}, {"id": "Foreground", "name": "Foreground", "parent": null}, {"id": "Ground", "name": "Ground", "parent": null}, {"id": "Hazards", "name": "Hazards", "parent": null}, {"id": "Enemies", "name": "Enemies", "parent": null}, {"id": "Functions", "name": "Functions", "parent": null}, {"id": "Objects", "name": "Objects", "parent": null}, {"id": "Decor", "name": "Decor", "parent": null}, {"id": "Textures", "name": "Textures", "parent": null}, {"id": "Gameplay", "name": "Gameplay", "parent": null}, {"id": "catmq5a31w3", "name": "Bones", "parent": "Decor"}, {"id": "catmq5bfuxo", "name": "Souls", "parent": "Functions"}], "bench": [{"id": "stmq4rqfpr", "name": "Crypt Depths I", "theme": "crypt", "act": "I", "ts": 1780952709021}, {"id": "stmq4rrlrf", "name": "Crypt Depths II", "theme": "crypt", "act": "II", "ts": 1780897687659}, {"id": "plains1", "name": "Ethereal Plains I", "theme": "plains", "act": "I", "ts": 1781016552339}, {"id": "plains2", "name": "Ethereal Plains II", "theme": "plains", "act": "II", "ts": 1781016552339}, {"id": "witch1", "name": "Witchwood I", "theme": "witch", "act": "I", "ts": 1781019341769}, {"id": "witch2", "name": "Witchwood II", "theme": "witch", "act": "II", "ts": 1781019341769}, {"id": "harbor1", "name": "Drowned Harbor I", "theme": "harbor", "act": "I", "ts": 1781019341769}, {"id": "harbor2", "name": "Drowned Harbor II", "theme": "harbor", "act": "II", "ts": 1781019341769}, {"id": "spire1", "name": "Bell Spire I", "theme": "spire", "act": "I", "ts": 1781019341769}, {"id": "spire2", "name": "Bell Spire II", "theme": "spire", "act": "II", "ts": 1781019341769}, {"id": "charnel1", "name": "Charnel Peak I", "theme": "charnel", "act": "I", "ts": 1781019341769}, {"id": "charnel2", "name": "Charnel Peak II", "theme": "charnel", "act": "II", "ts": 1781019341769}, {"id": "rift1", "name": "The Rift I", "theme": "rift", "act": "I", "ts": 1781019341769}, {"id": "rift2", "name": "The Rift II", "theme": "rift", "act": "II", "ts": 1781019341769}, {"id": "castle1", "name": "Blood Moon Castle I", "theme": "castle", "act": "I", "ts": 1781019341769}, {"id": "castle2", "name": "Blood Moon Castle II", "theme": "castle", "act": "II", "ts": 1781019341769}], "worldMap": {"cem": {"public": true, "acts": [null, null, null]}, "witch": {"public": false, "acts": ["witch1", "witch2", null]}, "crypt": {"public": false, "acts": ["stmq4rqfpr", "stmq4rrlrf", null]}, "harbor": {"public": false, "acts": ["harbor1", "harbor2", null]}, "spire": {"public": false, "acts": ["spire1", "spire2", null]}, "plains": {"public": false, "acts": ["plains1", "plains2", null]}, "charnel": {"public": false, "acts": ["charnel1", "charnel2", null]}, "rift": {"public": false, "acts": ["rift1", "rift2", null]}, "castle": {"public": false, "acts": ["castle1", "castle2", null]}}, "hidden": ["fg_cryptbg"], "itemCat": {"tex_bone16": "catmq5a31w3", "tex_bone15": "catmq5a31w3", "tex_bone14": "catmq5a31w3", "tex_bone13": "catmq5a31w3", "tex_bone12": "catmq5a31w3", "tex_bone11": "catmq5a31w3", "tex_bone10": "catmq5a31w3", "tex_bone09": "catmq5a31w3", "tex_bone08": "catmq5a31w3", "tex_bone07": "catmq5a31w3", "tex_bone06": "catmq5a31w3", "tex_bone05": "catmq5a31w3", "tex_bone04": "catmq5a31w3", "tex_bone03": "catmq5a31w3", "tex_bone02": "catmq5a31w3", "tex_bone01": "catmq5a31w3", "tex_skull1": "catmq5a31w3", "tex_cmq4r9k0a": "catmq5a31w3", "tex_cmq4robgv": "catmq5a31w3", "soul": "catmq5bfuxo", "soul100": "catmq5bfuxo", "soul50": "catmq5bfuxo", "soul25": "catmq5bfuxo", "soul5": "catmq5bfuxo", "tex_rockpile": "Decor", "tex_ceiling": "Decor", "tex_cmq58wn73": "Hazards"}}
+{
+ "version": 1,
+ "customAssets": [
+  {
+   "id": "cmq4r9k0a",
+   "name": "Death Totem",
+   "file": "assets/custom/cmq4r9k0a.png",
+   "kind": "decor",
+   "cat": "Decor",
+   "v": 1780895611018
+  },
+  {
+   "id": "cmq4robgv",
+   "name": "Dare Sign",
+   "file": "assets/custom/cmq4robgv.png",
+   "kind": "decor",
+   "cat": "Decor",
+   "v": 1780896299791
+  },
+  {
+   "id": "cmq58wn73",
+   "name": "Crypt Pillar",
+   "file": "assets/custom/cmq58wn73.png",
+   "kind": "gameplay",
+   "cat": "Gameplay",
+   "v": 1780925241711,
+   "behavior": "slam",
+   "ar": 1.5,
+   "sw": "#ff8a3c",
+   "params": {
+    "dir": "up"
+   }
+  },
+  {
+   "id": "cmq5a4qur",
+   "name": "Ethereal Plains - Backdrop",
+   "file": "assets/custom/cmq5a4qur.jpg",
+   "kind": "bg",
+   "cat": "Background",
+   "v": 1780927299315
+  }
+ ],
+ "categories": [
+  {
+   "id": "Background",
+   "name": "Background",
+   "parent": null
+  },
+  {
+   "id": "Foreground",
+   "name": "Foreground",
+   "parent": null
+  },
+  {
+   "id": "Ground",
+   "name": "Ground",
+   "parent": null
+  },
+  {
+   "id": "Hazards",
+   "name": "Hazards",
+   "parent": null
+  },
+  {
+   "id": "Enemies",
+   "name": "Enemies",
+   "parent": null
+  },
+  {
+   "id": "Functions",
+   "name": "Functions",
+   "parent": null
+  },
+  {
+   "id": "Objects",
+   "name": "Objects",
+   "parent": null
+  },
+  {
+   "id": "Decor",
+   "name": "Decor",
+   "parent": null
+  },
+  {
+   "id": "Textures",
+   "name": "Textures",
+   "parent": null
+  },
+  {
+   "id": "Gameplay",
+   "name": "Gameplay",
+   "parent": null
+  },
+  {
+   "id": "catmq5a31w3",
+   "name": "Bones",
+   "parent": "Decor"
+  },
+  {
+   "id": "catmq5bfuxo",
+   "name": "Souls",
+   "parent": "Functions"
+  }
+ ],
+ "bench": [
+  {
+   "id": "stmq4rqfpr",
+   "name": "Crypt Depths I",
+   "theme": "crypt",
+   "act": "I",
+   "ts": 1780952709021
+  },
+  {
+   "id": "stmq4rrlrf",
+   "name": "Crypt Depths II",
+   "theme": "crypt",
+   "act": "II",
+   "ts": 1780897687659
+  },
+  {
+   "id": "plains1",
+   "name": "Ethereal Plains I",
+   "theme": "plains",
+   "act": "I",
+   "ts": 1781016552339
+  },
+  {
+   "id": "plains2",
+   "name": "Ethereal Plains II",
+   "theme": "plains",
+   "act": "II",
+   "ts": 1781016552339
+  },
+  {
+   "id": "witch1",
+   "name": "Witchwood I",
+   "theme": "witch",
+   "act": "I",
+   "ts": 1781019341769
+  },
+  {
+   "id": "witch2",
+   "name": "Witchwood II",
+   "theme": "witch",
+   "act": "II",
+   "ts": 1781019341769
+  },
+  {
+   "id": "harbor1",
+   "name": "Drowned Harbor I",
+   "theme": "harbor",
+   "act": "I",
+   "ts": 1781019341769
+  },
+  {
+   "id": "harbor2",
+   "name": "Drowned Harbor II",
+   "theme": "harbor",
+   "act": "II",
+   "ts": 1781019341769
+  },
+  {
+   "id": "spire1",
+   "name": "Bell Spire I",
+   "theme": "spire",
+   "act": "I",
+   "ts": 1781019341769
+  },
+  {
+   "id": "spire2",
+   "name": "Bell Spire II",
+   "theme": "spire",
+   "act": "II",
+   "ts": 1781019341769
+  },
+  {
+   "id": "charnel1",
+   "name": "Charnel Peak I",
+   "theme": "charnel",
+   "act": "I",
+   "ts": 1781019341769
+  },
+  {
+   "id": "charnel2",
+   "name": "Charnel Peak II",
+   "theme": "charnel",
+   "act": "II",
+   "ts": 1781019341769
+  },
+  {
+   "id": "rift1",
+   "name": "The Rift I",
+   "theme": "rift",
+   "act": "I",
+   "ts": 1781019341769
+  },
+  {
+   "id": "rift2",
+   "name": "The Rift II",
+   "theme": "rift",
+   "act": "II",
+   "ts": 1781019341769
+  },
+  {
+   "id": "castle1",
+   "name": "Blood Moon Castle I",
+   "theme": "castle",
+   "act": "I",
+   "ts": 1781019341769
+  },
+  {
+   "id": "castle2",
+   "name": "Blood Moon Castle II",
+   "theme": "castle",
+   "act": "II",
+   "ts": 1781019341769
+  }
+ ],
+ "worldMap": {
+  "cem": {
+   "public": true,
+   "acts": [
+    null,
+    null,
+    null
+   ]
+  },
+  "witch": {
+   "public": false,
+   "acts": [
+    "witch1",
+    "witch2",
+    null
+   ]
+  },
+  "crypt": {
+   "public": false,
+   "acts": [
+    "stmq4rqfpr",
+    "stmq4rrlrf",
+    null
+   ]
+  },
+  "harbor": {
+   "public": false,
+   "acts": [
+    "harbor1",
+    "harbor2",
+    null
+   ]
+  },
+  "spire": {
+   "public": false,
+   "acts": [
+    "spire1",
+    "spire2",
+    null
+   ]
+  },
+  "plains": {
+   "public": false,
+   "acts": [
+    "plains1",
+    "plains2",
+    null
+   ]
+  },
+  "charnel": {
+   "public": false,
+   "acts": [
+    "charnel1",
+    "charnel2",
+    null
+   ]
+  },
+  "rift": {
+   "public": false,
+   "acts": [
+    "rift1",
+    "rift2",
+    null
+   ]
+  },
+  "castle": {
+   "public": false,
+   "acts": [
+    "castle1",
+    "castle2",
+    null
+   ]
+  }
+ },
+ "hidden": [
+  "fg_cryptbg"
+ ],
+ "itemCat": {
+  "tex_bone16": "catmq5a31w3",
+  "tex_bone15": "catmq5a31w3",
+  "tex_bone14": "catmq5a31w3",
+  "tex_bone13": "catmq5a31w3",
+  "tex_bone12": "catmq5a31w3",
+  "tex_bone11": "catmq5a31w3",
+  "tex_bone10": "catmq5a31w3",
+  "tex_bone09": "catmq5a31w3",
+  "tex_bone08": "catmq5a31w3",
+  "tex_bone07": "catmq5a31w3",
+  "tex_bone06": "catmq5a31w3",
+  "tex_bone05": "catmq5a31w3",
+  "tex_bone04": "catmq5a31w3",
+  "tex_bone03": "catmq5a31w3",
+  "tex_bone02": "catmq5a31w3",
+  "tex_bone01": "catmq5a31w3",
+  "tex_skull1": "catmq5a31w3",
+  "tex_cmq4r9k0a": "catmq5a31w3",
+  "tex_cmq4robgv": "catmq5a31w3",
+  "soul": "catmq5bfuxo",
+  "soul100": "catmq5bfuxo",
+  "soul50": "catmq5bfuxo",
+  "soul25": "catmq5bfuxo",
+  "soul5": "catmq5bfuxo",
+  "tex_rockpile": "Decor",
+  "tex_ceiling": "Decor",
+  "tex_cmq58wn73": "Hazards"
+ }
+}
