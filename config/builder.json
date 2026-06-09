@@ -58,6 +58,14 @@
    "kind": "fg",
    "cat": "Foreground",
    "v": 1781028945251
+  },
+  {
+   "id": "cmq6yq9bt",
+   "name": "Ethereal tile (filled)",
+   "file": "assets/custom/cmq6yq9bt.jpg",
+   "kind": "bg",
+   "cat": "Background",
+   "v": 1781029079993
   }
  ],
  "categories": [
@@ -369,7 +377,10 @@
   "bg_bonedirt": "catmq6yk69x",
   "fg_bonedirt": "catmq6ykt3g",
   "fg_cavebg": "catmq6ykt3g",
-  "fg_rockwall": "catmq6ykt3g"
+  "fg_rockwall": "catmq6ykt3g",
+  "fg_cmq6yndcz": "catmq6ym2v9",
+  "fg_cmq6ymvjf": "catmq6ym2v9",
+  "gnd_gmq6yhk33": "Ground"
  },
  "grounds": [
   {
