@@ -1,4 +1,4 @@
-const ASSET_VER='1781010000';
+const ASSET_VER='1781014000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -838,7 +838,7 @@ function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   const sy = keep && p && p.spawnY!==undefined ? p.spawnY : (segFloorsAt(sx)[0]!==undefined?segFloorsAt(sx)[0]:GROUND);
   p = { x:sx, y:sy, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
-        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, diveT:0, diveRec:0, slamT:0, slamRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
+        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, invHurt:0, diveT:0, diveRec:0, slamT:0, slamRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
   zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; shakeT=0; shakeMag=0;
@@ -1048,6 +1048,7 @@ function update(dt){
     return;
   }
   if (p.inv>0) p.inv-=dt;
+  if (p.invHurt>0) p.invHurt-=dt;
   if (shakeT>0){ shakeT-=dt; if(shakeT<=0){ shakeT=0; shakeMag=0; } }
   if (p.flash>0) p.flash-=dt;
   if (p.hurtT>0) p.hurtT-=dt;
@@ -1195,7 +1196,7 @@ function update(dt){
   if (p.y>WORLDH+220){
     gotHit=true; playSfx('sfx_hurt');
     p.hp-=1; p.x=p.spawn; p.y=(p.spawnY!==undefined?p.spawnY:GROUND); p.vy=0; p.vx=0; p.onGround=true; p.standPlat=null;
-    p.inv=1.2; p.flash=0.35; p.hurtT=0;
+    p.inv=1.2; p.invHurt=1.2; p.flash=0.35; p.hurtT=0;
     if (p.hp<=0){ p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.deathHurt=true; p.tossDir=-p.facing; playSfx('sfx_pdie'); }
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
     camY=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
@@ -1498,7 +1499,7 @@ function crushPlayer(dir){ if(p.dead||p.won||p.winning) return; gotHit=true; p.h
 function hurtPlayer(srcX,dmg){
   if (p.diveT>0||p.diveRec>0) return;   // Power Dive i-frames (until normal stance resumes)
   gotHit=true; playSfx('sfx_hurt');
-  p.hp-=(dmg||1); p.inv=1.0; p.flash=0.35;
+  p.hp-=(dmg||1); p.inv=1.0; p.invHurt=1.0; p.flash=0.35;
   p.hurtT=0.45;  // single retro hurt still + flicker, fixed hit-stun
   const away=(p.x<srcX)?-1:1; p.vx=away*2; p.x+=away*8;
   if(p.onGround){ p.vy=-7; p.onGround=false; }
@@ -2468,7 +2469,7 @@ function drawPlayerLayer(){
       ctx.restore();
     }
     else if ((powerActive && transformT>0)) {} 
-    else if (!(p.inv>0 && !powerActive && Math.floor(gt*16)%2===0)) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.inv>0 && !powerActive)?0.45:0);
+    else if (!(p.invHurt>0 && !powerActive && Math.floor(gt*16)%2===0)) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0);
     if (p.muzzleT>0){
       const k=1-p.muzzleT/0.14, hx=sx+p.facing*42, hy=p.y-56;
       // soft rim glow washing over the character
