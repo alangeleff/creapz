@@ -1,4 +1,4 @@
-const ASSET_VER='1780974000';
+const ASSET_VER='1780978000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -188,7 +188,7 @@ function loadStage(i){
   TEX.forEach(t=>{ const g=(typeof GAME_DEF!=='undefined')&&GAME_DEF[t.t]; if(!g) return;
     const dh=t.w*(g.ar||1), gm=t.geom||{x:0,y:0,w:1,h:1};
     const l=t.x+gm.x*t.w, r=t.x+(gm.x+gm.w)*t.w, top=(t.y-dh)+gm.y*dh, bot=(t.y-dh)+(gm.y+gm.h)*dh;
-    if(g.behavior==='solid'){ TSOLID.push({l,r,top,bot}); }
+    if(g.behavior==='solid'){ TSOLID.push({l,r,top,bot}); SOLID.push({l,r,top}); }
     else if(g.behavior==='platform'){ SOLID.push({l,r,top}); }
     else if(g.behavior==='spikes'){ GHURT.push({l,r,top,bot}); }
     else if(g.behavior==='bounce'){ GBOUNCE.push({l,r,top, strength:(g.params&&g.params.bounce)||19}); }
