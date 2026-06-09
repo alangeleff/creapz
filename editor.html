@@ -1229,20 +1229,23 @@ function uploadAsset(){ const inp=document.createElement('input'); inp.type='fil
   inp.click(); }
 document.getElementById('bUpload').onclick=uploadAsset;
 function uploadGround(){
-  const pick=(cb)=>{ const inp=document.createElement('input'); inp.type='image/*'; inp.type='file'; inp.accept='image/*'; inp.onchange=()=>{ const f=inp.files[0]; if(!f){cb(null);return;} const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>cb(im); im.src=fr.result; }; fr.readAsDataURL(f); }; inp.click(); };
-  alert('Pick the BASE tile next (a square, seamlessly-tileable texture).');
-  pick(base=>{ if(!base) return;
-    alert('Now pick the TOPPER (the top edge strip, e.g. the grass/surface).');
-    pick(top=>{ if(!top) return;
-      const name=(prompt('Ground name:','Ground')||'').trim(); if(!name) return;
-      const id='g'+Date.now().toString(36);
-      const toPng=(im)=>{ const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); return c.toDataURL('image/png'); };
-      const bP=toPng(base), tP=toPng(top), bf='assets/custom/'+id+'_base.png', tf='assets/custom/'+id+'_top.png';
-      const g={id,name,base:bf,top:tf,v:Date.now()};
-      BCONFIG.grounds=BCONFIG.grounds||[]; BCONFIG.grounds.push(g); registerGround(g,bP,tP); buildPalette(); draw();
-      commitFiles([{path:bf,content:bP.split(',')[1],encoding:'base64'},{path:tf,content:tP.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: add ground '+name).then(r=>{ if(r) toast('ground added \u2713 \u2014 find "'+name+'" under Ground'); });
-    });
-  });
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.multiple=true;
+  inp.onchange=()=>{ const files=[...(inp.files||[])]; if(files.length<2){ alert('Select BOTH images at once \u2014 the square BASE tile and the TOPPER strip (pick 2 files).'); return; }
+    let loaded=0; const imgs=[];
+    files.slice(0,2).forEach((f,i)=>{ const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>{ imgs[i]=im; if(++loaded===2) groundFinish(imgs); }; im.src=fr.result; }; fr.readAsDataURL(f); });
+  };
+  inp.click();
+}
+function groundFinish(imgs){
+  const ar=im=>im.naturalWidth/im.naturalHeight;
+  let base,top; if(ar(imgs[0])>=ar(imgs[1])){ top=imgs[0]; base=imgs[1]; } else { top=imgs[1]; base=imgs[0]; }
+  const name=(prompt('Ground name (the wider image becomes the topper):','Ground')||'').trim(); if(!name) return;
+  const id='g'+Date.now().toString(36);
+  const toPng=(im)=>{ const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight; c.getContext('2d').drawImage(im,0,0); return c.toDataURL('image/png'); };
+  const bP=toPng(base), tP=toPng(top), bf='assets/custom/'+id+'_base.png', tf='assets/custom/'+id+'_top.png';
+  const g={id,name,base:bf,top:tf,v:Date.now()};
+  BCONFIG.grounds=BCONFIG.grounds||[]; BCONFIG.grounds.push(g); registerGround(g,bP,tP); buildPalette(); draw();
+  commitFiles([{path:bf,content:bP.split(',')[1],encoding:'base64'},{path:tf,content:tP.split(',')[1],encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: add ground '+name).then(r=>{ if(r) toast('ground added \u2713 \u2014 find "'+name+'" under Ground'); });
 }
 document.getElementById('bGround').onclick=uploadGround;
 const BUILTIN_MUSIC=['act1','act2','crypt1','crypt2','ethereal1','ethereal2','title'];
