@@ -1,4 +1,4 @@
-const ASSET_VER='1780948000';
+const ASSET_VER='1780952000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -39,7 +39,7 @@ const PMETER=20, PDUR=7;
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
 function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
-function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Dingbat','ding_onyx':'Onyx','ding_frost':'Frost','ding_blood':'Blood'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
+function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Classic','ding_swamp':'Swamp','ding_azure':'Azure','ding_blood':'Blood','ding_magic':'Magic','ding_mystic':'Mystic','ding_wisp':'Wisp','ding_news':'Newspaper','ding_noir':'Noir'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 function cycleSkin(dir){ const list=isDing(chosen)?DORDER:ORDER; let i=list.indexOf(chosen); if(i<0)i=0; chosen=list[(i+dir+list.length)%list.length]; if(isDing(chosen))dingSkin=chosen; else creaperSkin=chosen; try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
@@ -385,7 +385,7 @@ cv.addEventListener('pointerdown', e=>{
     return;
   }
   if (mode==='select'){
-    for (const d of dotRects){ if (pt.x>d.x&&pt.x<d.x+d.w&&pt.y>d.y&&pt.y<d.y+d.h){ if(d.who==='d') dingSkin=d.skin; else creaperSkin=d.skin; playSfx('sfx_mtog'); return; } }
+    for (const aR of arrowRects){ if (pt.x>aR.x&&pt.x<aR.x+aR.w&&pt.y>aR.y&&pt.y<aR.y+aR.h){ if(aR.who==='d'){ const i=DORDER.indexOf(dingSkin); dingSkin=DORDER[(i+aR.dir+DORDER.length)%DORDER.length]; selFoc=1; } else { const i=ORDER.indexOf(creaperSkin); creaperSkin=ORDER[(i+aR.dir+ORDER.length)%ORDER.length]; selFoc=0; } selRow=1; playSfx('sfx_mtog'); return; } }
     for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ playSfx('sfx_msel'); startGame(c.key==='creaper'?creaperSkin:dingSkin); break; } }
     return;
   }
@@ -1824,11 +1824,11 @@ function drawCharSprite(ck,state,fi,cx,feetY,facing,scale,tint){
   ctx.restore();
 }
 
-let cardRects=[], dotRects=[];
+let cardRects=[], arrowRects=[];
 let creaperSkin='default', dingSkin='dingbat';
 const SKINC={default:'#5b3fd6', green:'#18a88a', blue:'#d82a2a', red:'#20c8c8', wraith:'#ff7a2a', gilded:'#2fcf55', bone:'#8a2a6a', crimson:'#d8e040'};
-const DSKINC={dingbat:'#8a5a2a', ding_onyx:'#3c3c46', ding_frost:'#8fa8c8', ding_blood:'#7a1f24'};
-const DORDER=['dingbat','ding_onyx','ding_frost','ding_blood'];
+const DSKINC={dingbat:'#b5762e', ding_swamp:'#6f9a1a', ding_azure:'#2470d8', ding_blood:'#c0231e', ding_magic:'#1fe0a0', ding_mystic:'#9a4ae0', ding_wisp:'#7fd8e8', ding_news:'#c4c4c4', ding_noir:'#ff3ca0'};
+const DORDER=['dingbat','ding_swamp','ding_azure','ding_blood','ding_magic','ding_mystic','ding_wisp','ding_news','ding_noir'];
 function drawSlots(){
   ctx.setTransform(RS,0,0,RS,0,0);
   camX=0; skyBG(); drawFence();
@@ -1909,9 +1909,9 @@ function drawSelect(){
   ctx.textAlign='center';
   ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText(selMode==='skin'?'Choose your Skin':'Choose your Creap', W/2, 56);
   ctx.fillStyle='#9b8cff'; ctx.font='15px sans-serif';
-  ctx.fillText(selMode==='skin'?'your character is bound to this story — colors only  ·  Esc returns to the realm':'tap a character to begin  ·  dots pick the colors  ·  or arrows + space', W/2, 82);
+  ctx.fillText(selMode==='skin'?'your character is bound to this story — colors only  ·  Esc returns to the realm':'tap a character to begin  ·  ◀ ▶ change the skin  ·  or arrow keys + space', W/2, 82);
   const cw=250, gap=(W-2*cw)/3, cardY=104, cardH=246;
-  cardRects=[]; dotRects=[];
+  cardRects=[]; arrowRects=[];
   const roster=[{key:'creaper', label:'cReaper', ck:creaperSkin},{key:'dingbat', label:'Dingbat', ck:dingSkin}];
   for (let i=0;i<2;i++){
     const it=roster[i], cardX=gap+i*(cw+gap);
@@ -1939,27 +1939,26 @@ function drawSelect(){
       continue;
     }
     {
-      // color dots floating above the character
       const isC=(it.key==='creaper');
       const list=isC?ORDER:DORDER, cmap=isC?SKINC:DSKINC, cur=isC?creaperSkin:dingSkin;
-      const dn=list.length, dr2=dn>6?9:11, dgap=Math.min(34,(cw-50)/Math.max(1,dn-1)), dx0=cardX+cw/2-((dn-1)*dgap)/2, dy=cardY+34;
-      for (let k=0;k<dn;k++){
-        const sk=list[k], dx=dx0+k*dgap;
-        dotRects.push({x:dx-13,y:dy-13,w:26,h:26,skin:sk,who:isC?'c':'d'});
-        ctx.fillStyle=cmap[sk]||'#888';
-        ctx.beginPath(); ctx.arc(dx,dy,dr2,0,7); ctx.fill();
-        if (sk===cur){
-          ctx.strokeStyle='#ffffff'; ctx.lineWidth=2.5;
-          ctx.beginPath(); ctx.arc(dx,dy,dr2+4.5,0,7); ctx.stroke();
-          if (selRow===1 && (isC?0:1)===selFoc){
-            const pu3=0.55+0.45*Math.sin(gt*4);
-            ctx.strokeStyle='rgba(200,251,80,'+pu3.toFixed(2)+')'; ctx.lineWidth=2.5;
-            ctx.beginPath(); ctx.arc(dx,dy,dr2+8.5,0,7); ctx.stroke();
-          }
-        } else {
-          ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1.5;
-          ctx.beginPath(); ctx.arc(dx,dy,dr2,0,7); ctx.stroke();
-        }
+      // skin name + index atop the card
+      ctx.textAlign='center';
+      ctx.fillStyle=cmap[cur]||'#cdbbe6'; ctx.font='bold 19px sans-serif';
+      ctx.fillText(prettySkin(cur), cardX+cw/2, cardY+32);
+      ctx.fillStyle='#8a82a6'; ctx.font='11px sans-serif';
+      ctx.fillText((list.indexOf(cur)+1)+' / '+list.length, cardX+cw/2, cardY+49);
+      // big tap arrows flanking the character (cycle skins, endless loop)
+      const ay=cardY+cardH-100, aw=40, ah=96, hot=(selRow===1 && (isC?0:1)===selFoc);
+      for (const ar of [[-1,cardX+6],[1,cardX+cw-6-aw]]){
+        const dir=ar[0], ax=ar[1];
+        arrowRects.push({x:ax,y:ay-ah/2,w:aw,h:ah,who:isC?'c':'d',dir:dir});
+        ctx.fillStyle='rgba(20,16,40,.6)'; roundRect(ax,ay-ah/2,aw,ah,10); ctx.fill();
+        ctx.strokeStyle = hot?('rgba(200,251,80,'+(0.55+0.45*Math.sin(gt*4)).toFixed(2)+')'):'rgba(155,140,255,.55)';
+        ctx.lineWidth=2; roundRect(ax,ay-ah/2,aw,ah,10); ctx.stroke();
+        ctx.fillStyle='#e9e3ff'; const mx=ax+aw/2, my=ay, t=11; ctx.beginPath();
+        if(dir<0){ ctx.moveTo(mx+t*0.6,my-t); ctx.lineTo(mx-t*0.6,my); ctx.lineTo(mx+t*0.6,my+t); }
+        else { ctx.moveTo(mx-t*0.6,my-t); ctx.lineTo(mx+t*0.6,my); ctx.lineTo(mx-t*0.6,my+t); }
+        ctx.closePath(); ctx.fill();
       }
     }
   }
