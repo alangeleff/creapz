@@ -1,5 +1,6 @@
 <!doctype html>
 <html><head>
+<script src="assets/vendor/lame.min.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>cReapZ — World Builder</title>
@@ -1271,20 +1272,36 @@ function allMusicOpts(selv){
   return o;
 }
 function refreshMusicOptions(){ const s=document.getElementById('fMusic'); if(s) s.innerHTML=allMusicOpts(M.music); }
+// ---- music auto-prep: decode -> resample 44.1k -> re-encode (lamejs) only if over the ~4.5MB commit cap ----
+function _f32toI16(f){ const o=new Int16Array(f.length); for(let i=0;i<f.length;i++){ let s=f[i]; s=s<-1?-1:s>1?1:s; o[i]= s<0? s*0x8000 : s*0x7FFF; } return o; }
+async function _resample(buf,rate){ if(buf.sampleRate===rate) return buf; const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext; const off=new OAC(buf.numberOfChannels, Math.max(1,Math.ceil(buf.duration*rate)), rate); const s=off.createBufferSource(); s.buffer=buf; s.connect(off.destination); s.start(); return await off.startRendering(); }
+function _encodeMp3(buf,kbps){ const ch=Math.min(2,buf.numberOfChannels); const enc=new lamejs.Mp3Encoder(ch,buf.sampleRate,kbps); const L=_f32toI16(buf.getChannelData(0)); const R=ch>1?_f32toI16(buf.getChannelData(1)):null; const blk=1152, out=[]; for(let i=0;i<L.length;i+=blk){ const lc=L.subarray(i,i+blk), rc=R?R.subarray(i,i+blk):lc; const b= ch>1? enc.encodeBuffer(lc,rc): enc.encodeBuffer(lc); if(b.length) out.push(b); } const fl=enc.flush(); if(fl.length) out.push(fl); return new Blob(out,{type:'audio/mpeg'}); }
+function _pickKbps(dur){ const tiers=[48,64,80,96,112,128]; const k=Math.floor(2900000*8/Math.max(1,dur)/1000); let best=48; for(const t of tiers) if(t<=k) best=t; return Math.min(128,best); }
+function _blobB64(blob){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result.split(',')[1]); fr.onerror=()=>rej(new Error('read failed')); fr.readAsDataURL(blob); }); }
+async function prepMusic(f){
+  const raw=await f.arrayBuffer();
+  if(Math.ceil(raw.byteLength/3)*4 <= 4000000) return {blob:f,recoded:false};   // already small enough -> keep original quality
+  if(typeof lamejs==='undefined'||!lamejs.Mp3Encoder) throw new Error('audio encoder not loaded');
+  const AC=new (window.AudioContext||window.webkitAudioContext)();
+  let buf=await AC.decodeAudioData(raw.slice(0)); try{AC.close&&AC.close();}catch(e){}
+  buf=await _resample(buf,44100);
+  let kbps=_pickKbps(buf.duration), blob=_encodeMp3(buf,kbps);
+  while(Math.ceil(blob.size/3)*4>4000000 && kbps>48){ kbps= kbps>96?96: kbps>64?64:48; blob=_encodeMp3(buf,kbps); }
+  return {blob,recoded:true,kbps};
+}
 function uploadMusic(){ const inp=document.createElement('input'); inp.type='file'; inp.accept='audio/*,.mp3,.m4a,.ogg,.wav';
-  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+  inp.onchange=async()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
     const name=(prompt('Name this music track:', f.name.replace(/\.[^.]+$/,''))||'').trim(); if(!name) return;
-    const ext=((f.name.match(/\.[^.]+$/)||['.mp3'])[0]).toLowerCase();
+    let prep; try{ toast('preparing audio…'); prep=await prepMusic(f); }catch(e){ alert('Could not process that audio ('+e.message+'). Try a standard MP3, M4A, or WAV.'); return; }
+    const blob=prep.blob; let b64; try{ b64=await _blobB64(blob); }catch(e){ alert('Could not read the audio data.'); return; }
+    if(b64.length>4200000){ alert('Even after compression this track is '+(blob.size/1048576).toFixed(1)+'MB — still over the limit. Try a shorter track.'); return; }
+    const ext= prep.recoded? '.mp3' : ((f.name.match(/\.[^.]+$/)||['.mp3'])[0]).toLowerCase();
     const id='m'+Date.now().toString(36); const file='assets/music/'+id+ext;
-    const fr=new FileReader();
-    fr.onload=async()=>{ const b64=fr.result.split(',')[1];
-      if(b64.length>4200000){ alert('That track is '+(f.size/1048576).toFixed(1)+'MB \u2014 too large to save through the builder (uploads are capped at ~4.5MB).\n\nRe-export it around 128kbps, or trim it under ~3MB, then try again. Game loops sound great at 128kbps.'); return; }
-      BCONFIG.music=BCONFIG.music||[]; BCONFIG.music.push({id,name,file}); refreshMusicOptions();
-      const r=await commitFiles([{path:file,content:b64,encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}], 'music: add '+name);
-      if(r){ toast('track added \u2713 \u2014 pick "\u266a '+name+'" in the stage music dropdown'); }
-      else { BCONFIG.music=(BCONFIG.music||[]).filter(m=>m.id!==id); refreshMusicOptions(); }
-    };
-    fr.readAsDataURL(f); };
+    BCONFIG.music=BCONFIG.music||[]; BCONFIG.music.push({id,name,file}); refreshMusicOptions();
+    const r=await commitFiles([{path:file,content:b64,encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}], 'music: add '+name);
+    if(r){ toast('track added ✓'+(prep.recoded?(' (auto-compressed to '+prep.kbps+'k)'):'')+' — pick "♪ '+name+'" in the stage music dropdown'); }
+    else { BCONFIG.music=(BCONFIG.music||[]).filter(m=>m.id!==id); refreshMusicOptions(); }
+  };
   inp.click(); }
 document.getElementById('bMusic').onclick=uploadMusic;
 document.getElementById('bCommit').onclick=async()=>{ const r=await commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'builder: update config'); };
