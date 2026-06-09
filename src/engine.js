@@ -1,4 +1,4 @@
-const ASSET_VER='1781002000';
+const ASSET_VER='1781006000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -2444,15 +2444,16 @@ function drawPlayerLayer(){
   }
   if (!p.dead){
     if (p.slamT>0){
+      const slamA=(SPR.chars[chosen]&&SPR.chars[chosen].slam)?'slam':'kneel';
       for (let gi3=0; gi3<slamGhosts.length; gi3+=2){
         const g3=slamGhosts[gi3], gsx3=g3.x-camX;
         ctx.save(); ctx.globalAlpha=0.05+0.13*(gi3/Math.max(1,slamGhosts.length));
-        drawCharSprite(chosen,'kneel',0,gsx3,g3.y,p.facing,1,0); ctx.restore();
+        drawCharSprite(chosen,slamA,0,gsx3,g3.y,p.facing,1,0); ctx.restore();
       }
       ctx.save(); ctx.strokeStyle='rgba(185,212,255,0.55)'; ctx.lineWidth=2;
       for(let s3=0;s3<5;s3++){ const ox=sx-26+s3*13+(Math.random()*4-2); ctx.beginPath(); ctx.moveTo(ox,p.y-152); ctx.lineTo(ox,p.y-152+34+Math.random()*20); ctx.stroke(); }
       ctx.restore();
-      drawCharSprite(chosen,'kneel',0,sx,p.y,p.facing,1,0);
+      drawCharSprite(chosen,slamA,0,sx,p.y,p.facing,1,0);
     }
     else if (p.state==='dive'){
       for (let gi2=0; gi2<diveGhosts.length; gi2+=2){
