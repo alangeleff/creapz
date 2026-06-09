@@ -478,10 +478,16 @@ function delAsset(id){ const a=(BCONFIG.customAssets||[]).find(x=>x.id===id); if
   commitFiles(files,'builder: delete asset '+a.name).then(r=>{ if(r) toast('deleted "'+a.name+'"'); });
 }
 function buildPaletteHTML(){ let palHtml='<h3>Drag a piece onto the map</h3>'+orgbarHTML(); const all=STAMPS.concat(customStamps()).concat(groundStamps());
-  for(const cat of catOrder()){ const items=all.filter(s=>effCat(s)===cat.id && !((BCONFIG.hidden||[]).includes(s.k)));
-    if(!items.length && !ORGANIZE) continue;
+  const notHid=s=>!((BCONFIG.hidden||[]).includes(s.k));
+  const catItems=id=>all.filter(s=>effCat(s)===id && notHid(s));
+  for(const cat of catOrder()){
+    if(cat.parent && CAT_COLLAPSE[cat.parent]) continue;
+    const items=catItems(cat.id);
+    const kidCount=cat.parent?0:catModel().filter(c=>c.parent===cat.id).reduce((n,c)=>n+catItems(c.id).length,0);
+    if(!items.length && !kidCount && !ORGANIZE) continue;
     const collapsed=!!CAT_COLLAPSE[cat.id], sub=cat.parent?' sub':'';
-    palHtml+='<div class="pcat'+sub+'" data-cat="'+cat.id+'"><span class="cchev">'+(collapsed?'\u25b8':'\u25be')+'</span><span class="pcname">'+esc(cat.name)+'</span>'+(ORGANIZE?'<button class="corg" data-org="menu" title="rename / subgroup / delete">\u22ef</button>':'')+'<span class="ccount">'+items.length+'</span></div>';
+    const badge=cat.parent?items.length:(items.length+kidCount);
+    palHtml+='<div class="pcat'+sub+'" data-cat="'+cat.id+'"><span class="cchev">'+(collapsed?'\u25b8':'\u25be')+'</span><span class="pcname">'+esc(cat.name)+'</span>'+(ORGANIZE?'<button class="corg" data-org="menu" title="rename / subgroup / delete">\u22ef</button>':'')+'<span class="ccount">'+badge+'</span></div>';
     if(collapsed) continue;
     for(const t of items) palHtml+=`<div class="tool${sub}" data-k="${t.k}"><span class="sw" style="background:${t.sw}"></span>${esc(t.label)}${ORGANIZE?'<button class="delasset" data-delk="'+t.k+'"'+(t.custom?' data-del="'+t.id+'"':'')+' title="remove from palette">\u2715</button>':''}</div>`; }
   palHtml+='<h3>Modes</h3><div class="modebtn" id="mErase"><span class="sw" style="background:#e23b3b"></span>Eraser (tap to delete)</div><div class="modebtn" id="mBulk"><span class="sw" style="background:#3f9bdf"></span>Bulk Replace (tap an asset)</div>';
