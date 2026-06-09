@@ -42,6 +42,14 @@
    "ar": 1,
    "sw": "#3fbf6a",
    "params": {}
+  },
+  {
+   "id": "cmq6ymvjf",
+   "name": "Ethereal Tile (holes)",
+   "file": "assets/custom/cmq6ymvjf.png",
+   "kind": "fg",
+   "cat": "Foreground",
+   "v": 1781028922155
   }
  ],
  "categories": [
@@ -104,6 +112,26 @@
    "id": "catmq5bfuxo",
    "name": "Souls",
    "parent": "Functions"
+  },
+  {
+   "id": "catmq6yk69x",
+   "name": "Crypt Depths",
+   "parent": "Background"
+  },
+  {
+   "id": "catmq6ykt3g",
+   "name": "Crypt Depths",
+   "parent": "Foreground"
+  },
+  {
+   "id": "catmq6ym2v9",
+   "name": "Ethereal Plains",
+   "parent": "Foreground"
+  },
+  {
+   "id": "catmq6ym831",
+   "name": "Ethereal Plains",
+   "parent": "Background"
   }
  ],
  "bench": [
@@ -325,7 +353,15 @@
   "soul5": "catmq5bfuxo",
   "tex_rockpile": "Decor",
   "tex_ceiling": "Decor",
-  "tex_cmq58wn73": "Hazards"
+  "tex_cmq58wn73": "Hazards",
+  "bg_cavebg": "catmq6yk69x",
+  "bg_cavebg2": "catmq6yk69x",
+  "bg_cryptbg": "catmq6yk69x",
+  "bg_rockwall": "catmq6yk69x",
+  "bg_bonedirt": "catmq6yk69x",
+  "fg_bonedirt": "catmq6ykt3g",
+  "fg_cavebg": "catmq6ykt3g",
+  "fg_rockwall": "catmq6ykt3g"
  },
  "grounds": [
   {
