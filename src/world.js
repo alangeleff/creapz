@@ -59,7 +59,7 @@ function edgeLen(a,b){
   return _elen[k];
 }
 function pathTo(from,to){ // Dijkstra over real road lengths
-  const blocked=id=>ALL[id].locked;
+  const blocked=id=>ALL[id].locked && !(hooks&&hooks.dev);
   if(blocked(to)) return null;
   const dist={}, par={}, open=new Set([from]), done=new Set();
   dist[from]=0;
@@ -123,7 +123,7 @@ function tap(pt){
   }
 }
 function selectNode(n){
-  if(n.locked){ say('Sealed by the usurper’s power…',2.2); return; }
+  if(n.locked && !(hooks&&hooks.dev)){ say('Sealed by the usurper’s power…',2.2); return; }
   if(hero===n.id&&!walking){
     const zo=hooks.zoneOpen?hooks.zoneOpen(n.id):!!n.play;
     if(!zo){ say(n.name.toUpperCase()+' — coming soon…',2.4); }
