@@ -145,7 +145,7 @@
   <div id="bar">
    <label>name</label><input id="fName" size="11" value="Crypt Depths">
    <label>act</label><input id="fAct" size="2" value="I">
-   <label>theme</label><select id="fTheme"><option value="crypt">crypt</option><option value="plains">ethereal plains</option><option value="">surface</option></select>
+   <label>theme</label><select id="fTheme"><option value="crypt">crypt</option><option value="plains">ethereal plains</option><option value="witch">witchwood</option><option value="harbor">drowned harbor</option><option value="spire">bell spire</option><option value="charnel">charnel peak</option><option value="rift">the rift</option><option value="castle">blood moon castle</option><option value="">surface</option></select>
    <label>music</label><select id="fMusic"><option>act1</option><option>act2</option><option>crypt1</option><option>crypt2</option><option>ethereal1</option><option>ethereal2</option><option>title</option></select>
    <label>W</label><input id="fW" size="5" value="3200">
    <label>H</label><input id="fH" size="5" value="2900">
@@ -915,7 +915,7 @@ function drawRuler(){ if(!ruler) return;
 function draw(){
  syncFields(); ctx.clearRect(0,0,CW,CH);
  if(M.theme==='crypt'){ ctx.fillStyle='#0a0712'; ctx.fillRect(0,0,CW,CH); }
- else if(M.theme==='plains'){ const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,'#161a26'); g.addColorStop(0.6,'#46525f'); g.addColorStop(1,'#7e8b98'); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); }
+ else if(M.theme==='plains'||M.theme==='witch'||M.theme==='harbor'||M.theme==='spire'||M.theme==='charnel'||M.theme==='rift'||M.theme==='castle'){ const TG={plains:['#161a26','#7e8b98'],witch:['#0a120c','#34452f'],harbor:['#0e151c','#6b7d88'],spire:['#181630','#9a8fae'],charnel:['#180c0c','#7a3216'],rift:['#080510','#281640'],castle:['#100608','#5a1e26']}[M.theme]; const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,TG[0]); g.addColorStop(1,TG[1]); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); }
  else { ctx.fillStyle='#0c0a16'; ctx.fillRect(0,0,CW,CH); drawCemeteryBackdrop(); }
  for(const b of (M.bg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue;
    ctx.globalAlpha=b.t==='cavebg2'?1:0.9;
@@ -1258,7 +1258,7 @@ function openNew(){ const p=document.getElementById('newP');
   p.innerHTML='<h4>✦ New Stage</h4>'
    +'<div class="nrow"><span>name</span><input id="nwName" value="New Stage"></div>'
    +'<div class="nrow"><span>act</span><input id="nwAct" value="I" style="max-width:70px"></div>'
-   +'<div class="nrow"><span>theme</span><select id="nwTheme"><option value="crypt">crypt (cave / vertical)</option><option value="plains">ethereal plains</option><option value="">surface (graveyard)</option></select></div>'
+   +'<div class="nrow"><span>theme</span><select id="nwTheme"><option value="crypt">crypt (cave / vertical)</option><option value="plains">ethereal plains</option><option value="witch">witchwood</option><option value="harbor">drowned harbor</option><option value="spire">bell spire</option><option value="charnel">charnel peak</option><option value="rift">the rift</option><option value="castle">blood moon castle</option><option value="">surface (graveyard)</option></select></div>'
    +'<div class="nrow"><span>width</span><input id="nwW" inputmode="numeric" value="3200"></div>'
    +'<div class="nrow"><span>height</span><input id="nwH" inputmode="numeric" value="2900"></div>'
    +'<div class="nrow"><span>music</span><select id="nwMusic">'+musicOpts('crypt1')+'</select></div>'
