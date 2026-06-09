@@ -50,6 +50,14 @@
    "kind": "fg",
    "cat": "Foreground",
    "v": 1781028922155
+  },
+  {
+   "id": "cmq6yndcz",
+   "name": "Ethereal tile (filled)",
+   "file": "assets/custom/cmq6yndcz.png",
+   "kind": "fg",
+   "cat": "Foreground",
+   "v": 1781028945251
   }
  ],
  "categories": [
