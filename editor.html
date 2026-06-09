@@ -820,7 +820,7 @@ function dTerr(s){ const dep=(s[3]||TERRACE_DROP), crypt=M.theme==='crypt', kind
  const X=sx(s[0]),Y=sy(s[2]),Wd=(s[1]-s[0])*zoom,Dp=dep*zoom;
  if(kind.indexOf('g:')===0){ const gid=kind.slice(2), b=GROUND_BASE[gid], t=GROUND_TOP[gid];
    if(b&&b.naturalWidth){ const T=84*zoom; ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Dp); ctx.clip(); for(let yy=Y;yy<Y+Dp;yy+=T) for(let xx=X;xx<X+Wd+T;xx+=T) ctx.drawImage(b,xx,yy,T,T); ctx.restore(); } else { ctx.fillStyle='#4a3a28'; ctx.fillRect(X,Y,Wd,Dp); }
-   if(t&&t.naturalWidth){ const TH=70*zoom, tw=TH*t.naturalWidth/t.naturalHeight, topY=Y-0.85*TH; ctx.save(); ctx.beginPath(); ctx.rect(X,topY,Wd,TH); ctx.clip(); ctx.imageSmoothingEnabled=true; for(let xx=X;xx<X+Wd+tw;xx+=tw) ctx.drawImage(t,xx,topY,tw,TH); ctx.restore(); }
+   if(t&&t.naturalWidth){ const TH=70*zoom, tw=TH*t.naturalWidth/t.naturalHeight, topY=Y-0.6*TH; ctx.save(); ctx.beginPath(); ctx.rect(X,topY,Wd,TH); ctx.clip(); ctx.imageSmoothingEnabled=true; for(let xx=X;xx<X+Wd+tw;xx+=tw) ctx.drawImage(t,xx,topY,tw,TH); ctx.restore(); }
    if(sel&&sel.raw===s){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-2,Wd+4,Dp+4); }
    return;
  }
