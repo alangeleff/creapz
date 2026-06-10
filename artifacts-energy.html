@@ -3,103 +3,97 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>cReapZ — Energy Line Styles</title>
+<title>cReapZ — Energy Line Scenarios</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Frijole&family=Inter:wght@400;600;700&display=swap');
-:root{ --bg:#0a0712; --gold:#d8b25a; --lime:#c8fb50; --violet:#7b5cff; --ink:#efe9ff; --dim:#9a8fc0; }
+:root{ --bg:#0a0712; --gold:#d8b25a; --lime:#c8fb50; --violet:#7b5cff; --viob:#9b8cff; --ink:#efe9ff; --dim:#9a8fc0; }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
 body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),var(--bg);
   color:var(--ink);font-family:Inter,system-ui,sans-serif;min-height:100dvh;
-  padding:max(12px,env(safe-area-inset-top)) 12px max(20px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center}
-.ttl{font-family:Frijole,serif;font-size:20px;color:#e7d3a0;margin:0 0 2px}
-.hint{font:600 11px Inter;color:var(--dim);text-align:center;max-width:460px;margin-bottom:14px;line-height:1.5}
-.opt{width:100%;max-width:420px;margin-bottom:22px}
-.lbl{display:flex;align-items:center;gap:8px;margin:0 2px 8px}
-.lbl b{font:700 13px Inter;color:var(--lime)}
-.lbl b.v{color:var(--violet)}
-.lbl span{font:600 11px Inter;color:var(--dim)}
+  padding:max(12px,env(safe-area-inset-top)) 12px max(28px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center}
+.ttl{font-family:Frijole,serif;font-size:20px;color:#e7d3a0;margin:0 0 2px;text-align:center}
+.hint{font:600 11px Inter;color:var(--dim);text-align:center;max-width:460px;margin-bottom:16px;line-height:1.5}
+.grid{display:flex;flex-direction:column;gap:24px;width:100%;align-items:center}
+.opt{width:100%;max-width:400px}
+.lbl{margin:0 2px 8px}
+.lbl b{font:800 13px Inter;color:var(--lime)}
+.lbl b.v{color:var(--viob)}
+.lbl div{font:600 11px Inter;color:var(--dim);margin-top:1px}
 .case{position:relative;width:100%;aspect-ratio:1;border-radius:22px;overflow:hidden;
   background:#0b0716 url(./assets/artifacts_case.png?v=art2) center/cover;box-shadow:0 18px 44px rgba(0,0,0,.55)}
 .bgsvg{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
-.stone{position:absolute;transform:translate(-50%,-50%);z-index:3;pointer-events:none;animation:bob 3.6s ease-in-out infinite}
-.stone img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+.stone{position:absolute;transform:translate(-50%,-50%);z-index:3;pointer-events:none}
+.stone.own{animation:bob 3.6s ease-in-out infinite}
+.stone img{width:100%;height:100%;object-fit:contain;display:block}
+.stone img.lit{filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+.stone img.sil{filter:brightness(0) opacity(.5) drop-shadow(0 0 1.2px rgba(159,142,205,.8))}
 @keyframes bob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-3px)}}
 .glow{position:absolute;inset:8%;border-radius:50%;filter:blur(11px);opacity:.5;z-index:-1}
-.core{position:absolute;left:49.84%;top:49.57%;transform:translate(-50%,-50%);z-index:4;width:16%;aspect-ratio:1;animation:bob 3.6s ease-in-out infinite;pointer-events:none}
+.core{position:absolute;left:49.84%;top:49.57%;transform:translate(-50%,-50%);z-index:4;width:16%;aspect-ratio:1;pointer-events:none}
+.core.lit{animation:bob 3.6s ease-in-out infinite}
 .core img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 7px rgba(0,0,0,.6))}
 .core .ring{position:absolute;inset:-22%;border-radius:50%;border:1px solid rgba(216,178,90,.4);animation:spin 18s linear infinite}
 .core .ring.r2{inset:-40%;border-color:rgba(123,92,255,.3);animation-duration:28s;animation-direction:reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
-.base{fill:none;stroke-linejoin:round;stroke-linecap:round}
-.sweep{fill:none;stroke-linejoin:round;stroke-linecap:round}
-.baseA{stroke:#c8fb50;stroke-width:0.85;opacity:.38}
-.sweepA{stroke:#efffb8;stroke-width:1.25;filter:drop-shadow(0 0 1.1px rgba(200,251,80,.9))}
-.baseB{stroke:url(#gradB);stroke-width:0.95;opacity:.42}
-.sweepB{stroke:#f4ecff;stroke-width:1.3;filter:drop-shadow(0 0 1.1px rgba(155,140,255,.9))}
+/* energy line: flat lime + periodic glow pulse contained in the line */
+.eline{stroke:#c8fb50;stroke-width:1;stroke-linecap:round;animation:eglow 2.6s ease-in-out infinite}
+@keyframes eglow{0%,100%{filter:drop-shadow(0 0 .5px rgba(200,251,80,.5));opacity:.7}50%{filter:drop-shadow(0 0 2.5px #c8fb50) drop-shadow(0 0 5px rgba(200,251,80,.5));opacity:1}}
+/* ascended: lime -> violet gradient + violet glow pulse */
+.eline.asc{stroke:url(#gradAsc);stroke-width:1.1;animation:eglowV 2.6s ease-in-out infinite}
+@keyframes eglowV{0%,100%{filter:drop-shadow(0 0 .6px rgba(155,140,255,.55));opacity:.74}50%{filter:drop-shadow(0 0 2.8px #9b8cff) drop-shadow(0 0 6px rgba(123,92,255,.5));opacity:1}}
 </style>
 </head>
 <body>
-<div class="ttl">Energy Line Styles</div>
-<div class="hint">Subtle now — a bright band <b>sweeps through the lines</b> (contained, no outward bloom). Pick A or B.</div>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="gradAsc" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#c8fb50"></stop><stop offset="50%" stop-color="#7b5cff"></stop><stop offset="100%" stop-color="#c8fb50"></stop>
+    <animateTransform attributeName="gradientTransform" type="translate" values="-1 -1; 1 1; -1 -1" dur="6s" repeatCount="indefinite"></animateTransform>
+  </linearGradient>
+</defs></svg>
 
-<div class="opt">
-  <div class="lbl"><b>A</b><span>&middot; Lime line, lime sweep traveling through it</span></div>
-  <div class="case" id="caseA">
-    <svg class="bgsvg" viewBox="0 0 100 100" preserveAspectRatio="none">
-      <polyline class="base baseA" id="baseA"></polyline>
-      <polyline class="sweep sweepA" id="sweepA"></polyline>
-    </svg>
-    <div class="stones" id="stonesA"></div>
-    <div class="core" id="coreA"></div>
-  </div>
-</div>
-
-<div class="opt">
-  <div class="lbl"><b class="v">B</b><span>&middot; Lime &rarr; violet line, bright sweep traveling through it</span></div>
-  <div class="case" id="caseB">
-    <svg class="bgsvg" viewBox="0 0 100 100" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="gradB" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#c8fb50"></stop><stop offset="50%" stop-color="#7b5cff"></stop><stop offset="100%" stop-color="#c8fb50"></stop>
-          <animateTransform attributeName="gradientTransform" type="translate" values="-1 -1; 1 1; -1 -1" dur="6s" repeatCount="indefinite"></animateTransform>
-        </linearGradient>
-      </defs>
-      <polyline class="base baseB" id="baseB"></polyline>
-      <polyline class="sweep sweepB" id="sweepB"></polyline>
-    </svg>
-    <div class="stones" id="stonesB"></div>
-    <div class="core" id="coreB"></div>
-  </div>
-</div>
+<div class="ttl">Energy Line Scenarios</div>
+<div class="hint">Flat lime line with a periodic glow pulse contained inside it. A line shows only when <b>both</b> connected stones are collected (per the star's links). After Ascension (Holy Stone), every line shifts to the lime&rarr;violet gradient glow.</div>
+<div class="grid" id="grid"></div>
 
 <script>
 const ORDER=['ruby','topaz','emerald','sapphire','amethyst','fluorite','obsidian','chaos'];
 const GLOW={ruby:'#ff3d5a',topaz:'#ffd24a',emerald:'#3ddc84',sapphire:'#4aa8ff',amethyst:'#b06bff',fluorite:'#6be0d0',obsidian:'#8a7fb0',chaos:'#ff7ad9'};
 const POS=[[50.13,13.93],[74.53,25.25],[84.39,49.59],[74.39,73.93],[49.87,83.24],[25.7,74.02],[15.61,49.85],[25.78,25.33]];
 const VERTS=[[49.67,14.67],[74.38,24.96],[84.02,49.53],[73.95,73.8],[49.75,82.79],[26.05,74.38],[15.54,49.75],[25.69,25.18]];
-const SCALE=14, OC=[0,3,6,1,4,7,2,5,0];
-const seq=OC.map(i=>VERTS[i]);
-const pts=seq.map(p=>p.join(',')).join(' ');
-let L=0; for(let i=1;i<seq.length;i++){ L+=Math.hypot(seq[i][0]-seq[i-1][0], seq[i][1]-seq[i-1][1]); }
-const BAND=Math.round(L*0.22*10)/10;
+const SCALE=14, EDGES=[[0,3],[3,6],[6,1],[1,4],[4,7],[7,2],[2,5],[5,0]];
 function url(id){return './assets/stone_'+id+'.png?v=art2';}
-['A','B'].forEach(function(suf){
-  document.getElementById('base'+suf).setAttribute('points',pts);
-  var sweep=document.getElementById('sweep'+suf);
-  sweep.setAttribute('points',pts);
-  sweep.setAttribute('stroke-dasharray', BAND+' '+(L-BAND).toFixed(1));
-  var anim=document.createElementNS('http://www.w3.org/2000/svg','animate');
-  anim.setAttribute('attributeName','stroke-dashoffset');
-  anim.setAttribute('from', L.toFixed(1)); anim.setAttribute('to','0');
-  anim.setAttribute('dur','3.2s'); anim.setAttribute('repeatCount','indefinite');
-  sweep.appendChild(anim);
-  var sw=document.getElementById('stones'+suf);
-  ORDER.forEach(function(id,i){ var el=document.createElement('div'); el.className='stone';
+var SCEN=[
+  {t:'0 / 8 — None collected', d:'Empty sockets, no lines.', own:[], holy:false},
+  {t:'3 / 8 — No connecting lines', d:'Ruby, Topaz, Emerald — adjacent on the case but not linked on the star, so no lines.', own:[0,1,2], holy:false},
+  {t:'4 / 8 — Connected lines appear', d:'Ruby + Sapphire + Obsidian + Topaz form linked pairs — 3 lines light up.', own:[0,3,6,1], holy:false},
+  {t:'8 / 8 — All stones, pre-Ascension', d:'Full star, still flat lime (Holy not yet earned).', own:[0,1,2,3,4,5,6,7], holy:false},
+  {t:'8 / 8 + Holy — Ascended', d:'Grid complete and fully powered — lines go lime → violet.', own:[0,1,2,3,4,5,6,7], holy:true}
+];
+var grid=document.getElementById('grid');
+SCEN.forEach(function(sc,n){
+  var owned={}; sc.own.forEach(function(i){owned[i]=1;});
+  var opt=document.createElement('div'); opt.className='opt';
+  opt.innerHTML='<div class="lbl"><b class="'+(sc.holy?'v':'')+'">'+sc.t+'</b><div>'+sc.d+'</div></div>'+
+    '<div class="case"><svg class="bgsvg" viewBox="0 0 100 100" preserveAspectRatio="none" id="svg'+n+'"></svg>'+
+    '<div class="stones" id="st'+n+'"></div><div class="core'+(sc.holy?' lit':'')+'" id="co'+n+'"></div></div>';
+  grid.appendChild(opt);
+  // lines
+  var inner='';
+  EDGES.forEach(function(e){ if(owned[e[0]]&&owned[e[1]]){ var a=VERTS[e[0]],b=VERTS[e[1]];
+    inner+='<line class="eline'+(sc.holy?' asc':'')+'" x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"></line>'; } });
+  document.getElementById('svg'+n).innerHTML=inner;
+  // stones
+  var sw=document.getElementById('st'+n);
+  ORDER.forEach(function(id,i){ var el=document.createElement('div'); el.className='stone'+(owned[i]?' own':'');
     el.style.width=SCALE+'%'; el.style.aspectRatio='1'; el.style.left=POS[i][0]+'%'; el.style.top=POS[i][1]+'%';
-    el.innerHTML='<div class="glow" style="background:radial-gradient(circle,'+GLOW[id]+',transparent 70%)"></div><img src="'+url(id)+'">';
+    el.innerHTML=(owned[i]?'<div class="glow" style="background:radial-gradient(circle,'+GLOW[id]+',transparent 70%)"></div>':'')+
+      '<img class="'+(owned[i]?'lit':'sil')+'" src="'+url(id)+'">';
     sw.appendChild(el); });
-  document.getElementById('core'+suf).innerHTML='<div class="ring"></div><div class="ring r2"></div><div class="glow" style="background:radial-gradient(circle,#fff3b0,transparent 70%)"></div><img src="'+url('holy')+'">';
+  // core
+  var co=document.getElementById('co'+n);
+  co.innerHTML='<div class="ring"></div><div class="ring r2"></div>'+
+    (sc.holy?'<div class="glow" style="background:radial-gradient(circle,#fff3b0,transparent 70%)"></div><img src="'+url('holy')+'">':'');
 });
 </script>
 </body>
