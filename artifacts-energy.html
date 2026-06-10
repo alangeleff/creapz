@@ -31,7 +31,6 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 .core .ring{position:absolute;inset:-22%;border-radius:50%;border:1px solid rgba(216,178,90,.4);animation:spin 18s linear infinite}
 .core .ring.r2{inset:-40%;border-color:rgba(123,92,255,.3);animation-duration:28s;animation-direction:reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* energy lines: dim solid base + a bright band that sweeps THROUGH the line */
 .base{fill:none;stroke-linejoin:round;stroke-linecap:round}
 .sweep{fill:none;stroke-linejoin:round;stroke-linecap:round}
 .baseA{stroke:#c8fb50;stroke-width:0.85;opacity:.38}
@@ -45,11 +44,11 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 <div class="hint">Subtle now — a bright band <b>sweeps through the lines</b> (contained, no outward bloom). Pick A or B.</div>
 
 <div class="opt">
-  <div class="lbl"><b>A</b><span>· Lime line, lime sweep traveling through it</span></div>
+  <div class="lbl"><b>A</b><span>&middot; Lime line, lime sweep traveling through it</span></div>
   <div class="case" id="caseA">
     <svg class="bgsvg" viewBox="0 0 100 100" preserveAspectRatio="none">
-      <polyline class="base baseA" id="baseA"/>
-      <polyline class="sweep sweepA" id="sweepA"/>
+      <polyline class="base baseA" id="baseA"></polyline>
+      <polyline class="sweep sweepA" id="sweepA"></polyline>
     </svg>
     <div class="stones" id="stonesA"></div>
     <div class="core" id="coreA"></div>
@@ -57,17 +56,17 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 </div>
 
 <div class="opt">
-  <div class="lbl"><b class="v">B</b><span>· Lime → violet line, bright sweep traveling through it</span></div>
+  <div class="lbl"><b class="v">B</b><span>&middot; Lime &rarr; violet line, bright sweep traveling through it</span></div>
   <div class="case" id="caseB">
     <svg class="bgsvg" viewBox="0 0 100 100" preserveAspectRatio="none">
       <defs>
         <linearGradient id="gradB" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#c8fb50"/><stop offset="50%" stop-color="#7b5cff"/><stop offset="100%" stop-color="#c8fb50"/>
-          <animateTransform attributeName="gradientTransform" type="translate" values="-1 -1; 1 1; -1 -1" dur="6s" repeatCount="indefinite"/>
+          <stop offset="0%" stop-color="#c8fb50"></stop><stop offset="50%" stop-color="#7b5cff"></stop><stop offset="100%" stop-color="#c8fb50"></stop>
+          <animateTransform attributeName="gradientTransform" type="translate" values="-1 -1; 1 1; -1 -1" dur="6s" repeatCount="indefinite"></animateTransform>
         </linearGradient>
       </defs>
-      <polyline class="base baseB" id="baseB"/>
-      <polyline class="sweep sweepB" id="sweepB"/>
+      <polyline class="base baseB" id="baseB"></polyline>
+      <polyline class="sweep sweepB" id="sweepB"></polyline>
     </svg>
     <div class="stones" id="stonesB"></div>
     <div class="core" id="coreB"></div>
@@ -82,17 +81,26 @@ const VERTS=[[49.67,14.67],[74.38,24.96],[84.02,49.53],[73.95,73.8],[49.75,82.79
 const SCALE=14, OC=[0,3,6,1,4,7,2,5,0];
 const seq=OC.map(i=>VERTS[i]);
 const pts=seq.map(p=>p.join(',')).join(' ');
-// total polyline length (viewBox units) for the dash math
 let L=0; for(let i=1;i<seq.length;i++){ L+=Math.hypot(seq[i][0]-seq[i-1][0], seq[i][1]-seq[i-1][1]); }
-const BAND=Math.round(L*0.22*10)/10; // bright segment length
+const BAND=Math.round(L*0.22*10)/10;
 function url(id){return './assets/stone_'+id+'.png?v=art2';}
-['A','B'].forEach(suf=>{
+['A','B'].forEach(function(suf){
   document.getElementById('base'+suf).setAttribute('points',pts);
-  const sweep=document.getElementById('sweep'+suf);
+  var sweep=document.getElementById('sweep'+suf);
   sweep.setAttribute('points',pts);
   sweep.setAttribute('stroke-dasharray', BAND+' '+(L-BAND).toFixed(1));
-  const anim=document.createElementNS('http://www.w3.org/2000/svg','animate');
+  var anim=document.createElementNS('http://www.w3.org/2000/svg','animate');
   anim.setAttribute('attributeName','stroke-dashoffset');
   anim.setAttribute('from', L.toFixed(1)); anim.setAttribute('to','0');
   anim.setAttribute('dur','3.2s'); anim.setAttribute('repeatCount','indefinite');
-  sweep.appendChil
+  sweep.appendChild(anim);
+  var sw=document.getElementById('stones'+suf);
+  ORDER.forEach(function(id,i){ var el=document.createElement('div'); el.className='stone';
+    el.style.width=SCALE+'%'; el.style.aspectRatio='1'; el.style.left=POS[i][0]+'%'; el.style.top=POS[i][1]+'%';
+    el.innerHTML='<div class="glow" style="background:radial-gradient(circle,'+GLOW[id]+',transparent 70%)"></div><img src="'+url(id)+'">';
+    sw.appendChild(el); });
+  document.getElementById('core'+suf).innerHTML='<div class="ring"></div><div class="ring r2"></div><div class="glow" style="background:radial-gradient(circle,#fff3b0,transparent 70%)"></div><img src="'+url('holy')+'">';
+});
+</script>
+</body>
+</html>
