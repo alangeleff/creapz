@@ -182,4 +182,11 @@ function openMega(m){ const page=document.getElementById('page'); const lock=!m.
     <div class="pstone"><div class="porb" style="${st}">${lock?'<span>?</span>':''}</div></div>
     <div class="pname">${lock?'Undiscovered':m.name}</div><div class="pclass">MEGA SOUL</div>
     <div class="pblock"><div class="bt">⚡ EFFECT</div><div class="bv ${lock?'dim':''}">${lock?'? ? ?':m.power}</div><div class="bd">${lock?'Its essence is sealed until you claim one.':m.desc}</div></div>
-    <div class="pblock"><div class="bt">📍 HOW TO ACQUIRE</div><div class="bv">${lock?'Hidden in the realm':m.acq}</div><div class="bd">${lock?'A Mega Soul lies somewhere in the realm, waiting to be claimed.':'Claimed — its power flows through you.'}</div>
+    <div class="pblock"><div class="bt">📍 HOW TO ACQUIRE</div><div class="bv">${lock?'Hidden in the realm':m.acq}</div><div class="bd">${lock?'A Mega Soul lies somewhere in the realm, waiting to be claimed.':'Claimed — its power flows through you.'}</div></div>`;
+  openComp(); }
+function openComp(){ const c=document.getElementById('comp'); c.classList.add('open'); document.getElementById('page').querySelector('#cx').onclick=()=>c.classList.remove('open'); }
+document.getElementById('comp').onclick=e=>{ if(e.target.id==='comp') e.currentTarget.classList.remove('open'); };
+</script>
+</body>
+</html>
+            
