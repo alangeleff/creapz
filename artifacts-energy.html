@@ -37,11 +37,11 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 .core .ring.r2{inset:-40%;border-color:rgba(123,92,255,.3);animation-duration:28s;animation-direction:reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* energy line: flat lime + periodic glow pulse contained in the line */
-.eline{stroke:#c8fb50;stroke-width:1;stroke-linecap:round;animation:eglow 2.6s ease-in-out infinite}
-@keyframes eglow{0%,100%{filter:drop-shadow(0 0 .5px rgba(200,251,80,.5));opacity:.7}50%{filter:drop-shadow(0 0 2.5px #c8fb50) drop-shadow(0 0 5px rgba(200,251,80,.5));opacity:1}}
+.eline{stroke:#c8fb50;stroke-width:0.9;stroke-linecap:round;opacity:.85;animation:eglow 3s ease-in-out infinite}
+@keyframes eglow{0%,100%{filter:drop-shadow(0 0 .4px rgba(200,251,80,.35));opacity:.55}50%{filter:drop-shadow(0 0 1.4px rgba(200,251,80,.6));opacity:.85}}
 /* ascended: lime -> violet gradient + violet glow pulse */
-.eline.asc{stroke:url(#gradAsc);stroke-width:1.1;animation:eglowV 2.6s ease-in-out infinite}
-@keyframes eglowV{0%,100%{filter:drop-shadow(0 0 .6px rgba(155,140,255,.55));opacity:.74}50%{filter:drop-shadow(0 0 2.8px #9b8cff) drop-shadow(0 0 6px rgba(123,92,255,.5));opacity:1}}
+.eline.asc{stroke:url(#gradAsc);stroke-width:1;opacity:.9;animation:eglowV 3s ease-in-out infinite}
+@keyframes eglowV{0%,100%{filter:drop-shadow(0 0 .45px rgba(155,140,255,.4));opacity:.6}50%{filter:drop-shadow(0 0 1.6px rgba(155,140,255,.65));opacity:.9}}
 </style>
 </head>
 <body>
