@@ -66,6 +66,7 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 .mslot.have::after{content:"";position:absolute;top:13%;left:24%;width:32%;height:22%;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%);z-index:2}
 .mslot .core2{position:absolute;inset:6%;border-radius:50%;animation:pulse 2.8s ease-in-out infinite}
 .mslot:active{transform:translate(-50%,-50%) scale(.95)}
+.mslot .msimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
 .comp{position:fixed;inset:0;z-index:40;background:rgba(6,4,12,.6);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:16px}
 .comp.open{display:flex}
 .page{width:100%;max-width:420px;max-height:100%;overflow-y:auto;border-radius:20px;position:relative;background:linear-gradient(180deg,#1b1206,#120b04);border:1px solid #5a4422;box-shadow:0 30px 80px rgba(0,0,0,.7)}
@@ -152,10 +153,13 @@ const MEGA=[
   {id:'unknown',name:'???',c:'#9b8cff',found:false,power:'? ? ?',desc:'',acq:'Unknown'},
 ];
 const MSLOT={w:12, h:36, pos:[[28.39,51.24],[50.04,51.24],[71.61,51.24]]};
+const MIMG={vigor:'mega_vigor', siphon:'mega_siphon'};
 const mega=document.getElementById('megacase');
-MEGA.forEach((m,i)=>{ const d=document.createElement('div'); d.className='mslot'+(m.found?' have':'');
+MEGA.forEach((m,i)=>{ const d=document.createElement('div'); const hasImg=m.found&&MIMG[m.id]; d.className='mslot'+((m.found&&!hasImg)?' have':'');
   d.style.left=MSLOT.pos[i][0]+'%'; d.style.top=MSLOT.pos[i][1]+'%'; d.style.width=MSLOT.w+'%'; d.style.height=MSLOT.h+'%';
-  if(m.found){ d.style.boxShadow='0 0 20px '+m.c+'aa, inset 0 6px 16px rgba(255,255,255,.16), inset 0 -4px 12px rgba(0,0,0,.5)';
+  if(hasImg){ d.style.boxShadow='0 0 22px '+m.c+'aa';
+    d.innerHTML=`<img class="msimg" src="./assets/${MIMG[m.id]}.png?v=art1">`; }
+  else if(m.found){ d.style.boxShadow='0 0 20px '+m.c+'aa, inset 0 6px 16px rgba(255,255,255,.16), inset 0 -4px 12px rgba(0,0,0,.5)';
     d.innerHTML=`<div class="core2" style="background:radial-gradient(circle at 40% 32%, #fff 0%, ${m.c} 34%, ${shade(m.c,-75)} 82%, transparent 100%)"></div>`; }
   /* unfound: empty — backdrop socket shows through (still tappable for compendium) */
   d.onclick=()=>openMega(m); mega.appendChild(d); });
@@ -177,7 +181,7 @@ function openStone(s){ const page=document.getElementById('page'); const lock=!s
 function openMega(m){ const page=document.getElementById('page'); const lock=!m.found;
   const st=lock?'':`background:radial-gradient(circle at 40% 30%, #fff 0%, ${m.c} 32%, ${shade(m.c,-75)} 82%, #0a0714 100%);box-shadow:0 0 42px ${m.c}99, inset 0 8px 22px rgba(255,255,255,.15)`;
   page.innerHTML=`<div class="ribbon"></div><div class="cx" id="cx">✕</div>
-    <div class="pstone"><div class="porb" style="${st}">${lock?'<span>?</span>':''}</div></div>
+    <div class="pstone">${(!lock&&MIMG[m.id])?`<div class="pglow" style="background:${m.c}"></div><img src="./assets/${MIMG[m.id]}.png?v=art1">`:`<div class="porb" style="${st}">${lock?'<span>?</span>':''}</div>`}</div>
     <div class="pname">${lock?'Undiscovered':m.name}</div><div class="pclass">MEGA SOUL</div>
     <div class="pblock"><div class="bt">⚡ EFFECT</div><div class="bv ${lock?'dim':''}">${lock?'? ? ?':m.power}</div><div class="bd">${lock?'Its essence is sealed until you claim one.':m.desc}</div></div>
     <div class="pblock"><div class="bt">📍 HOW TO ACQUIRE</div><div class="bv">${lock?'Hidden in the realm':m.acq}</div><div class="bd">${lock?'A Mega Soul lies somewhere in the realm, waiting to be claimed.':'Claimed — its power flows through you.'}</div></div>`;
