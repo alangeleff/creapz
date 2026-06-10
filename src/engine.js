@@ -1,4 +1,4 @@
-const ASSET_VER='1781032000';
+const ASSET_VER='1781036000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -2843,7 +2843,8 @@ const SB_BUILTIN=[
 ];
 let SB_TRACKS=[], sbIdx=0, sbPlaying=false, sbMode='soul', sbRepeat='all', sbShuffle=false;
 let sbSrc=null, sbAnalyser=null, sbGain=null, sbVol=0.85, sbStartT=0, sbOffset=0, sbDur=0, sbRAF=0, sbOpen=false, sbToken=0;
-let sbData=null, sbBuilt=false, sbBars=[], sbOrb=null, sbFill=null, sbTimeCur=null, sbTimeTot=null;
+let sbData=null, sbBuilt=false, sbBars=[], sbFill=null, sbTimeCur=null, sbTimeTot=null;
+let sbSoulCv=null, sbSoulCtx=null, sbDPR=1, sbMotes=[], sbRings=[], sbBeatAvg=0, sbHueRot=0;
 function sbFmt(s){ s=Math.max(0,Math.floor(s||0)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function sbIco(n){
   const s='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">';
@@ -2870,16 +2871,16 @@ const SB_CSS=`
   --sb-bg:#0a0814;--sb-panel:#15112a;--sb-line:#2c2350;--sb-lime:#c8fb50;--sb-violet:#7b5cff;--sb-viob:#9b8cff;--sb-ink:#ece9ff;--sb-dim:#9b93c4;
   background:radial-gradient(120% 80% at 50% -10%, #221a4a 0%, var(--sb-bg) 55%),var(--sb-bg);
   font-family:system-ui,-apple-system,sans-serif;color:var(--sb-ink);
-  padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));}
+  padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));}
 #soulbox.open{display:flex}
 #soulbox *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 #soulbox .sb-card{width:100%;max-width:440px;max-height:100%;overflow:hidden;background:linear-gradient(180deg,var(--sb-panel),#100c22);
   border:1px solid var(--sb-line);border-radius:24px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.6);display:flex;flex-direction:column}
-#soulbox .sb-head{padding:16px 18px 4px;text-align:center;position:relative;flex:none}
+#soulbox .sb-head{padding:14px 18px 4px;text-align:center;position:relative;flex:none}
 #soulbox .sb-x{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:#1d1838;border:1px solid var(--sb-line);color:var(--sb-ink);cursor:pointer}
 #soulbox .sb-x svg{width:18px;height:18px}
 #soulbox .sb-brand{font-size:10px;letter-spacing:3px;color:var(--sb-lime);font-weight:700;opacity:.85}
-#soulbox .sb-title{font-family:Frijole,Creepster,serif;font-size:27px;line-height:1;margin:3px 0 2px;color:#fff;text-shadow:0 0 22px rgba(123,92,255,.4)}
+#soulbox .sb-title{font-family:Frijole,Creepster,serif;font-size:26px;line-height:1;margin:3px 0 2px;color:#fff;text-shadow:0 0 22px rgba(123,92,255,.4)}
 #soulbox .sb-sub{font-size:9px;letter-spacing:2px;color:var(--sb-dim);font-weight:600}
 #soulbox .sb-body{overflow-y:auto;padding-bottom:6px}
 #soulbox .sb-modes{display:flex;gap:6px;justify-content:center;margin:8px 14px 0}
@@ -2890,25 +2891,23 @@ const SB_CSS=`
 #soulbox .sb-mode:active{transform:scale(.96)}
 #soulbox .sb-stage{position:relative;height:200px;margin:10px 14px 0;border-radius:18px;overflow:hidden;background:radial-gradient(80% 90% at 50% 30%, #241a52 0%, #120d28 70%);border:1px solid var(--sb-line)}
 #soulbox .sb-eq{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;gap:4px;padding:0 14px;z-index:1}
-#soulbox .sb-eq i{width:7px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--sb-lime),#5cc0ff 55%,var(--sb-violet));box-shadow:0 0 8px rgba(200,251,80,.4);opacity:.7;height:10%;transition:height .07s linear}
+#soulbox .sb-eq i{width:7px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--sb-lime),#5cc0ff 55%,var(--sb-violet));box-shadow:0 0 8px rgba(200,251,80,.4);opacity:.55;height:10%;transition:height .07s linear}
+#soulbox .sb-soulcv{position:absolute;inset:0;width:100%;height:100%;z-index:2;display:none;pointer-events:none}
 #soulbox .sb-viz{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:2;display:none}
 #soulbox .sb-viz.show{display:block}
-#soulbox .sb-orb{width:118px;height:118px;border-radius:50%;background:radial-gradient(circle at 50% 42%, #fff 0%, var(--sb-lime) 16%, var(--sb-violet) 52%, #2a1c66 78%, transparent 80%);filter:drop-shadow(0 0 26px rgba(123,92,255,.7));transition:transform .08s ease-out}
-#soulbox .sb-orb::after{content:"";position:absolute;inset:-16px;border-radius:50%;border:1px solid rgba(200,251,80,.35);animation:sbring 2.6s ease-in-out infinite}
-@keyframes sbring{0%,100%{opacity:.15;transform:scale(.96)}50%{opacity:.5;transform:scale(1.12)}}
-#soulbox .sb-vinyl{width:162px;height:162px;border-radius:50%;position:relative;animation:sbspin 3.4s linear infinite;background:repeating-radial-gradient(circle,#0c0c15 0 2px,#17141f 2px 4px);box-shadow:0 0 34px rgba(123,92,255,.4),inset 0 0 46px #000,0 0 0 4px #0a0a10}
+#soulbox .sb-vinyl{width:158px;height:158px;border-radius:50%;position:relative;animation:sbspin 3.4s linear infinite;background:repeating-radial-gradient(circle,#0c0c15 0 2px,#17141f 2px 4px);box-shadow:0 0 34px rgba(123,92,255,.4),inset 0 0 46px #000,0 0 0 4px #0a0a10}
 #soulbox .sb-vinyl::before{content:"";position:absolute;inset:33%;border-radius:50%;background:radial-gradient(circle,var(--sb-lime) 0 60%,#92cf2e);box-shadow:0 0 14px rgba(200,251,80,.5)}
 #soulbox .sb-vinyl::after{content:"";position:absolute;left:50%;top:50%;width:9px;height:9px;border-radius:50%;background:#0a0814;transform:translate(-50%,-50%)}
 @keyframes sbspin{to{transform:rotate(360deg)}}
-#soulbox .sb-cass{width:200px;height:124px;border-radius:14px;position:relative;background:linear-gradient(160deg,#262049,#15112a);border:1px solid var(--sb-line);box-shadow:0 0 26px rgba(123,92,255,.3)}
-#soulbox .sb-cass .strip{position:absolute;left:14px;right:14px;top:11px;height:28px;border-radius:6px;background:#0e0b1d;border:1px solid var(--sb-line);display:flex;align-items:center;justify-content:center}
+#soulbox .sb-cass{width:196px;height:120px;border-radius:14px;position:relative;background:linear-gradient(160deg,#262049,#15112a);border:1px solid var(--sb-line);box-shadow:0 0 26px rgba(123,92,255,.3)}
+#soulbox .sb-cass .strip{position:absolute;left:14px;right:14px;top:11px;height:26px;border-radius:6px;background:#0e0b1d;border:1px solid var(--sb-line);display:flex;align-items:center;justify-content:center}
 #soulbox .sb-cass .strip b{font-size:10px;letter-spacing:2px;color:var(--sb-lime)}
-#soulbox .sb-cass .win{position:absolute;left:24px;right:24px;bottom:18px;height:50px;border-radius:8px;background:#0c0a18;border:1px solid var(--sb-line);display:flex;align-items:center;justify-content:space-around}
-#soulbox .sb-reel{width:40px;height:40px;border-radius:50%;border:3px solid #2c2350;position:relative;background:radial-gradient(circle,#1b1636 38%,#0e0b1d 40%);animation:sbspin 1.5s linear infinite}
+#soulbox .sb-cass .win{position:absolute;left:22px;right:22px;bottom:16px;height:48px;border-radius:8px;background:#0c0a18;border:1px solid var(--sb-line);display:flex;align-items:center;justify-content:space-around}
+#soulbox .sb-reel{width:38px;height:38px;border-radius:50%;border:3px solid #2c2350;position:relative;background:radial-gradient(circle,#1b1636 38%,#0e0b1d 40%);animation:sbspin 1.5s linear infinite}
 #soulbox .sb-reel::before{content:"";position:absolute;inset:7px;border-radius:50%;border:2px dashed var(--sb-viob)}
-#soulbox .sb-now{position:absolute;left:0;right:0;bottom:11px;text-align:center;padding:0 16px;z-index:3}
-#soulbox .sb-nl{font-size:9px;letter-spacing:2px;color:var(--sb-lime);font-weight:700;opacity:.8}
-#soulbox .sb-nt{font-size:16px;font-weight:700;color:#fff;margin-top:2px;text-shadow:0 1px 10px rgba(0,0,0,.7)}
+#soulbox .sb-now{position:absolute;left:0;right:0;bottom:10px;text-align:center;padding:0 16px;z-index:3;text-shadow:0 1px 12px rgba(0,0,0,.85)}
+#soulbox .sb-nl{font-size:9px;letter-spacing:2px;color:var(--sb-lime);font-weight:700;opacity:.85}
+#soulbox .sb-nt{font-size:16px;font-weight:700;color:#fff;margin-top:2px}
 #soulbox .sb-nz{font-size:11px;font-weight:600;color:var(--sb-viob);margin-top:1px}
 #soulbox .sb-prog{margin:13px 18px 0;display:flex;align-items:center;gap:10px}
 #soulbox .sb-time{font-size:10px;font-weight:600;color:var(--sb-dim);min-width:30px;text-align:center}
@@ -2920,8 +2919,8 @@ const SB_CSS=`
 #soulbox .sb-btn svg{width:20px;height:20px}
 #soulbox .sb-btn:active{transform:scale(.9)}
 #soulbox .sb-btn.on{border-color:var(--sb-lime);color:var(--sb-lime);background:#1f2a16;box-shadow:0 0 14px rgba(200,251,80,.25)}
-#soulbox .sb-play{width:66px;height:66px;border-radius:20px;background:linear-gradient(180deg,var(--sb-lime),#92cf2e);color:#10210a;border:none;box-shadow:0 8px 26px rgba(200,251,80,.4)}
-#soulbox .sb-play svg{width:26px;height:26px}
+#soulbox .sb-play{width:64px;height:64px;border-radius:20px;background:linear-gradient(180deg,var(--sb-lime),#92cf2e);color:#10210a;border:none;box-shadow:0 8px 26px rgba(200,251,80,.4)}
+#soulbox .sb-play svg{width:25px;height:25px}
 #soulbox .sb-foot{display:flex;align-items:center;gap:10px;padding:4px 20px 8px;color:var(--sb-dim)}
 #soulbox .sb-foot svg{width:18px;height:18px;flex:none}
 #soulbox .sb-vol{flex:1;height:6px;border-radius:6px;background:#241d44;position:relative;cursor:pointer}
@@ -2946,17 +2945,41 @@ const SB_CSS=`
 #soulbox .sb-miniq i{width:3px;background:var(--sb-lime);border-radius:2px;animation:sbmq .7s ease-in-out infinite}
 #soulbox .sb-miniq i:nth-child(2){animation-delay:.18s}#soulbox .sb-miniq i:nth-child(3){animation-delay:.36s}
 @keyframes sbmq{0%,100%{height:4px}50%{height:14px}}
-#soulbox.sb-paused .sb-orb{animation-play-state:paused}
 #soulbox.sb-paused .sb-vinyl,#soulbox.sb-paused .sb-reel{animation-play-state:paused}
 #soulbox.sb-paused .sb-miniq i{animation-play-state:paused}
-@media(min-width:760px) and (orientation:landscape){
+/* roomy landscape / desktop: two columns, full-size */
+@media (min-width:760px) and (orientation:landscape) and (min-height:561px){
   #soulbox .sb-card{max-width:920px}
-  #soulbox .sb-body{display:grid;grid-template-columns:1.1fr .9fr;column-gap:8px;align-items:start}
+  #soulbox .sb-body{display:grid;grid-template-columns:1.1fr .9fr;column-gap:10px;align-items:start}
   #soulbox .sb-modes{grid-column:1;margin-top:6px}
-  #soulbox .sb-stage{grid-column:1;height:248px}
+  #soulbox .sb-stage{grid-column:1;height:250px}
   #soulbox .sb-prog{grid-column:1}#soulbox .sb-ctrls{grid-column:1}#soulbox .sb-foot{grid-column:1}
   #soulbox .sb-lh{grid-column:2;grid-row:1;margin-top:12px}
-  #soulbox .sb-list{grid-column:2;grid-row:2 / span 6;max-height:62vh}
+  #soulbox .sb-list{grid-column:2;grid-row:2 / span 7;max-height:64vh}
+}
+/* short landscape (phones): shrink the left column so controls are always visible — no scroll */
+@media (orientation:landscape) and (max-height:560px){
+  #soulbox{padding:8px}
+  #soulbox .sb-card{max-width:900px;max-height:100%}
+  #soulbox .sb-body{display:grid;grid-template-columns:1.04fr .96fr;column-gap:8px;align-items:start;overflow:hidden}
+  #soulbox .sb-head{padding:7px 16px 0}
+  #soulbox .sb-title{font-size:19px}
+  #soulbox .sb-brand{font-size:9px}
+  #soulbox .sb-sub{display:none}
+  #soulbox .sb-modes{grid-column:1;margin:5px 12px 0}
+  #soulbox .sb-mode{padding:4px}
+  #soulbox .sb-mode svg{width:15px;height:15px}
+  #soulbox .sb-mode span{font-size:8px}
+  #soulbox .sb-stage{grid-column:1;height:clamp(88px,28vh,190px);margin-top:6px}
+  #soulbox .sb-prog{grid-column:1;margin-top:7px}
+  #soulbox .sb-ctrls{grid-column:1;margin:8px 0 2px;gap:12px}
+  #soulbox .sb-btn{width:38px;height:38px;border-radius:11px}
+  #soulbox .sb-btn svg{width:17px;height:17px}
+  #soulbox .sb-play{width:50px;height:50px;border-radius:15px}
+  #soulbox .sb-play svg{width:21px;height:21px}
+  #soulbox .sb-foot{grid-column:1;padding:2px 18px 6px}
+  #soulbox .sb-lh{grid-column:2;grid-row:1;margin:7px 16px 4px}
+  #soulbox .sb-list{grid-column:2;grid-row:2 / span 9;max-height:calc(100vh - 92px);margin-top:0}
 }
 `;
 function sbBuildTracks(){
@@ -2989,7 +3012,7 @@ function sbInit(){
       </div>
       <div class="sb-stage">
         <div class="sb-eq" id="sbEq"></div>
-        <div class="sb-viz" data-v="soul"><div class="sb-orb" id="sbOrb"></div></div>
+        <canvas class="sb-soulcv" id="sbSoulCv"></canvas>
         <div class="sb-viz" data-v="vinyl"><div class="sb-vinyl"></div></div>
         <div class="sb-viz" data-v="cass"><div class="sb-cass"><div class="strip"><b>SOUL BOX</b></div><div class="win"><div class="sb-reel"></div><div class="sb-reel"></div></div></div></div>
         <div class="sb-now"><div class="sb-nl">NOW PLAYING</div><div class="sb-nt" id="sbName">—</div><div class="sb-nz" id="sbZone"></div></div>
@@ -3011,14 +3034,11 @@ function sbInit(){
       <div class="sb-list" id="sbList"></div>
     </div></div>`;
   document.body.appendChild(el);
-  // refs
-  sbOrb=el.querySelector('#sbOrb'); sbFill=el.querySelector('#sbFill');
-  sbTimeCur=el.querySelector('#sbCur'); sbTimeTot=el.querySelector('#sbTot');
+  sbFill=el.querySelector('#sbFill'); sbTimeCur=el.querySelector('#sbCur'); sbTimeTot=el.querySelector('#sbTot');
+  sbSoulCv=el.querySelector('#sbSoulCv'); sbSoulCtx=sbSoulCv.getContext('2d');
   const eq=el.querySelector('#sbEq'); sbBars=[];
   for(let i=0;i<27;i++){ const b=document.createElement('i'); eq.appendChild(b); sbBars.push(b); }
-  // persisted prefs
   try{ const m=localStorage.getItem('creapz_sb_mode'); if(m) sbMode=m; const v=localStorage.getItem('creapz_sb_vol'); if(v!=null) sbVol=Math.max(0,Math.min(1,parseFloat(v))); }catch(e){}
-  // wire
   el.querySelector('#sbX').onclick=closeSoulBox;
   el.querySelector('#sbPlay').onclick=sbTogglePlay;
   el.querySelector('#sbPrev').onclick=()=>{ playSfx('sfx_mtog',0.5); sbPrev(); };
@@ -3031,12 +3051,18 @@ function sbInit(){
   const vb=el.querySelector('#sbVolBar'); const volDrag=e=>{ seek(e,vb,sbSetVol); };
   vb.onpointerdown=e=>{ e.preventDefault(); volDrag(e); vb.setPointerCapture&&vb.setPointerCapture(e.pointerId); vb.onpointermove=volDrag; };
   vb.onpointerup=()=>{ vb.onpointermove=null; };
+  window.addEventListener('resize',()=>{ if(sbOpen) sbSizeSoul(); });
   sbSetMode(sbMode); sbUpdRepeat(); sbUpdShuf(); sbUpdVol();
+}
+function sbSizeSoul(){ if(!sbSoulCv) return; const r=sbSoulCv.getBoundingClientRect(); if(!r.width) return;
+  sbDPR=Math.min(2,window.devicePixelRatio||1);
+  sbSoulCv.width=Math.round(r.width*sbDPR); sbSoulCv.height=Math.round(r.height*sbDPR);
+  sbSoulCtx=sbSoulCv.getContext('2d'); sbSoulCtx.setTransform(sbDPR,0,0,sbDPR,0,0);
 }
 function sbAudioInit(){
   if(!AC) audioInit();
   if(AC && !sbAnalyser){
-    sbAnalyser=AC.createAnalyser(); sbAnalyser.fftSize=128; sbAnalyser.smoothingTimeConstant=0.78;
+    sbAnalyser=AC.createAnalyser(); sbAnalyser.fftSize=128; sbAnalyser.smoothingTimeConstant=0.72;
     sbGain=AC.createGain(); sbGain.gain.value=sbVol;
     sbAnalyser.connect(sbGain); sbGain.connect(AC.destination);
     sbData=new Uint8Array(sbAnalyser.frequencyBinCount);
@@ -3077,6 +3103,8 @@ function sbSetMode(m){ sbMode=m; try{localStorage.setItem('creapz_sb_mode',m);}c
   const el=document.getElementById('soulbox'); if(!el) return;
   el.querySelectorAll('.sb-mode').forEach(x=>x.classList.toggle('on',x.dataset.m===m));
   el.querySelectorAll('.sb-viz').forEach(z=>z.classList.toggle('show',z.dataset.v===m));
+  if(sbSoulCv) sbSoulCv.style.display=(m==='soul')?'block':'none';
+  if(m==='soul') sbSizeSoul();
   if(m!=='soul') playSfx('sfx_mtog',0.5);
 }
 function sbSetVol(v){ sbVol=Math.max(0,Math.min(1,v)); if(sbGain) sbGain.gain.value=sbVol; try{localStorage.setItem('creapz_sb_vol',sbVol);}catch(e){} sbUpdVol(); }
@@ -3103,15 +3131,69 @@ function sbSyncUI(){
   sbTimeTot.textContent=sbFmt(sbDur);
   el.querySelectorAll('.sb-row').forEach((r,i)=>r.classList.toggle('active',i===sbIdx));
 }
+function sbDrawSoul(e,bass,treble){
+  const cx=sbSoulCtx, cv=sbSoulCv; if(!cx||!cv) return;
+  const w=cv.width/sbDPR, h=cv.height/sbDPR; if(!w) return;
+  cx.clearRect(0,0,w,h);
+  const ox=w/2, oy=h*0.5;
+  sbHueRot+=0.01+e*0.05;
+  sbBeatAvg=sbBeatAvg*0.9+e*0.1;
+  const beat = e>sbBeatAvg*1.28 && e>0.14;
+  cx.globalCompositeOperation='lighter';
+  const R=20+bass*40+e*16;
+  // outer halo
+  let g=cx.createRadialGradient(ox,oy,0,ox,oy,R*2.7);
+  g.addColorStop(0,'rgba(200,251,80,'+(0.35+e*0.5).toFixed(3)+')');
+  g.addColorStop(0.4,'rgba(123,92,255,'+(0.25+e*0.4).toFixed(3)+')');
+  g.addColorStop(1,'rgba(40,20,90,0)');
+  cx.fillStyle=g; cx.beginPath(); cx.arc(ox,oy,R*2.7,0,6.2832); cx.fill();
+  // wavy aura ring
+  cx.strokeStyle='rgba(155,140,255,'+(0.25+e*0.45).toFixed(3)+')'; cx.lineWidth=2;
+  cx.beginPath();
+  for(let a=0;a<=6.2832;a+=0.18){ const wob=1+Math.sin(a*5+sbHueRot*3)*0.10*(0.5+e); const rr=R*1.5*wob; const px=ox+Math.cos(a)*rr, py=oy+Math.sin(a)*rr*0.92; a===0?cx.moveTo(px,py):cx.lineTo(px,py); }
+  cx.closePath(); cx.stroke();
+  // core
+  let c=cx.createRadialGradient(ox,oy-2,0,ox,oy,R*0.95);
+  c.addColorStop(0,'rgba(255,255,255,'+(0.9).toFixed(2)+')');
+  c.addColorStop(0.45,'rgba(200,251,80,0.92)');
+  c.addColorStop(1,'rgba(123,92,255,0)');
+  cx.fillStyle=c; cx.beginPath(); cx.arc(ox,oy,R*(1+e*0.25),0,6.2832); cx.fill();
+  // spawn rising motes (like in-game souls)
+  const spawn = 0.4 + e*3.2 + (beat?7:0);
+  let acc=(sbDrawSoul._a=(sbDrawSoul._a||0)+spawn);
+  while(acc>=1 && sbMotes.length<150){ acc-=1;
+    const a=Math.random()*6.2832, rr=R*(0.3+Math.random()*0.5);
+    sbMotes.push({x:ox+Math.cos(a)*rr, y:oy+Math.sin(a)*rr*0.7, vy:-(0.6+Math.random()*1.6)-e*2.0, ph:Math.random()*6.2832, amp:6+Math.random()*10, life:0, max:0.8+Math.random()*0.9, sz:1+Math.random()*2.6, lime:Math.random()<0.55});
+  }
+  sbDrawSoul._a=acc;
+  for(const m of sbMotes){ m.life+=0.016; m.ph+=0.13; m.y+=m.vy; m.vy*=0.985;
+    const k=1-m.life/m.max; if(k<=0) continue;
+    const x=m.x+Math.sin(m.ph)*m.amp*0.15;
+    cx.fillStyle = m.lime?('rgba(210,251,110,'+(k*0.95).toFixed(3)+')'):('rgba(165,150,255,'+(k*0.95).toFixed(3)+')');
+    cx.beginPath(); cx.arc(x,m.y,m.sz*(0.5+k*0.7),0,6.2832); cx.fill();
+  }
+  sbMotes=sbMotes.filter(m=>m.life<m.max && m.y>-12);
+  // beat shock rings
+  if(beat) sbRings.push({r:R*1.2,life:0});
+  for(const rg of sbRings){ rg.life+=0.045; rg.r+=4.5; const k=1-rg.life; if(k<=0) continue;
+    cx.strokeStyle='rgba(200,251,80,'+(k*0.5).toFixed(3)+')'; cx.lineWidth=2.2;
+    cx.beginPath(); cx.arc(ox,oy,rg.r,0,6.2832); cx.stroke();
+  }
+  sbRings=sbRings.filter(rg=>rg.life<1);
+  cx.globalCompositeOperation='source-over';
+}
 function sbFrame(){
   if(!sbOpen) return;
-  if(sbAnalyser && sbPlaying){
+  let energy=0,bass=0,treble=0;
+  if(sbAnalyser){
     sbAnalyser.getByteFrequencyData(sbData);
     const n=sbBars.length, span=sbData.length-6;
     for(let i=0;i<n;i++){ const bin=2+Math.floor(i/n*span); const v=sbData[bin]/255; sbBars[i].style.height=(6+v*v*150)+'%'; }
-    let sum=0; for(let i=2;i<26;i++) sum+=sbData[i]; const e=sum/(24*255);
-    if(sbOrb) sbOrb.style.transform='scale('+(0.9+e*0.55).toFixed(3)+')';
+    let s=0;for(let i=2;i<26;i++)s+=sbData[i];energy=s/(24*255);
+    let b=0;for(let i=1;i<8;i++)b+=sbData[i];bass=b/(7*255);
+    let t=0;for(let i=28;i<58;i++)t+=sbData[i];treble=t/(30*255);
   }
+  if(sbMode==='soul') sbDrawSoul(sbPlaying?energy:0, sbPlaying?bass:0, sbPlaying?treble:0);
   if(sbDur>0){ const ct=sbCurTime(); sbFill.style.width=Math.min(100,ct/sbDur*100)+'%'; sbTimeCur.textContent=sbFmt(ct); }
   sbRAF=requestAnimationFrame(sbFrame);
 }
@@ -3124,6 +3206,7 @@ function openSoulBox(){
   sbRenderList(); sbSyncUI();
   document.getElementById('soulbox').classList.add('open');
   const tc=document.querySelector('.touch'); if(tc) tc.style.display='none';
+  sbMotes=[]; sbRings=[]; sbSizeSoul(); setTimeout(sbSizeSoul,60);
   sbAudioInit(); try{ if(AC && AC.state==='suspended') AC.resume(); }catch(e){}
   sbPlayIndex(sbIdx);
   cancelAnimationFrame(sbRAF); sbRAF=requestAnimationFrame(sbFrame);
