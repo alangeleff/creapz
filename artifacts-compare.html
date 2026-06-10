@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>cReapZ — Artifacts (compare)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Frijole&family=Inter:wght@400;600;700&display=swap');
+:root{ --bg:#0a0712; --gold:#d8b25a; --lime:#c8fb50; --violet:#7b5cff; --viob:#9b8cff; --crim:#ff3d5a; --ink:#efe9ff; --dim:#9a8fc0; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:radial-gradient(130% 70% at 50% -6%, #241546 0%, var(--bg) 60%),var(--bg);
+  color:var(--ink);font-family:Inter,system-ui,sans-serif;min-height:100dvh;padding:max(16px,env(safe-area-inset-top)) 14px 40px}
+.toptitle{text-align:center;font-family:Frijole,serif;font-size:22px;color:#e7d3a0;margin-bottom:4px}
+.topsub{text-align:center;font:600 11px Inter;color:var(--dim);margin-bottom:18px}
+.row{display:flex;flex-wrap:wrap;gap:26px;justify-content:center;align-items:flex-start}
+.col{width:100%;max-width:420px;flex:1 1 340px}
+.vlab{text-align:center;font:700 12px Inter;letter-spacing:1px;color:var(--lime);margin-bottom:8px}
+.vlab span{color:var(--dim);font-weight:600}
+.ahead{display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:4px}
+.ahead .t{font-family:Frijole,serif;font-size:24px;background:linear-gradient(180deg,#fff,#e7d3a0);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ahead .brand{position:absolute;left:0;top:6px;font:700 9px Inter;letter-spacing:3px;color:var(--gold);opacity:.8}
+.sec{margin-top:12px}
+.seclbl{display:flex;align-items:center;gap:9px;margin:0 4px 8px}
+.seclbl b{font:700 12px Inter;letter-spacing:1.5px;color:var(--gold)}
+.seclbl .ln{flex:1;height:1px;background:linear-gradient(90deg,rgba(216,178,90,.5),transparent)}
+.seclbl .n{font:700 11px Inter;color:var(--viob)}
+.case{position:relative;width:100%;aspect-ratio:1;border-radius:20px;overflow:hidden;
+  background:radial-gradient(70% 70% at 50% 47%, #19112f 0%, #0b0716 80%);border:1px solid #34264d;
+  box-shadow:0 18px 44px rgba(0,0,0,.5), inset 0 0 55px rgba(0,0,0,.6)}
+.frame{position:absolute;inset:9px;border-radius:13px;border:1.5px solid rgba(216,178,90,.4);pointer-events:none;box-shadow:inset 0 0 26px rgba(0,0,0,.55);z-index:5}
+.corner{position:absolute;width:15px;height:15px;border:2px solid var(--gold);opacity:.75;z-index:6}
+.corner.tl{top:13px;left:13px;border-right:0;border-bottom:0;border-radius:5px 0 0 0}
+.corner.tr{top:13px;right:13px;border-left:0;border-bottom:0;border-radius:0 5px 0 0}
+.corner.bl{bottom:13px;left:13px;border-right:0;border-top:0;border-radius:0 0 0 5px}
+.corner.br{bottom:13px;right:13px;border-left:0;border-top:0;border-radius:0 0 5px 0}
+.bgsvg{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+.stone{position:absolute;transform:translate(-50%,-50%);z-index:3;cursor:pointer}
+.stone.owned{animation:bob 3.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-3px)}}
+.simg{position:relative;width:100%;height:100%}
+.simg img{width:100%;height:100%;object-fit:contain;display:block}
+.simg img.lit{filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+.simg img.sil{filter:brightness(0) opacity(.58) drop-shadow(0 0 1.2px rgba(159,142,205,.85)) drop-shadow(0 0 1px rgba(159,142,205,.55))}
+.glow{position:absolute;inset:8%;border-radius:50%;filter:blur(11px);opacity:.5;z-index:-1;animation:pulse 2.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:.62}}
+.shine{position:absolute;inset:0;background:linear-gradient(115deg,transparent 44%,rgba(255,255,255,.85) 50%,transparent 56%);background-size:250% 100%;
+  -webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;
+  mix-blend-mode:screen;animation:shimmer 5s linear infinite;pointer-events:none;opacity:0}
+@keyframes shimmer{0%{background-position:135% 0;opacity:0}4%{opacity:1}24%{background-position:-35% 0;opacity:1}30%{background-position:-35% 0;opacity:0}100%{background-position:-35% 0;opacity:0}}
+.edge{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 45%, transparent 55%, rgba(8,5,16,.4) 100%);
+  -webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+.core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;cursor:pointer;width:19%;aspect-ratio:1}
+.core .ring{position:absolute;inset:-22%;border-radius:50%;border:1px solid rgba(216,178,90,.4);animation:spin 18s linear infinite}
+.core .ring.r2{inset:-40%;border-color:rgba(123,92,255,.3);animation-duration:28s;animation-direction:reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.megarow{display:flex;gap:14px;justify-content:center;padding:6px 2px 2px}
+.msphere{flex:1;max-width:110px;aspect-ratio:1;border-radius:50%;position:relative;cursor:pointer;background:radial-gradient(circle at 38% 30%, #2a2040 0%, #140e24 55%, #0a0714 100%);border:1px solid #2c2348;box-shadow:inset 0 7px 20px rgba(0,0,0,.72), inset 0 -2px 7px rgba(123,92,255,.1), 0 5px 16px rgba(0,0,0,.45)}
+.msphere::after{content:"";position:absolute;top:13%;left:24%;width:32%;height:22%;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%);z-index:2}
+.msphere .q{position:absolute;inset:0;display:grid;place-items:center;font-family:Frijole,serif;font-size:24px;color:#39305a}
+.msphere .core2{position:absolute;inset:14%;border-radius:50%;animation:pulse 2.8s ease-in-out infinite}
+.comp{position:fixed;inset:0;z-index:40;background:rgba(6,4,12,.6);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:16px}
+.comp.open{display:flex}
+.page{width:100%;max-width:420px;max-height:100%;overflow-y:auto;border-radius:20px;position:relative;background:linear-gradient(180deg,#1b1206,#120b04);border:1px solid #5a4422;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+.page .ribbon{height:7px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,#7a5a1e,#d8b25a,#7a5a1e)}
+.cx{position:absolute;right:12px;top:16px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#241a0e;border:1px solid #5a4422;color:#e7d3a0;cursor:pointer;z-index:3;font-size:18px}
+.pstone{height:180px;display:grid;place-items:center;position:relative}
+.pstone img{width:138px;height:138px;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6))}
+.pstone img.sil{filter:brightness(0) opacity(.62)}
+.pstone .pglow{position:absolute;width:150px;height:150px;border-radius:50%;filter:blur(24px);opacity:.45;animation:pulse 2.8s ease-in-out infinite}
+.pname{font-family:Frijole,serif;text-align:center;font-size:27px;margin:0 16px 2px;background:linear-gradient(180deg,#fff,#e7d3a0);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pclass{text-align:center;font:700 10px Inter;letter-spacing:2px;color:#b78a3a;margin-bottom:13px}
+.pblock{margin:0 18px 12px;background:rgba(0,0,0,.32);border:1px solid #4a381c;border-radius:12px;padding:11px 14px}
+.pblock .bt{font:700 10px Inter;letter-spacing:2px;color:#d8b25a;margin-bottom:4px}
+.pblock .bv{font:600 14px Inter;color:#f3ecd6}.pblock .bd{font:500 13px Inter;color:#bdae8e;margin-top:3px;line-height:1.45}
+.pclassic{margin:8px 18px 16px;text-align:center;font:italic 600 12px Inter;color:#8c7a52;line-height:1.5}
+.dim{color:#6f6044 !important}
+</style>
+</head>
+<body>
+<div class="toptitle">Artifacts — Empty vs. Mid-game</div>
+<div class="topsub">left: a fresh save (0 collected) · right: partway through (4/8 · 1/3)</div>
+<div class="row" id="row"></div>
+<div class="comp" id="comp"><div class="page" id="page"></div></div>
+
+<script>
+const V='?v=art1';
+const STONES=[
+  {id:'ruby',name:'Ruby',zone:'Charnel Peak',power:'Hellfire Aura',desc:'Cloak yourself in burning soulfire — anything that touches you ignites.',c:'#ff3d5a'},
+  {id:'topaz',name:'Topaz',zone:'Crypt Depths',power:'Thunder Rush',desc:'Surge with electric speed, crackling through everything in your path.',c:'#ffc23c'},
+  {id:'emerald',name:'Emerald',zone:'Witchwood',power:'Verdant Renewal',desc:'Regenerate health and pull loose souls toward you like a magnet.',c:'#2fe06a'},
+  {id:'sapphire',name:'Sapphire',zone:'Drowned Harbor',power:'Time Frost',desc:'Slow the world to a crawl while you move at full speed.',c:'#4d8cff'},
+  {id:'amethyst',name:'Amethyst',zone:'cReapY Cemetery',power:'Phantom Veil',desc:'Turn spectral — invincible, phasing clean through hazards.',c:'#b24dff'},
+  {id:'fluorite',name:'Fluorite',zone:'Ethereal Plains',power:'Prism Barrage',desc:'Split your soul-bolts into a homing prismatic volley.',c:'#5fe0c0'},
+  {id:'obsidian',name:'Obsidian',zone:'Bell Spire',power:'Void Maw',desc:'Warp your projectile into a void that drags enemies in.',c:'#9a7fd0'},
+  {id:'chaos',name:'Chaos',zone:'The Rift',power:'Wieldable Chaos',desc:'Unpredictable, reality-bending power. Its true effect is unknown…',c:'#e24dff'},
+];
+const HOLY={id:'holy',name:'The Holy Stone',c:'#fff0a0',power:'Reaper Ascension',holy:true};
+const MEGA=[
+  {id:'vigor',name:'Vigor',c:'#ff3d5a',power:'+1 Maximum Life',desc:'A bound heart-soul. Each Vigor you claim permanently expands your life meter by one.',acq:'Rare finds hidden across the realm'},
+  {id:'siphon',name:'Siphon',c:'#5fd8ff',power:'Double soul value',desc:'Every soul you collect is worth double.',acq:'Hidden in the realm'},
+  {id:'unknown',name:'???',c:'#9b8cff',power:'? ? ?',desc:'',acq:'Unknown'},
+];
+const TIPR=38, SCALE=16;
+function url(id){return './assets/stone_'+id+'.png'+V;}
+function shade(h,a){let c=h.replace('#','');let r=+('0x'+c.slice(0,2))+a,g=+('0x'+c.slice(2,4))+a,b=+('0x'+c.slice(4,6))+a;return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');}
+function stoneImg(s,lit){const u=url(s.id);
+  return `<div class="simg">${lit?`<div class="glow" style="background:${s.c}"></div>`:''}
+    <img class="${lit?'lit':'sil'}" src="${u}">
+    ${lit?`<span class="edge" style="-webkit-mask-image:url(${u});mask-image:url(${u})"></span><span class="shine" style="-webkit-mask-image:url(${u});mask-image:url(${u})"></span>`:''}</div>`;}
+function tip(i){const a=(-90+i*45)*Math.PI/180;return [50+TIPR*Math.cos(a),50+TIPR*Math.sin(a)];}
+function octa(){const o=[0,3,6,1,4,7,2,5];return o.map(i=>tip(i).map(v=>v.toFixed(2)).join(',')).join(' ');}
+
+function buildPanel(cfg){
+  const col=document.createElement('div'); col.className='col';
+  const ownedN=cfg.owned.length;
+  let spokes='';
+  STONES.forEach((s,i)=>{ if(!cfg.owned.includes(s.id)) return; const [x,y]=tip(i);
+    spokes+=`<line x1="${x.toFixed(2)}" y1="${y.toFixed(2)}" x2="50" y2="50" stroke="#7df3c0" stroke-width="0.6" opacity="0.5" stroke-dasharray="2 4"><animate attributeName="stroke-dashoffset" from="0" to="-30" dur="1.9s" repeatCount="indefinite"/></line>
+      <circle r="1.4" fill="#c8fb50"><animate attributeName="cx" from="${x.toFixed(2)}" to="50" dur="2.4s" begin="${(i*0.28).toFixed(2)}s" repeatCount="indefinite"/><animate attributeName="cy" from="${y.toFixed(2)}" to="50" dur="2.4s" begin="${(i*0.28).toFixed(2)}s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;1;1;0" dur="2.4s" begin="${(i*0.28).toFixed(2)}s" repeatCount="indefinite"/></circle>`;});
+  const so=(0.35+0.65*ownedN/8).toFixed(2);
+  col.innerHTML=`<div class="vlab">${cfg.label}</div>
+    <div class="ahead"><div class="brand">PREVIEW</div><div class="t">Artifacts</div></div>
+    <div class="sec"><div class="seclbl"><b>cReapY STONEZ</b><div class="ln"></div><div class="n">${ownedN} / 8</div></div>
+      <div class="case">
+        <svg class="bgsvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"><defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e7cf8a"/><stop offset="0.5" stop-color="#d8b25a"/><stop offset="1" stop-color="#8a6a24"/></linearGradient></defs>
+          <circle cx="50" cy="50" r="${TIPR+4}" fill="none" stroke="#7b5cff" stroke-width="0.35" opacity="0.3" stroke-dasharray="1 3"><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="44s" repeatCount="indefinite"/></circle>
+          <polygon points="${octa()}" fill="rgba(123,92,255,0.05)" stroke="url(#sg)" stroke-width="0.6" stroke-linejoin="round" opacity="${so}"/>
+          <polygon points="${octa()}" fill="none" stroke="#c8fb50" stroke-width="0.3" stroke-linejoin="round" opacity="${(so*0.5).toFixed(2)}" stroke-dasharray="2 6"><animate attributeName="stroke-dashoffset" from="0" to="-40" dur="5s" repeatCount="indefinite"/></polygon>
+          ${spokes}</svg>
+        <div class="stones"></div><div class="core"></div>
+        <div class="frame"></div><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      </div></div>
+    <div class="sec"><div class="seclbl"><b>MEGA SOULS</b><div class="ln"></div><div class="n">${cfg.mega.length} / 3</div></div><div class="megarow"></div></div>`;
+  const sw=col.querySelector('.stones');
+  STONES.forEach((s,i)=>{ const [x,y]=tip(i); const owned=cfg.owned.includes(s.id);
+    const el=document.createElement('div'); el.className='stone '+(owned?'owned':'locked');
+    el.style.left=x.toFixed(2)+'%'; el.style.top=y.toFixed(2)+'%'; el.style.width=SCALE+'%'; el.style.aspectRatio='1';
+    el.innerHTML=stoneImg(s,owned); el.onclick=()=>openStone(s,owned); sw.appendChild(el); });
+  const core=col.querySelector('.core'); const asc=ownedN>=8;
+  core.innerHTML='<div class="ring"></div><div class="ring r2"></div>'+stoneImg(HOLY,asc);
+  core.onclick=()=>openStone(HOLY,asc);
+  const mr=col.querySelector('.megarow');
+  MEGA.forEach(m=>{ const found=cfg.mega.includes(m.id); const d=document.createElement('div'); d.className='msphere';
+    if(found){ d.style.boxShadow='0 0 18px '+m.c+'aa, inset 0 6px 16px rgba(255,255,255,.16), inset 0 -4px 12px rgba(0,0,0,.5)';
+      d.innerHTML=`<div class="core2" style="background:radial-gradient(circle at 40% 32%, #fff 0%, ${m.c} 34%, ${shade(m.c,-75)} 82%, transparent 100%)"></div>`; }
+    else d.innerHTML='<div class="q">?</div>';
+    d.onclick=()=>openMega(m,found); mr.appendChild(d); });
+  return col;
+}
+function openStone(s,owned){ const page=document.getElementById('page'); const lock=!owned;
+  const abV=lock?'? ? ?':s.power, abD=lock?(s.holy?'Its nature is known only to legend.':'Its power stays sealed until the stone is reclaimed.'):s.desc;
+  const acqV=s.holy?'The Myth of Ascension':('Hidden in '+s.zone);
+  const acqD=s.holy?'Whispered of in legend alone — said to take form only when all eight stones are reunited.':(lock?('Lost somewhere in '+s.zone+'.'):'Reclaimed — it fuels the star.');
+  page.innerHTML=`<div class="ribbon"></div><div class="cx" id="cx">✕</div>
+    <div class="pstone">${lock?'':`<div class="pglow" style="background:${s.c}"></div>`}<img class="${lock?'sil':''}" src="${url(s.id)}"></div>
+    <div class="pname">${lock?'Undiscovered':s.name}</div><div class="pclass">${s.holy?'THE MIRACLE STONE':'ONE OF EIGHT LEGENDARY STONES'}</div>
+    <div class="pblock"><div class="bt">⚡ ABILITY</div><div class="bv ${lock?'dim':''}">${abV}</div><div class="bd">${abD}</div></div>
+    <div class="pblock"><div class="bt">📍 HOW TO ACQUIRE</div><div class="bv">${acqV}</div><div class="bd">${acqD}</div></div>
+    <div class="pclassic">"When all eight are brought together, a miraculous power is unleashed — the <b>Myth of Ascension</b>."</div>`;
+  openComp(); }
+function openMega(m,found){ const page=document.getElementById('page'); const lock=!found;
+  const st=lock?'':`background:radial-gradient(circle at 40% 30%, #fff 0%, ${m.c} 32%, ${shade(m.c,-75)} 82%, #0a0714 100%);box-shadow:0 0 42px ${m.c}99, inset 0 8px 22px rgba(255,255,255,.15)`;
+  page.innerHTML=`<div class="ribbon"></div><div class="cx" id="cx">✕</div>
+    <div class="pstone"><div style="width:138px;height:138px;border-radius:50%;display:grid;place-items:center;background:${lock?'radial-gradient(circle at 38% 30%, #2a2040 0%, #140e24 55%, #0a0714 100%)':''};${st};box-shadow:${lock?'inset 0 8px 22px rgba(0,0,0,.7)':st};animation:pulse 3s ease-in-out infinite">${lock?'<span style=\"font-family:Frijole,serif;font-size:42px;color:#39305a\">?</span>':''}</div></div>
+    <div class="pname">${lock?'Undiscovered':m.name}</div><div class="pclass">MEGA SOUL</div>
+    <div class="pblock"><div class="bt">⚡ EFFECT</div><div class="bv ${lock?'dim':''}">${lock?'? ? ?':m.power}</div><div class="bd">${lock?'Its essence is sealed until you claim one.':m.desc}</div></div>
+    <div class="pblock"><div class="bt">📍 HOW TO ACQUIRE</div><div class="bv">${lock?'Hidden in the realm':m.acq}</div><div class="bd">${lock?'A Mega Soul lies somewhere in the realm, waiting to be claimed.':'Claimed — its power flows through you.'}</div></div>`;
+  openComp(); }
+function openComp(){ const c=document.getElementById('comp'); c.classList.add('open'); document.getElementById('page').querySelector('#cx').onclick=()=>c.classList.remove('open'); }
+document.getElementById('comp').onclick=e=>{ if(e.target.id==='comp') e.currentTarget.classList.remove('open'); };
+
+const row=document.getElementById('row');
+row.appendChild(buildPanel({label:'FRESH SAVE · 0 / 8', owned:[], mega:[]}));
+row.appendChild(buildPanel({label:'MID-GAME · 4 / 8', owned:['ruby','emerald','amethyst','fluorite'], mega:['vigor']}));
+</script>
+</body>
+</html>
