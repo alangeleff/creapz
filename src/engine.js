@@ -40,8 +40,8 @@ function poweredImg(){ const ck=chosen; if(!POWER_IMGS[ck]){ const im=new Image(
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
 const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidian','fluorite','chaos','none'];
 const PMETER=20, PDUR=7;
-let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
-function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
+let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, emHealAcc=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
+function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
 function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Classic','ding_swamp':'Swamp','ding_azure':'Azure','ding_blood':'Blood','ding_magic':'Magic','ding_mystic':'Mystic','ding_wisp':'Wisp','ding_news':'Newspaper','ding_noir':'Noir'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
@@ -1259,6 +1259,11 @@ function update(dt){
       for (const z of zombies){ if(z.dead) continue; if(z.hitCd<=0 && overlap(aura,zBodyBox(z))){ z.hp-=1; z.hitCd=0.25; z.shown=3;
         for(let i=0;i<5;i++) zbits.push({x:z.x,y:z.y-40,vx:(Math.random()-0.5)*170,vy:-30-Math.random()*120,sz:2+Math.random()*3,life:0.4+Math.random()*0.4,t:0,c:['#ff7a2c','#ffcf3c','#ff3d2c'][(Math.random()*3)|0]});
         if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.55); } else playSfx('sfx_meleehit',0.45); } }
+    }
+    else if (equippedStone==='emerald'){
+      // Verdant Renewal: pull loose souls in like a magnet + regenerate health
+      for(const s of souls){ if(s.got) continue; const dx=p.x-s.x, dy=(p.y-50)-s.y, d=Math.hypot(dx,dy); if(d>2 && d<470){ const pull=Math.min(0.9, dt*(3.0+360/d)); s.x+=dx*pull; s.y+=dy*pull; } }
+      emHealAcc+=dt; if(emHealAcc>=1.2){ emHealAcc-=1.2; if(p.hp<PMAXHP){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup',0.6); for(let i=0;i<9;i++) zbits.push({x:p.x,y:p.y-50,vx:(Math.random()-0.5)*120,vy:-40-Math.random()*95,sz:2+Math.random()*2.5,life:0.5+Math.random()*0.4,t:0,c:'#3ddc84'}); } }
     }
     if (powerT<=0){ powerActive=false; stoneCharge=0; }
   }
