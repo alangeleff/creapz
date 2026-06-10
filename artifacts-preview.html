@@ -54,7 +54,7 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 @keyframes shimmer{0%{background-position:135% 0;opacity:0}4%{opacity:1}24%{background-position:-35% 0;opacity:1}30%{background-position:-35% 0;opacity:0}100%{background-position:-35% 0;opacity:0}}
 .edge{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 45%, transparent 55%, rgba(8,5,16,.4) 100%);
   -webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
-.core{position:absolute;left:49.87%;top:51.93%;transform:translate(-50%,-50%);z-index:4;cursor:pointer;width:14%;aspect-ratio:1;animation:bob 3.6s ease-in-out infinite}
+.core{position:absolute;left:49.84%;top:49.57%;transform:translate(-50%,-50%);z-index:4;cursor:pointer;width:16%;aspect-ratio:1;animation:bob 3.6s ease-in-out infinite}
 .core .ring{position:absolute;inset:-22%;border-radius:50%;border:1px solid rgba(216,178,90,.4);animation:spin 18s linear infinite}
 .core .ring.r2{inset:-40%;border-color:rgba(123,92,255,.3);animation-duration:28s;animation-direction:reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -118,7 +118,7 @@ const STONES=[
 ];
 const HOLY={id:'holy',name:'The Holy Stone',c:'#fff0a0',zone:'Forged from all 8',power:'Reaper Ascension',desc:'The Miracle Stone. Ascend into an unstoppable super-form, master of every soul.'};
 const SCALE=14;
-const POS=[[50.13,13.93],[74.53,25.25],[84.39,49.59],[74.39,73.93],[49.87,83.24],[25.7,74.02],[15.61,49.85],[25.78,25.33]], CTR=[49.87,51.93];
+const POS=[[50.13,13.93],[74.53,25.25],[84.39,49.59],[74.39,73.93],[49.87,83.24],[25.7,74.02],[15.61,49.85],[25.78,25.33]], CTR=[49.84,49.57];
 const VERTS=[[49.67,14.67],[74.38,24.96],[84.02,49.53],[73.95,73.8],[49.75,82.79],[26.05,74.38],[15.54,49.75],[25.69,25.18]];
 function url(id){return './assets/stone_'+id+'.png'+V;}
 function stoneImg(s,lit,cls){
