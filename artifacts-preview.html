@@ -143,7 +143,7 @@ const sw=document.getElementById('stones');
 STONES.forEach((s,i)=>{ const [x,y]=POS[i]; const el=document.createElement('div'); el.className='stone '+(s.owned?'owned':'locked')+((s.owned&&owned>=8)?' full':'');
   el.style.left=x+'%'; el.style.top=y+'%'; el.style.width=SCALE+'%'; el.style.aspectRatio='1';
   el.style.animationDelay=(-(i*0.45+ (i%2)*0.7)).toFixed(2)+'s';
-  el.innerHTML=s.owned?stoneImg(s,true):''; const sh=el.querySelector('.shine'); if(sh) sh.style.animationDelay=(-(i*0.62)).toFixed(2)+'s'; el.onclick=()=>openStone(s); sw.appendChild(el); });
+  el.innerHTML=s.owned?stoneImg(s,true):''; el.onclick=()=>openStone(s); sw.appendChild(el); });
 document.getElementById('scnt').textContent=owned+' / 8';
 const core=document.getElementById('core'); core.style.left=CTR[0]+'%'; core.style.top=CTR[1]+'%'; core.style.animationDelay='-2.1s';
 core.innerHTML=(owned>=8)?stoneImg(HOLY,true):'';

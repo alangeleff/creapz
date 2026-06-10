@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>cReapZ — Vigor Fragment Reconstruction</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Frijole&family=Inter:wght@400;600;700&display=swap');
+:root{ --bg:#0a0712; --gold:#d8b25a; --lime:#c8fb50; --crim:#ff3d5a; --ink:#efe9ff; --dim:#9a8fc0; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:radial-gradient(130% 80% at 50% -8%, #2a1430 0%, var(--bg) 60%),var(--bg);
+  color:var(--ink);font-family:Inter,system-ui,sans-serif;min-height:100dvh;display:flex;flex-direction:column;align-items:center;
+  padding:max(16px,env(safe-area-inset-top)) 16px max(20px,env(safe-area-inset-bottom))}
+.ttl{font-family:Frijole,serif;font-size:22px;color:#e7d3a0;margin:2px 0}
+.hint{font:600 11px Inter;color:var(--dim);text-align:center;max-width:420px;margin-bottom:18px;line-height:1.5}
+.stage{position:relative;width:260px;height:260px;margin:6px 0 4px}
+.ghost{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%, #3a2030, #140a16 78%);border-radius:50%;
+  box-shadow:inset 0 8px 26px rgba(0,0,0,.7), inset 0 -3px 10px rgba(255,61,90,.08)}
+.ghost img{width:100%;height:100%;object-fit:contain;filter:grayscale(1) brightness(.28) opacity(.5)}
+.frag{position:absolute;inset:0}
+.frag img{width:100%;height:100%;object-fit:contain;display:block}
+.frag.show{animation:pop .55s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes pop{0%{opacity:0;transform:scale(.5) rotate(-8deg);filter:brightness(2.4) drop-shadow(0 0 18px var(--crim))}
+  60%{opacity:1;filter:brightness(1.5) drop-shadow(0 0 14px var(--crim))}100%{opacity:1;transform:none;filter:none}}
+.aura{position:absolute;inset:-12%;border-radius:50%;pointer-events:none;opacity:0}
+.aura.flash{animation:auraflash .6s ease both}
+@keyframes auraflash{0%{opacity:0;transform:scale(.8)}40%{opacity:.8;box-shadow:0 0 50px 10px rgba(255,61,90,.6);transform:scale(1)}100%{opacity:0;transform:scale(1.25)}}
+.complete .ring{position:absolute;inset:-7%;border-radius:50%;border:2px solid rgba(255,120,140,.5);opacity:0}
+.sealed .ring{animation:seal 1s ease both}
+@keyframes seal{0%{opacity:0;transform:scale(.7)}50%{opacity:1}100%{opacity:0;transform:scale(1.2)}}
+.cnt{font:800 15px Inter;color:var(--crim);margin:6px 0 2px}
+.cnt b{color:#ffd0d8}
+.hp{font:700 12px Inter;color:var(--dim);margin-bottom:14px}
+.hp b{color:var(--lime)}
+.bar{display:flex;gap:10px}
+.bar button{font:700 13px Inter;padding:11px 18px;border-radius:12px;border:1px solid #4a2030;background:#2a1018;color:#ffd0d8;cursor:pointer}
+.bar button.alt{border-color:#33264f;background:#1d1640;color:var(--ink)}
+.note{font:600 10px Inter;color:#6f6790;text-align:center;margin-top:16px;max-width:420px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="ttl">Vigor — Fragment Reconstruction</div>
+<div class="hint">Each fragment you collect rebuilds the soul one wedge at a time, granting <b>+1 max HP</b>. Tap <b>Collect Fragment</b> to see it assemble and seal when complete.</div>
+
+<div class="stage" id="stage">
+  <div class="ghost"><img src="./assets/mega_vigor.png?v=mega3"></div>
+  <div id="frags"></div>
+  <div class="aura" id="aura"></div>
+  <div class="ring"></div>
+</div>
+<div class="cnt"><b id="have">0</b> / <span id="tot">6</span> fragments</div>
+<div class="hp">Max HP: <b id="hp">4</b></div>
+<div class="bar">
+  <button id="add">+ Collect Fragment</button>
+  <button class="alt" id="reset">Reset</button>
+</div>
+<div class="note">This is the 6-fragment version (→ 10 HP). Easy to set to 4 (→ 8 HP) — it's just a number. The wedges reveal in a celebratory pop; the last one triggers a "sealed" ring flash.</div>
+
+<script>
+var N=6, have=0, BASE=4;
+var fragsEl=document.getElementById('frags'), aura=document.getElementById('aura'), stage=document.getElementById('stage');
+function wedge(k){ var a0=(k/N)*360-90, a1=((k+1)/N)*360-90, pts=['50% 50%'];
+  for(var s=0;s<=8;s++){ var ang=(a0+(a1-a0)*s/8)*Math.PI/180; pts.push((50+Math.cos(ang)*78).toFixed(1)+'% '+(50+Math.sin(ang)*78).toFixed(1)+'%'); }
+  return 'polygon('+pts.join(',')+')'; }
+// reveal order: top, then alternate sides for a pleasing build
+var ORDER=[0,3,1,4,2,5];
+var els=[];
+for(var k=0;k<N;k++){ var d=document.createElement('div'); d.className='frag'; d.style.clipPath=wedge(k); d.style.webkitClipPath=wedge(k);
+  d.innerHTML='<img src="./assets/mega_vigor.png?v=mega3">'; d.style.display='none'; fragsEl.appendChild(d); els.push(d); }
+function render(){ document.getElementById('have').textContent=have; document.getElementById('hp').textContent=BASE+have;
+  els.forEach(function(d){ d.style.display='none'; d.classList.remove('show'); });
+  for(var i=0;i<have;i++){ var d=els[ORDER[i]]; d.style.display='block'; }
+  stage.classList.toggle('sealed', have>=N); }
+document.getElementById('add').onclick=function(){ if(have>=N) return; var idx=ORDER[have]; have++;
+  var d=els[idx]; d.style.display='block'; d.classList.add('show');
+  aura.classList.remove('flash'); void aura.offsetWidth; aura.classList.add('flash');
+  document.getElementById('have').textContent=have; document.getElementById('hp').textContent=BASE+have;
+  if(have>=N){ stage.classList.add('sealed'); } };
+document.getElementById('reset').onclick=function(){ have=0; stage.classList.remove('sealed'); render(); };
+render();
+</script>
+</body>
+</html>
