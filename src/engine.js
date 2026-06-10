@@ -1265,13 +1265,14 @@ function update(dt){
     if (z.shown>0) z.shown-=dt;
     z.hpShown += (z.hp-z.hpShown)*Math.min(1,dt*10);
     if (z.dead){ z.dieT+=dt; if(z.dieT<0.7) zbitsEmit(z,dt); continue; }
-    const dx=p.x-z.x, ad=Math.abs(dx); z.facing = z.aggro ? (dx<0?-1:1) : z.face;
-    if (!z.aggro && ad<340 && !p.dead){
+    const dx=p.x-z.x, ad=Math.abs(dx), dy=Math.abs(z.y-p.y); z.facing = z.aggro ? (dx<0?-1:1) : z.face;
+    const _onscr=(z.x-camX)>-20 && (z.x-camX)<W+20;   // must be on-screen, near, and on the same vertical band
+    if (!z.aggro && ad<260 && dy<160 && _onscr && !p.dead){
       z.aggro=true;
       if (z.kw==='bd') playSfx('sfx_zsee',0.7);
       else if (z.kw==='gob') playSfx('sfx_gsee',0.7);
       else if (z.kw==='zombie'||z.kw==='zgen') playSfx('sfx_ksee',0.7);
-    } else if (z.aggro && ad>420) z.aggro=false;
+    } else if (z.aggro && (ad>440 || dy>260)) z.aggro=false;
     // player weapon strikes zombie body
     if ((p.diveT>0||p.slamT>0) && z.hitCd<=0 && overlap(pBodyBox(), zBodyBox(z))){
       z.hp-=1; z.hitCd=0.6; z.shown=3; playSfx('sfx_meleehit',0.6);

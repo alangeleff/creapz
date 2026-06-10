@@ -61,7 +61,10 @@
  canvas{display:block;background:#06040e;touch-action:none}
  #hint{position:absolute;left:10px;bottom:8px;font-size:12px;color:#9b8cffaa;pointer-events:none}
  #ghost{position:fixed;pointer-events:none;z-index:50;font-size:11px;color:#10210a;background:#c8fb50dd;border-radius:6px;padding:3px 7px;display:none;transform:translate(-50%,-130%);white-space:nowrap;font-weight:700}
- #sel{position:absolute;right:10px;top:10px;width:210px;background:#15112af2;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;display:none}
+ #sel{position:absolute;right:10px;top:10px;width:210px;max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;background:#15112af2;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;display:none}
+ #sel .cg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0}
+ #sel .cg .row{margin:0;gap:4px}
+ #sel .cg input{flex:1;width:auto;min-width:0}
  #sel h4{margin:0 0 6px;color:var(--lime);font-size:13px}
  #sel .row{display:flex;justify-content:space-between;align-items:center;margin:6px 0;gap:6px}
  #sel input{width:74px;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px;font-size:13px}
@@ -528,7 +531,7 @@ function showSel(){
  const o=sel.obj; const _ak=assetKey(sel); let html='<h4>'+(LABELOF[_ak]||LABELOF[sel.kind]||sel.type)+'</h4>';
  let _flds=(sel.type==='haz'&&o.t==='spikeshot')?['x','y','dir','tx','ty','tw','th']:(SEL_FIELDS[sel.type]||[]);
  if(sel.type==='bg'||sel.type==='fg') _flds=(o.w&&o.h)?['x','y','w','h']:['par'];
- for(const f of _flds){ if(o[f]===undefined)continue; html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; }
+ { const _fr=_flds.filter(f=>o[f]!==undefined); if(_fr.length){ html+='<div class="cg">'; for(const f of _fr){ html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; } html+='</div>'; } }
  if(sel.type==='bg'||sel.type==='fg'){ const _pl=(o.w&&o.h);
    if(_pl){ const _pon=(o.par!==undefined&&o.par!==1); const _pv=(o.par!==undefined?o.par:1);
      html+='<div style="font-size:11px;color:#9b8cff;margin:4px 0;line-height:1.4">'+(_pon?('Parallax ON \u00b7 scrolls at '+_pv+'\u00d7 world speed. Lower = looks deeper. Editor shows its anchor; it drifts in-game.'):'Parallax OFF \u00b7 world-locked. Lines up in gameplay exactly as placed here.')+'</div>';
