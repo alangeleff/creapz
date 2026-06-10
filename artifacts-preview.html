@@ -54,7 +54,7 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 @keyframes shimmer{0%{background-position:135% 0;opacity:0}4%{opacity:1}24%{background-position:-35% 0;opacity:1}30%{background-position:-35% 0;opacity:0}100%{background-position:-35% 0;opacity:0}}
 .edge{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 45%, transparent 55%, rgba(8,5,16,.4) 100%);
   -webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
-.core{position:absolute;left:49.87%;top:51.93%;transform:translate(-50%,-50%);z-index:4;cursor:pointer;width:14%;aspect-ratio:1}
+.core{position:absolute;left:49.87%;top:51.93%;transform:translate(-50%,-50%);z-index:4;cursor:pointer;width:14%;aspect-ratio:1;animation:bob 3.6s ease-in-out infinite}
 .core .ring{position:absolute;inset:-22%;border-radius:50%;border:1px solid rgba(216,178,90,.4);animation:spin 18s linear infinite}
 .core .ring.r2{inset:-40%;border-color:rgba(123,92,255,.3);animation-duration:28s;animation-direction:reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
