@@ -1129,7 +1129,7 @@ function update(dt){
   const running=(dir!==0&&runHeld[dc])||keys['ShiftLeft']||keys['ShiftRight'];
   let inTar=false; for(const h of HAZ){ if(h.t==='tar' && p.onGround && p.x>=h.x && p.x<=h.x+h.w && Math.abs(p.y-h.y)<8){ inTar=true; break; } }
   if(p.inv<=0){ for(const z of GHURT){ if(p.x+26>z.l && p.x-26<z.r && p.y>z.top && (p.y-PH)<z.bot){ hurtPlayer((z.l+z.r)/2,1); break; } } }
-  const speed=(running?RUN:WALK)*(inTar?0.4:1);
+  const speed=(running?RUN:WALK)*(inTar?0.4:1)*((powerActive&&equippedStone==='topaz')?1.7:1);
   if (p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
   if (!kneeling && p.diveRec<=0 && p.slamRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
   if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamRec<=0&&p.onGround&&SPR.chars[chosen].attack.weapon){
@@ -1256,9 +1256,11 @@ function update(dt){
     powerT-=dt; if(powerBoom>0)powerBoom-=dt; powerPulse+=dt;
     if (equippedStone==='ruby'){
       const aura={x:p.x-58,y:p.y-118,w:116,h:120};
-      for (const z of zombies){ if(z.dead) continue; if(z.hitCd<=0 && overlap(aura,zBodyBox(z))){ z.hp-=1; z.hitCd=0.25; z.shown=3;
-        for(let i=0;i<5;i++) zbits.push({x:z.x,y:z.y-40,vx:(Math.random()-0.5)*170,vy:-30-Math.random()*120,sz:2+Math.random()*3,life:0.4+Math.random()*0.4,t:0,c:['#ff7a2c','#ffcf3c','#ff3d2c'][(Math.random()*3)|0]});
-        if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.55); } else playSfx('sfx_meleehit',0.45); } }
+      for (const z of zombies){ if(z.dead) continue; if(overlap(aura,zBodyBox(z))){
+        if(Math.random()<0.75) zbits.push({x:z.x+(Math.random()-0.5)*30, y:z.y-28-Math.random()*46, vx:(Math.random()-0.5)*50, vy:-55-Math.random()*80, sz:1.6+Math.random()*2.6, life:0.35+Math.random()*0.4, t:0, c:['#ffe08a','#ff7a2c','#ff3d2c'][(Math.random()*3)|0]});
+        if(z.hitCd<=0){ z.hp-=1; z.hitCd=0.25; z.shown=3;
+          if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.55); } else playSfx('sfx_meleehit',0.45); }
+      } }
     }
     else if (equippedStone==='emerald'){
       // Verdant Renewal: pull loose souls in like a magnet + regenerate health
@@ -1268,6 +1270,13 @@ function update(dt){
     else if (equippedStone==='amethyst'){
       // Phantom Veil: go spectral — invincible and phase clean through enemies & hazards
       p.inv=Math.max(p.inv,0.35);
+    }
+    else if (equippedStone==='topaz'){
+      // Thunder Rush: electric strikes zap any enemy you run through
+      for (const z of zombies){ if(z.dead) continue; if(z.hitCd<=0 && overlap(pBodyBox(), zBodyBox(z))){ z.hp-=2; z.hitCd=0.2; z.shown=3;
+        for(let i=0;i<7;i++) zbits.push({x:z.x+(Math.random()-0.5)*24, y:z.y-44-Math.random()*30, vx:(Math.random()-0.5)*200, vy:-40-Math.random()*120, sz:1.5+Math.random()*2, life:0.2+Math.random()*0.25, t:0, c:['#fff2a0','#ffe04a','#ffffff'][(Math.random()*3)|0]});
+        playSfx('sfx_bolt',0.5);
+        if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.55); } } }
     }
     if (powerT<=0){ powerActive=false; stoneCharge=0; }
   }
@@ -2229,12 +2238,41 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
     ctx.strokeStyle=col; ctx.lineWidth=13*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R,0,7); ctx.stroke(); ctx.globalAlpha=1;
     if(tp<0.45) drawPoweredFrame(sx);
   }
-  // SUSTAINED aura while active
-  if(powerActive && transformT<=0){ const pr=48+6*Math.sin(gt*6);
-    const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.6,col+'33'); g.addColorStop(0.85,col+'aa'); g.addColorStop(1,col+'00');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
-    for(let i=0;i<4;i++){ const a=gt*3+i*1.57, rr=30+18*Math.sin(gt*4+i); ctx.globalAlpha=0.5+0.5*Math.sin(gt*7+i); ctx.fillStyle=col; ctx.fillRect(sx+Math.cos(a)*rr-1.5, cy+14+Math.sin(a)*rr-6, 3, 9); } ctx.globalAlpha=1;
-    if(Math.random()<0.32){ ctx.strokeStyle=col; ctx.lineWidth=2; ctx.globalAlpha=0.7; let ax=sx+(Math.random()-0.5)*70, ay=cy-28; ctx.beginPath(); ctx.moveTo(ax,ay); for(let k2=0;k2<3;k2++){ ax+=(Math.random()-0.5)*30; ay+=22; ctx.lineTo(ax,ay);} ctx.stroke(); ctx.globalAlpha=1; }
+  // SUSTAINED — per-stone signature FX while active (no generic ring)
+  if(powerActive && transformT<=0){
+    if(equippedStone==='ruby'){
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const gg=ctx.createRadialGradient(sx,p.y-34,4,sx,p.y-34,78); gg.addColorStop(0,'rgba(255,170,40,0.5)'); gg.addColorStop(0.5,'rgba(255,90,30,0.2)'); gg.addColorStop(1,'rgba(255,60,40,0)'); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(sx,p.y-40,80,0,7); ctx.fill();
+      for(let i=0;i<11;i++){ const a=(i/11)*6.283; const baseR=20+7*Math.sin(gt*5+i*1.3); const fx=sx+Math.cos(a)*baseR; const fb=p.y-16-Math.abs(Math.sin(a))*8; const hgt=30+20*Math.abs(Math.sin(gt*7+i*1.7)); const fl=Math.sin(gt*11+i)*4;
+        const fg=ctx.createLinearGradient(fx,fb,fx,fb-hgt); fg.addColorStop(0,'rgba(255,225,140,0.95)'); fg.addColorStop(0.45,'rgba(255,120,40,0.8)'); fg.addColorStop(1,'rgba(255,60,40,0)');
+        ctx.fillStyle=fg; ctx.beginPath(); ctx.moveTo(fx-5,fb); ctx.quadraticCurveTo(fx-3+fl,fb-hgt*0.55, fx+fl,fb-hgt); ctx.quadraticCurveTo(fx+3+fl,fb-hgt*0.55, fx+5,fb); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+      if(Math.random()<0.85) zbits.push({x:p.x+(Math.random()-0.5)*42, y:p.y-26-Math.random()*46, vx:(Math.random()-0.5)*44, vy:-60-Math.random()*80, sz:1.4+Math.random()*2.4, life:0.4+Math.random()*0.4, t:0, c:['#ffcf3c','#ff7a2c','#ff3d2c'][(Math.random()*3)|0]});
+    }
+    else if(equippedStone==='emerald'){
+      const pulse=0.5+0.5*Math.sin(gt*4);
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const bg=ctx.createRadialGradient(sx,cy,6,sx,cy,86+12*pulse); bg.addColorStop(0,'rgba(61,220,132,'+(0.34+0.16*pulse).toFixed(2)+')'); bg.addColorStop(0.5,'rgba(47,224,106,0.16)'); bg.addColorStop(1,'rgba(47,224,106,0)'); ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(sx,cy,90,0,7); ctx.fill();
+      ctx.restore();
+      if(Math.random()<0.45) zbits.push({x:p.x+(Math.random()-0.5)*46, y:p.y-8, vx:(Math.random()-0.5)*30, vy:-44-Math.random()*54, sz:1.4+Math.random()*2, life:0.6+Math.random()*0.5, t:0, c:'#3ddc84'});
+    }
+    else if(equippedStone==='amethyst'){
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const g=ctx.createRadialGradient(sx,cy,6,sx,cy,74); g.addColorStop(0,'rgba(176,107,255,0.32)'); g.addColorStop(0.6,'rgba(123,92,255,0.13)'); g.addColorStop(1,'rgba(123,92,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy,76,0,7); ctx.fill();
+      for(let i=0;i<3;i++){ if(Math.random()<0.5){ const px=sx+(Math.random()-0.5)*56, py=cy+(Math.random()-0.5)*88, s=2+Math.random()*2.6; ctx.globalAlpha=0.5+Math.random()*0.5; ctx.fillStyle='#e7d4ff'; ctx.fillRect(px-0.7,py-s,1.4,2*s); ctx.fillRect(px-s,py-0.7,2*s,1.4); } }
+      ctx.globalAlpha=1; ctx.restore();
+    }
+    else if(equippedStone==='topaz'){
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const g=ctx.createRadialGradient(sx,cy,6,sx,cy,66); g.addColorStop(0,'rgba(255,224,74,0.3)'); g.addColorStop(0.6,'rgba(255,194,60,0.13)'); g.addColorStop(1,'rgba(255,194,60,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy,68,0,7); ctx.fill();
+      ctx.strokeStyle='#fff2a0'; ctx.lineCap='round';
+      for(let i=0;i<3;i++){ if(Math.random()<0.85){ ctx.lineWidth=1.4+Math.random(); ctx.globalAlpha=0.6+Math.random()*0.4; let ax=sx+(Math.random()-0.5)*30, ay=p.y-92+Math.random()*72; ctx.beginPath(); ctx.moveTo(ax,ay); for(let j=0;j<4;j++){ ax+=(Math.random()-0.5)*26; ay+=14; ctx.lineTo(ax,ay);} ctx.stroke(); } }
+      ctx.globalAlpha=1; ctx.restore();
+      if(Math.random()<0.55) zbits.push({x:p.x+(Math.random()-0.5)*36, y:p.y-50+(Math.random()-0.5)*64, vx:(Math.random()-0.5)*130, vy:(Math.random()-0.5)*130, sz:1+Math.random()*1.4, life:0.18+Math.random()*0.2, t:0, c:'#fff2a0'});
+    }
+    else {
+      const pr=48+6*Math.sin(gt*6); const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.7,col+'44'); g.addColorStop(1,col+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
+    }
   }
 }
 
