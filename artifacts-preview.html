@@ -12,7 +12,8 @@ html,body{margin:0}
 body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),var(--bg);
   color:var(--ink);font-family:Inter,system-ui,sans-serif;min-height:100dvh;display:flex;justify-content:center;
   padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom))}
-.screen{width:100%;max-width:460px}
+.screen{width:100%;max-width:460px;animation:enter .38s ease both}
+@keyframes enter{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
 .ahead{display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:4px}
 .ahead .t{font-family:Frijole,serif;font-size:26px;background:linear-gradient(180deg,#fff,#e7d3a0);-webkit-background-clip:text;background-clip:text;color:transparent}
 .ahead .x{position:absolute;right:0;top:2px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#1d1640;border:1px solid #33264f;color:var(--ink);font-size:18px;cursor:pointer}
@@ -32,9 +33,9 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 .corner.bl{bottom:13px;left:13px;border-right:0;border-top:0;border-radius:0 0 0 5px}
 .corner.br{bottom:13px;right:13px;border-left:0;border-top:0;border-radius:0 0 5px 0}
 .bgsvg{position:absolute;inset:0;width:100%;height:100%;z-index:1}
-.bgsvg .elines{animation:eglow 3s ease-in-out infinite}
+.bgsvg .elines{filter:drop-shadow(0 0 1px rgba(200,251,80,.5));animation:eglow 3s ease-in-out infinite}
 .bgsvg .elines line,.bgsvg .elines circle{stroke:#c8fb50;stroke-linecap:round;fill:none}
-@keyframes eglow{0%,100%{opacity:.6;filter:drop-shadow(0 0 .4px rgba(200,251,80,.35))}50%{opacity:.92;filter:drop-shadow(0 0 1.4px rgba(200,251,80,.6))}}
+@keyframes eglow{0%,100%{opacity:.6}50%{opacity:.92}}
 .stone{position:absolute;transform:translate(-50%,-50%);z-index:3;cursor:pointer}
 .stone.owned{animation:bob 3.6s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-3px)}}
@@ -85,6 +86,7 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 .pblock .bv{font:600 14px Inter;color:#f3ecd6}.pblock .bd{font:500 13px Inter;color:#bdae8e;margin-top:3px;line-height:1.45}
 .pclassic{margin:8px 18px 16px;text-align:center;font:italic 600 12px Inter;color:#8c7a52;line-height:1.5}
 .dim{color:#6f6044 !important}
+@media(prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
 </style>
 </head>
 <body>
@@ -141,7 +143,7 @@ const sw=document.getElementById('stones');
 STONES.forEach((s,i)=>{ const [x,y]=POS[i]; const el=document.createElement('div'); el.className='stone '+(s.owned?'owned':'locked')+((s.owned&&owned>=8)?' full':'');
   el.style.left=x+'%'; el.style.top=y+'%'; el.style.width=SCALE+'%'; el.style.aspectRatio='1';
   el.style.animationDelay=(-(i*0.45+ (i%2)*0.7)).toFixed(2)+'s';
-  el.innerHTML=s.owned?stoneImg(s,true):''; el.onclick=()=>openStone(s); sw.appendChild(el); });
+  el.innerHTML=s.owned?stoneImg(s,true):''; const sh=el.querySelector('.shine'); if(sh) sh.style.animationDelay=(-(i*0.62)).toFixed(2)+'s'; el.onclick=()=>openStone(s); sw.appendChild(el); });
 document.getElementById('scnt').textContent=owned+' / 8';
 const core=document.getElementById('core'); core.style.left=CTR[0]+'%'; core.style.top=CTR[1]+'%'; core.style.animationDelay='-2.1s';
 core.innerHTML=(owned>=8)?stoneImg(HOLY,true):'';
