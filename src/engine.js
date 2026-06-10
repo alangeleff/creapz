@@ -1714,10 +1714,10 @@ function collectLoot(L){
     addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85);
     const cy=L.restY!==undefined?L.restY:L.y;
     for(let i=0;i<18;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*230, vy:-30-Math.random()*180, sz:2.5+Math.random()*3.5, life:0.5+Math.random()*0.5, t:0, c:col});
-    if(key!=='master' && prog){ prog.owned=prog.owned||[]; if(prog.owned.indexOf(key)<0){ prog.owned.push(key); saveProg(); } }
+    if(key!=='master'){ const _ps=artProg(); _ps.owned=_ps.owned||[]; if(_ps.owned.indexOf(key)<0){ _ps.owned.push(key); if(prog) saveProg(); } }
     return; }
-  if (L.type==='vigorfrag'){ if(prog){ prog.megas=prog.megas||{}; prog.megas.vigorFrags=Math.min(6,(prog.megas.vigorFrags||0)+1); saveProg(); } addScore(2500); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85); const cy=L.restY!==undefined?L.restY:L.y; for(let i=0;i<14;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*210, vy:-30-Math.random()*170, sz:2.5+Math.random()*3, life:0.5+Math.random()*0.5, t:0, c:'#ff3d5a'}); return; }
-  if (L.type==='mega_greed' || L.type==='mega_discord'){ if(prog){ prog.megas=prog.megas||{}; prog.megas[L.type==='mega_greed'?'greed':'discord']=true; saveProg(); } addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.9); return; }
+  if (L.type==='vigorfrag'){ { const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas.vigorFrags=Math.min(6,(_ps.megas.vigorFrags||0)+1); if(prog) saveProg(); } addScore(2500); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85); const cy=L.restY!==undefined?L.restY:L.y; for(let i=0;i<14;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*210, vy:-30-Math.random()*170, sz:2.5+Math.random()*3, life:0.5+Math.random()*0.5, t:0, c:'#ff3d5a'}); return; }
+  if (L.type==='mega_greed' || L.type==='mega_discord'){ { const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas[L.type==='mega_greed'?'greed':'discord']=true; if(prog) saveProg(); } addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.9); return; }
   if (L.type==='heart'){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup'); }
   else if (L.type==='soul' || /^soul\d+$/.test(L.type)){ const v=L.type==='soul'?1:parseInt(L.type.slice(4)); soulCount+=v; if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+v); addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
   else if (L.type==='stone'){ addScore(2000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.7); }
@@ -3316,6 +3316,7 @@ const ART_CSS=`
 @media(prefers-reduced-motion:reduce){#artifacts *{animation:none !important}}
 `;
 let artEl=null;
+function artProg(){ if(typeof prog!=='undefined'&&prog) return prog; if(!window.__artProg) window.__artProg={owned:[],megas:{}}; return window.__artProg; }
 function artStoneImgHTML(id,lit){
   const g=ART_GLOWC[id]||'#fff';
   if(lit) return '<div class="art-simg"><div class="art-glow" style="background:'+g+'"></div><img class="lit" src="'+artStoneURL(id)+'"><div class="art-shine" style="-webkit-mask-image:url('+artStoneURL(id)+');mask-image:url('+artStoneURL(id)+')"></div></div>';
@@ -3337,7 +3338,7 @@ function artBuild(){
   artEl.querySelector('#artComp').addEventListener('pointerdown',function(e){ if(e.target.id==='artComp') e.currentTarget.classList.remove('open'); });
 }
 function artRender(){
-  const owned=(typeof prog!=='undefined'&&prog&&prog.owned)||[]; const oset={}; owned.forEach(function(k){oset[k]=1;});
+  const _ps=artProg(); const owned=_ps.owned||[]; const oset={}; owned.forEach(function(k){oset[k]=1;});
   const cnt=ART_ORDER.filter(function(k){return oset[k];}).length; const asc=cnt>=8;
   // energy group: lines between owned linked stones + holy ring on ascension
   let inner='';
@@ -3357,7 +3358,7 @@ function artRender(){
   core.innerHTML='<div class="art-ring"></div><div class="art-ring r2"></div>'+(asc?artStoneImgHTML('holy',true):'');
   core.onclick=function(){ openArtStone('holy',asc,true); };
   // mega souls
-  const megas=(typeof prog!=='undefined'&&prog&&prog.megas)||{}; const vf=megas.vigorFrags||0, greed=!!megas.greed, discord=!!megas.discord;
+  const megas=_ps.megas||{}; const vf=megas.vigorFrags||0, greed=!!megas.greed, discord=!!megas.discord;
   const found={vigor:vf>0, greed:greed, discord:discord};
   const mega=artEl.querySelector('#artMega'); mega.innerHTML='';
   ART_MEGADEF.forEach(function(m,i){ const d=document.createElement('div'); d.className='art-mslot';
