@@ -1,4 +1,4 @@
-const ASSET_VER='1781040000';
+const ASSET_VER='1781044000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -2947,39 +2947,32 @@ const SB_CSS=`
 @keyframes sbmq{0%,100%{height:4px}50%{height:14px}}
 #soulbox.sb-paused .sb-vinyl,#soulbox.sb-paused .sb-reel{animation-play-state:paused}
 #soulbox.sb-paused .sb-miniq i{animation-play-state:paused}
-/* roomy landscape / desktop: two columns, full-size */
-@media (min-width:760px) and (orientation:landscape) and (min-height:561px){
-  #soulbox .sb-card{max-width:920px}
-  #soulbox .sb-body{display:grid;grid-template-columns:1.1fr .9fr;column-gap:10px;align-items:start}
-  #soulbox .sb-modes{grid-column:1;margin-top:6px}
-  #soulbox .sb-stage{grid-column:1;height:clamp(260px,48vh,400px)}
-  #soulbox .sb-prog{grid-column:1}#soulbox .sb-ctrls{grid-column:1}#soulbox .sb-foot{grid-column:1}
-  #soulbox .sb-lh{grid-column:2;grid-row:1;margin-top:12px}
-  #soulbox .sb-list{grid-column:2;grid-row:2 / span 7;max-height:64vh}
+ #soulbox .sb-left,#soulbox .sb-right{display:contents}
+/* landscape: flex columns; the visualizer flex-grows to fill all vertical space (no dead space, any height) */
+@media (orientation:landscape) and (min-width:720px){
+  #soulbox{padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+  #soulbox .sb-card{max-width:940px;max-height:100%}
+  #soulbox .sb-body{display:flex;gap:12px;overflow:hidden;align-items:stretch;flex:1;min-height:0}
+  #soulbox .sb-left{display:flex;flex-direction:column;flex:1.05 1 0;min-height:0;min-width:0}
+  #soulbox .sb-right{display:flex;flex-direction:column;flex:.95 1 0;min-height:0;min-width:0}
+  #soulbox .sb-modes{margin:6px 0 0 14px}
+  #soulbox .sb-stage{flex:1 1 auto;height:auto;min-height:120px;margin:8px 0 0 14px}
+  #soulbox .sb-prog{margin:11px 0 0 14px}
+  #soulbox .sb-ctrls{margin:11px 0 2px}
+  #soulbox .sb-foot{padding:4px 0 8px 14px}
+  #soulbox .sb-lh{margin:6px 16px 6px 6px}
+  #soulbox .sb-list{flex:1 1 auto;max-height:none;min-height:0;margin:0 6px 4px}
 }
-/* short landscape (phones): shrink the left column so controls are always visible — no scroll */
+/* short landscape (phones): compact head + controls so the stage keeps room */
 @media (orientation:landscape) and (max-height:560px){
-  #soulbox{padding:8px}
-  #soulbox .sb-card{max-width:900px;max-height:100%}
-  #soulbox .sb-body{display:grid;grid-template-columns:1.04fr .96fr;column-gap:8px;align-items:start;overflow:hidden}
   #soulbox .sb-head{padding:7px 16px 0}
-  #soulbox .sb-title{font-size:19px}
-  #soulbox .sb-brand{font-size:9px}
-  #soulbox .sb-sub{display:none}
-  #soulbox .sb-modes{grid-column:1;margin:5px 12px 0}
-  #soulbox .sb-mode{padding:4px}
-  #soulbox .sb-mode svg{width:15px;height:15px}
-  #soulbox .sb-mode span{font-size:8px}
-  #soulbox .sb-stage{grid-column:1;height:clamp(88px,28vh,190px);margin-top:6px}
-  #soulbox .sb-prog{grid-column:1;margin-top:7px}
-  #soulbox .sb-ctrls{grid-column:1;margin:8px 0 2px;gap:12px}
-  #soulbox .sb-btn{width:38px;height:38px;border-radius:11px}
-  #soulbox .sb-btn svg{width:17px;height:17px}
-  #soulbox .sb-play{width:50px;height:50px;border-radius:15px}
-  #soulbox .sb-play svg{width:21px;height:21px}
-  #soulbox .sb-foot{grid-column:1;padding:2px 18px 6px}
-  #soulbox .sb-lh{grid-column:2;grid-row:1;margin:7px 16px 4px}
-  #soulbox .sb-list{grid-column:2;grid-row:2 / span 9;max-height:calc(100vh - 92px);margin-top:0}
+  #soulbox .sb-title{font-size:19px}#soulbox .sb-brand{font-size:9px}#soulbox .sb-sub{display:none}
+  #soulbox .sb-mode{padding:4px}#soulbox .sb-mode svg{width:15px;height:15px}#soulbox .sb-mode span{font-size:8px}
+  #soulbox .sb-stage{min-height:96px}
+  #soulbox .sb-ctrls{margin:8px 0 2px;gap:12px}
+  #soulbox .sb-btn{width:38px;height:38px;border-radius:11px}#soulbox .sb-btn svg{width:17px;height:17px}
+  #soulbox .sb-play{width:50px;height:50px;border-radius:15px}#soulbox .sb-play svg{width:21px;height:21px}
+  #soulbox .sb-foot{padding:2px 0 6px 14px}
 }
 `;
 function sbBuildTracks(){
@@ -3005,6 +2998,7 @@ function sbInit(){
       <div class="sb-sub">EVERY TRACK FROM THE REALM</div>
     </div>
     <div class="sb-body">
+      <div class="sb-left">
       <div class="sb-modes" id="sbModes">
         <div class="sb-mode" data-m="soul">${sbIco('soul')}<span>SOUL</span></div>
         <div class="sb-mode" data-m="vinyl">${sbIco('disc')}<span>VINYL</span></div>
@@ -3030,8 +3024,11 @@ function sbInit(){
         <div class="sb-btn" id="sbRep">${sbIco('repeat')}</div>
       </div>
       <div class="sb-foot">${sbIco('vollow')}<div class="sb-vol" id="sbVolBar"><div class="sb-volfill" id="sbVolFill"></div></div>${sbIco('vol')}</div>
+      </div>
+      <div class="sb-right">
       <div class="sb-lh"><div class="lt">TRACK LIST</div><div class="cnt" id="sbCnt"></div></div>
       <div class="sb-list" id="sbList"></div>
+      </div>
     </div></div>`;
   document.body.appendChild(el);
   sbFill=el.querySelector('#sbFill'); sbTimeCur=el.querySelector('#sbCur'); sbTimeTot=el.querySelector('#sbTot');
