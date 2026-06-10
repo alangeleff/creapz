@@ -540,6 +540,7 @@ function showSel(){
      if(_til) html+='<div class="row" style="margin-top:6px;align-items:center"><span>tile size</span><input class="tsc" type="range" min="0.2" max="3" step="0.05" value="'+(o.tscale||1)+'" style="flex:1;margin:0 6px"><span class="tscv" style="min-width:36px;text-align:right;color:#9bd0ff">'+(o.tscale||1)+'\u00d7</span></div>';
      html+='<button class="bgfit" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #5b9cff;color:#bcd9ff;border-radius:6px;padding:8px;cursor:pointer">Refit to current view</button>';
      html+='<button class="bgtile" style="width:100%;margin-top:4px;background:#241d44;border:1px solid var(--line);color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer">Back to full-world tile</button>';
+     if(sel.type==='fg'){ html+='<div style="font-size:11px;color:#9b8cff;margin:8px 0 2px;line-height:1.4">'+(o.fade?'Fades to see-through once the player\'s whole body is behind it, then back to solid.':'Stays fully solid even when the player walks behind it.')+'</div>'; html+='<button class="bgfade" style="width:100%;background:'+(o.fade?'#242a16':'#1d2a3a')+';border:1px solid '+(o.fade?'#c8fb50':'#7b5cff')+';color:'+(o.fade?'#c8fb50':'#cdbbe6')+';border-radius:6px;padding:8px;cursor:pointer">Fade when player behind: '+(o.fade?'ON':'OFF')+' \u00b7 tap to toggle</button>'; }
    } else {
      const _cov=!!o.cover;
      html+='<div style="font-size:11px;color:#9b8cff;margin:4px 0;line-height:1.4">'+(_cov?'Single scene \u2014 one copy scaled across the level, scrolls with parallax. No repeating.':'Tiled \u2014 the image repeats across the level (good for seamless textures).')+'</div>';
@@ -570,6 +571,7 @@ function showSel(){
  const _bp=selBox.querySelector('.bgpar'); if(_bp)_bp.onclick=()=>{ histPush(); if(o.par!==undefined&&o.par!==1) delete o.par; else o.par=0.5; persist(); showSel(); draw(); };
  const _ps=selBox.querySelector('.parsl'); if(_ps)_ps.oninput=()=>{ o.par=parseFloat(_ps.value); const pv=selBox.querySelector('.parval'); if(pv)pv.textContent=o.par+'\u00d7'; persist(); draw(); };
  const _bt=selBox.querySelector('.bgtile'); if(_bt)_bt.onclick=()=>{ histPush(); delete o.x; delete o.y; delete o.w; delete o.h; persist(); showSel(); draw(); };
+ const _bfd=selBox.querySelector('.bgfade'); if(_bfd)_bfd.onclick=()=>{ histPush(); o.fade=!o.fade; persist(); showSel(); draw(); };
  selBox.querySelectorAll('.swapb').forEach(b=>b.onclick=()=>{ histPush(); applySwap(sel.raw,b.dataset.k); persist(); sel=reselect(sel); showSel(); draw(); });
  const _ls=selBox.querySelector('[data-loot]'); if(_ls) _ls.onchange=()=>{ histPush(); o.loot=_ls.value; persist(); showSel(); draw(); };
  selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ histPush(); o[inp.dataset.f]=v; syncBack(sel); persist(); draw(); } });

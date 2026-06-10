@@ -181,7 +181,7 @@ function loadStage(i){
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
   TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z, f:t.f, rot:t.rot, geom:t.geom}));
   BG = (ST.bg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale, cover:b.cover}));
-  FG = (ST.fg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale, cover:b.cover}));
+  FG = (ST.fg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale, cover:b.cover, fade:b.fade, _fa:1}));
   HAZ = (ST.hazards||[]).map(h=>{
     const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0, dir:h.dir, tx:h.tx, ty:h.ty, tw:h.tw, th:h.th};
     if(h.t==='rock'){ const n=Math.max(1,Math.round(h.w/160)); const step=h.w/n; o.spawns=[]; for(let i=0;i<n;i++) o.spawns.push(Math.round(h.x+step*(i+0.5))); o.cds=o.spawns.map(()=>0); }
@@ -1811,6 +1811,7 @@ function drawForegrounds(){
     const par=(b.par!==undefined&&b.par!==null)?b.par:0.3;
     ctx.globalAlpha=(b.alpha!==undefined)?b.alpha:1;
     if(b.w&&b.h){ const pp=(b.par!==undefined&&b.par!==null)?b.par:1; const ox=(b.x||0)-camX*pp, oy=(b.y||0)-camY*pp;
+      if(b.fade){ let inside=false; if(typeof p!=='undefined'&&p&&!p.dead){ const pb=pBodyBox(); const psx=pb.x-camX, psy=pb.y-camY; inside = psx>=ox && psy>=oy && (psx+pb.w)<=(ox+b.w) && (psy+pb.h)<=(oy+b.h); } const tgt=inside?0.3:1; b._fa=(b._fa!==undefined?b._fa:1); b._fa+=(tgt-b._fa)*0.16; ctx.globalAlpha*=b._fa; }
       if(b.tile){ const ts=(b.tscale||1), tw=img.naturalWidth*ts, th=img.naturalHeight*ts; ctx.save(); ctx.beginPath(); ctx.rect(ox,oy,b.w,b.h); ctx.clip(); for(let yy=oy; yy<oy+b.h; yy+=th) for(let xx=ox; xx<ox+b.w; xx+=tw) ctx.drawImage(img,xx,yy,tw,th); ctx.restore(); }
       else ctx.drawImage(img, ox, oy, b.w, b.h);
       ctx.globalAlpha=1; continue; }
