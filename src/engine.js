@@ -30,6 +30,9 @@ const CHEST_CLOSED_IMG=new Image(); CHEST_CLOSED_IMG.src='./assets/chest_closed1
 const CHEST_OPEN_IMG=new Image(); CHEST_OPEN_IMG.src='./assets/chest_open1.png?v='+ASSET_VER;
 const STONE_DEFS={amethyst:'#b24dff',chaos:'#e24dff',emerald:'#2fe06a',fluorite:'#5fe0c0',holy:'#fff0a0',obsidian:'#9a7fd0',ruby:'#ff3d5a',sapphire:'#4d8cff',topaz:'#ffc23c',master:'#ff7a2c'};
 const STONE_IMGS={}; for(const _k in STONE_DEFS){ const _i=new Image(); _i.src='./assets/stone_'+_k+'.png?v='+ASSET_VER; STONE_IMGS[_k]=_i; }
+const MEGA_LOOT_IMG={}, MEGA_LOOT_COL={};
+['1','2','3','4','5','6'].forEach(function(k){ const i=new Image(); i.src='./assets/mega_vigor_frag'+k+'.png?v='+ASSET_VER; MEGA_LOOT_IMG['vigorfrag'+k]=i; MEGA_LOOT_COL['vigorfrag'+k]='#ff3d5a'; });
+(function(){ const ig=new Image(); ig.src='./assets/mega_siphon.png?v='+ASSET_VER; MEGA_LOOT_IMG['mega_greed']=ig; MEGA_LOOT_COL['mega_greed']='#5fd8ff'; const id2=new Image(); id2.src='./assets/mega_discord.png?v='+ASSET_VER; MEGA_LOOT_IMG['mega_discord']=id2; MEGA_LOOT_COL['mega_discord']='#ffae57'; })();
 const CREAPER_POWER_IMG=new Image(); CREAPER_POWER_IMG.src='./assets/creaper_power.png?v='+ASSET_VER;
 const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_power.png?v='+ASSET_VER;
 const POWER_IMGS={};
@@ -1708,7 +1711,7 @@ function terrWallX(nx, px, y, hw){
   }
   return nx;
 }
-function spawnLoot(o){ const lt=o.loot||'gold'; const rise=lt.indexOf('stone_')===0?90:56; loots.push({x:o.x, y:o.gy-o.h+12, restY:o.gy-o.h-rise, t:0, type:lt, collected:false, fade:0}); }
+function spawnLoot(o){ const lt=o.loot||'gold'; const rise=(lt.indexOf('stone_')===0||MEGA_LOOT_IMG[lt])?90:56; loots.push({x:o.x, y:o.gy-o.h+12, restY:o.gy-o.h-rise, t:0, type:lt, collected:false, fade:0}); }
 function collectLoot(L){
   if (L.type.indexOf('stone_')===0){ const key=L.type.slice(6), col=STONE_DEFS[key]||'#ffcf3c';
     addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85);
@@ -1716,7 +1719,7 @@ function collectLoot(L){
     for(let i=0;i<18;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*230, vy:-30-Math.random()*180, sz:2.5+Math.random()*3.5, life:0.5+Math.random()*0.5, t:0, c:col});
     if(key!=='master'){ const _ps=artProg(); _ps.owned=_ps.owned||[]; if(_ps.owned.indexOf(key)<0){ _ps.owned.push(key); if(prog) saveProg(); } }
     return; }
-  if (L.type==='vigorfrag'){ { const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas.vigorFrags=Math.min(6,(_ps.megas.vigorFrags||0)+1); if(prog) saveProg(); } addScore(2500); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85); const cy=L.restY!==undefined?L.restY:L.y; for(let i=0;i<14;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*210, vy:-30-Math.random()*170, sz:2.5+Math.random()*3, life:0.5+Math.random()*0.5, t:0, c:'#ff3d5a'}); return; }
+  if (/^vigorfrag[1-6]$/.test(L.type)){ const k=parseInt(L.type.slice(8)); const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas.vigorShards=_ps.megas.vigorShards||[]; if(_ps.megas.vigorShards.indexOf(k)<0){ _ps.megas.vigorShards.push(k); if(prog) saveProg(); } addScore(2500); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85); const cy=L.restY!==undefined?L.restY:L.y; for(let i=0;i<14;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*210, vy:-30-Math.random()*170, sz:2.5+Math.random()*3, life:0.5+Math.random()*0.5, t:0, c:'#ff3d5a'}); return; }
   if (L.type==='mega_greed' || L.type==='mega_discord'){ { const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas[L.type==='mega_greed'?'greed':'discord']=true; if(prog) saveProg(); } addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.9); return; }
   if (L.type==='heart'){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup'); }
   else if (L.type==='soul' || /^soul\d+$/.test(L.type)){ const v=L.type==='soul'?1:parseInt(L.type.slice(4)); soulCount+=v; if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+v); addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
@@ -1724,6 +1727,16 @@ function collectLoot(L){
   else { addScore(500); playSfx('sfx_soul',0.8); }
 }
 function drawTreasure(x,y,type,sc,al){
+  if (MEGA_LOOT_IMG[type]){ const img=MEGA_LOOT_IMG[type], col=MEGA_LOOT_COL[type]||'#ff3d5a';
+    ctx.save(); ctx.globalAlpha=al;
+    const pulse=0.8+0.2*Math.sin(gt*4.2), R=38*sc*pulse;
+    const g0=ctx.createRadialGradient(x,y,2,x,y,R); g0.addColorStop(0,col+'cc'); g0.addColorStop(0.5,col+'55'); g0.addColorStop(1,col+'00');
+    ctx.fillStyle=g0; ctx.beginPath(); ctx.arc(x,y,R,0,7); ctx.fill();
+    ctx.globalAlpha=al;
+    if (img && img.complete && img.naturalWidth){ const hh=46*sc, ww=hh*img.naturalWidth/img.naturalHeight; ctx.imageSmoothingEnabled=true; ctx.drawImage(img, x-ww/2, y-hh/2, ww, hh); }
+    else { ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,12*sc,0,7); ctx.fill(); }
+    ctx.restore(); return;
+  }
   if (type.indexOf('stone_')===0){ const key=type.slice(6), img=STONE_IMGS[key], col=STONE_DEFS[key]||'#ffcf3c';
     ctx.save(); ctx.globalAlpha=al;
     const pulse=0.78+0.22*Math.sin(gt*4.2), R=40*sc*pulse;
@@ -3339,7 +3352,7 @@ function artBuild(){
 }
 function artRender(){
   const _ps=artProg(); const owned=_ps.owned||[]; const oset={}; owned.forEach(function(k){oset[k]=1;});
-  const cnt=ART_ORDER.filter(function(k){return oset[k];}).length; const asc=cnt>=8;
+  const cnt=ART_ORDER.filter(function(k){return oset[k];}).length; const allBase=cnt>=8; const asc=!!oset['holy'];
   // energy group: lines between owned linked stones + holy ring on ascension
   let inner='';
   ART_EDGES.forEach(function(e){ if(oset[ART_ORDER[e[0]]]&&oset[ART_ORDER[e[1]]]){ const a=ART_VERTS[e[0]],b=ART_VERTS[e[1]]; inner+='<line stroke-width="0.9" x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"></line>'; } });
@@ -3348,7 +3361,7 @@ function artRender(){
   // stones
   const sw=artEl.querySelector('#artStones'); sw.innerHTML='';
   ART_ORDER.forEach(function(id,i){ const el=document.createElement('div'); const own=!!oset[id];
-    el.className='art-stone'+(own?' owned':'')+(own&&asc?' full':'');
+    el.className='art-stone'+(own?' owned':'')+(own&&allBase?' full':'');
     el.style.left=ART_POS[i][0]+'%'; el.style.top=ART_POS[i][1]+'%'; el.style.width=ART_SCALE+'%'; el.style.aspectRatio='1';
     el.innerHTML=own?artStoneImgHTML(id,true):'';
     el.onclick=function(){ openArtStone(id,own,false); }; sw.appendChild(el); });
@@ -3358,12 +3371,12 @@ function artRender(){
   core.innerHTML='<div class="art-ring"></div><div class="art-ring r2"></div>'+(asc?artStoneImgHTML('holy',true):'');
   core.onclick=function(){ openArtStone('holy',asc,true); };
   // mega souls
-  const megas=_ps.megas||{}; const vf=megas.vigorFrags||0, greed=!!megas.greed, discord=!!megas.discord;
+  const megas=_ps.megas||{}; const shards=megas.vigorShards||[]; const vf=shards.length, greed=!!megas.greed, discord=!!megas.discord;
   const found={vigor:vf>0, greed:greed, discord:discord};
   const mega=artEl.querySelector('#artMega'); mega.innerHTML='';
   ART_MEGADEF.forEach(function(m,i){ const d=document.createElement('div'); d.className='art-mslot';
     d.style.left=ART_MSLOT.pos[i][0]+'%'; d.style.top=ART_MSLOT.pos[i][1]+'%'; d.style.width=ART_MSLOT.w+'%'; d.style.height=ART_MSLOT.h+'%';
-    if(m.id==='vigor'){ if(vf>0){ let h=''; for(let k=1;k<=vf&&k<=6;k++) h+='<img class="art-msimg" src="./assets/mega_vigor_frag'+k+'.png?v='+artV()+'">'; d.innerHTML=h; d.style.filter='drop-shadow(0 0 9px '+m.c+'cc)'; } }
+    if(m.id==='vigor'){ if(vf>0){ let h=''; shards.forEach(function(k){ h+='<img class="art-msimg" src="./assets/mega_vigor_frag'+k+'.png?v='+artV()+'">'; }); d.innerHTML=h; d.style.filter='drop-shadow(0 0 9px '+m.c+'cc)'; } }
     else if(found[m.id]){ d.innerHTML='<img class="art-msimg" src="./assets/'+m.img+'.png?v='+artV()+'">'; d.style.filter='drop-shadow(0 0 9px '+m.c+'cc)'; }
     d.onclick=function(){ openArtMega(m,found[m.id],vf); }; mega.appendChild(d); });
   const mc=(found.vigor?1:0)+(found.greed?1:0)+(found.discord?1:0);
