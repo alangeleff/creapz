@@ -1,4 +1,4 @@
-const ASSET_VER='1781036000';
+const ASSET_VER='1781040000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -2952,7 +2952,7 @@ const SB_CSS=`
   #soulbox .sb-card{max-width:920px}
   #soulbox .sb-body{display:grid;grid-template-columns:1.1fr .9fr;column-gap:10px;align-items:start}
   #soulbox .sb-modes{grid-column:1;margin-top:6px}
-  #soulbox .sb-stage{grid-column:1;height:250px}
+  #soulbox .sb-stage{grid-column:1;height:clamp(260px,48vh,400px)}
   #soulbox .sb-prog{grid-column:1}#soulbox .sb-ctrls{grid-column:1}#soulbox .sb-foot{grid-column:1}
   #soulbox .sb-lh{grid-column:2;grid-row:1;margin-top:12px}
   #soulbox .sb-list{grid-column:2;grid-row:2 / span 7;max-height:64vh}
