@@ -39,13 +39,15 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 .simg{position:relative;width:100%;height:100%}
 .simg img{width:100%;height:100%;object-fit:contain;display:block}
 .simg img.lit{filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
-.simg img.sil{filter:brightness(0) opacity(.62) drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.simg img.sil{filter:brightness(0) opacity(.58) drop-shadow(0 0 1.2px rgba(159,142,205,.85)) drop-shadow(0 0 1px rgba(159,142,205,.55))}
 .glow{position:absolute;inset:8%;border-radius:50%;filter:blur(11px);opacity:.5;z-index:-1;animation:pulse 2.8s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:.3}50%{opacity:.62}}
-.shine{position:absolute;inset:0;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.8) 50%,transparent 58%);background-size:280% 100%;
+.shine{position:absolute;inset:0;background:linear-gradient(115deg,transparent 44%,rgba(255,255,255,.85) 50%,transparent 56%);background-size:250% 100%;
   -webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;
-  mix-blend-mode:screen;animation:shimmer 4s ease-in-out infinite;pointer-events:none}
-@keyframes shimmer{0%{background-position:180% 0}55%,100%{background-position:-90% 0}}
+  mix-blend-mode:screen;animation:shimmer 5s linear infinite;pointer-events:none;opacity:0}
+@keyframes shimmer{0%{background-position:135% 0;opacity:0}4%{opacity:1}24%{background-position:-35% 0;opacity:1}30%{background-position:-35% 0;opacity:0}100%{background-position:-35% 0;opacity:0}}
+.edge{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 45%, transparent 55%, rgba(8,5,16,.4) 100%);
+  -webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
 .core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;cursor:pointer;width:19%;aspect-ratio:1}
 .core .ring{position:absolute;inset:-22%;border-radius:50%;border:1px solid rgba(216,178,90,.4);animation:spin 18s linear infinite}
 .core .ring.r2{inset:-40%;border-color:rgba(123,92,255,.3);animation-duration:28s;animation-direction:reverse}
@@ -89,7 +91,6 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
       <div class="core" id="core"></div>
       <div class="frame"></div><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
     </div>
-    <div class="scap">Each stone you reclaim fuels the <b>Holy Stone</b> at the heart of the star</div>
   </div>
   <div class="sec">
     <div class="seclbl"><b>MEGA SOULS</b><div class="ln"></div><div class="n" id="mcnt">1 / 3</div></div>
@@ -117,7 +118,7 @@ function stoneImg(s,lit,cls){
   const u=url(s.id);
   return `<div class="simg">${lit?`<div class="glow" style="background:${s.c}"></div>`:''}
     <img class="${lit?'lit':'sil'} ${cls||''}" src="${u}" alt="${s.name}">
-    ${lit?`<span class="shine" style="-webkit-mask-image:url(${u});mask-image:url(${u})"></span>`:''}</div>`;
+    ${lit?`<span class="edge" style="-webkit-mask-image:url(${u});mask-image:url(${u})"></span><span class="shine" style="-webkit-mask-image:url(${u});mask-image:url(${u})"></span>`:''}</div>`;
 }
 function tip(i){const a=(-90+i*45)*Math.PI/180;return [50+TIPR*Math.cos(a),50+TIPR*Math.sin(a)];}
 function octa(){const o=[0,3,6,1,4,7,2,5];return o.map(i=>tip(i).map(v=>v.toFixed(2)).join(',')).join(' ');}
@@ -156,11 +157,15 @@ document.getElementById('mcnt').textContent=MEGA.filter(m=>m.found).length+' / 3
 function shade(h,a){let c=h.replace('#','');let r=+('0x'+c.slice(0,2))+a,g=+('0x'+c.slice(2,4))+a,b=+('0x'+c.slice(4,6))+a;return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');}
 
 function openStone(s){ const page=document.getElementById('page'); const lock=!s.owned;
+  const abV = lock? '? ? ?' : s.power;
+  const abD = lock? (s.holy?'Its nature is known only to legend.':'Its power stays sealed until the stone is reclaimed.') : s.desc;
+  const acqV = s.holy? 'The Myth of Ascension' : ('Hidden in '+s.zone);
+  const acqD = s.holy? 'Whispered of in legend alone — said to take form only when all eight stones are reunited.' : (lock? ('Lost somewhere in '+s.zone+'.') : 'Reclaimed — it fuels the star.');
   page.innerHTML=`<div class="ribbon"></div><div class="cx" id="cx">✕</div>
     <div class="pstone">${lock?'':`<div class="pglow" style="background:${s.c}"></div>`}<img class="${lock?'sil':''}" src="${url(s.id)}"></div>
     <div class="pname">${lock?'Undiscovered':s.name}</div><div class="pclass">${s.holy?'THE MIRACLE STONE':'ONE OF EIGHT LEGENDARY STONES'}</div>
-    <div class="pblock"><div class="bt">⚡ ABILITY</div><div class="bv ${lock?'dim':''}">${lock?'? ? ?':s.power}</div><div class="bd">${lock?'Its power stays sealed until the stone is reclaimed.':s.desc}</div></div>
-    <div class="pblock"><div class="bt">📍 HOW TO ACQUIRE</div><div class="bv">${s.holy?'Unite all eight stones':('Hidden in '+s.zone)}</div><div class="bd">${lock?('Somewhere in '+s.zone+', a black skull waits.'):(s.holy?'When the eight align, the fusion begins.':'Reclaimed. It fuels the star.')}</div></div>
+    <div class="pblock"><div class="bt">⚡ ABILITY</div><div class="bv ${lock?'dim':''}">${abV}</div><div class="bd">${abD}</div></div>
+    <div class="pblock"><div class="bt">📍 HOW TO ACQUIRE</div><div class="bv">${acqV}</div><div class="bd">${acqD}</div></div>
     <div class="pclassic">"When all eight are brought together, a miraculous power is unleashed — the <b>Myth of Ascension</b>."</div>`;
   openComp(); }
 function openMega(m){ const page=document.getElementById('page'); const lock=!m.found;
