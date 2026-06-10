@@ -1714,7 +1714,10 @@ function collectLoot(L){
     addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85);
     const cy=L.restY!==undefined?L.restY:L.y;
     for(let i=0;i<18;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*230, vy:-30-Math.random()*180, sz:2.5+Math.random()*3.5, life:0.5+Math.random()*0.5, t:0, c:col});
+    if(key!=='master' && prog){ prog.owned=prog.owned||[]; if(prog.owned.indexOf(key)<0){ prog.owned.push(key); saveProg(); } }
     return; }
+  if (L.type==='vigorfrag'){ if(prog){ prog.megas=prog.megas||{}; prog.megas.vigorFrags=Math.min(6,(prog.megas.vigorFrags||0)+1); saveProg(); } addScore(2500); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85); const cy=L.restY!==undefined?L.restY:L.y; for(let i=0;i<14;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*210, vy:-30-Math.random()*170, sz:2.5+Math.random()*3, life:0.5+Math.random()*0.5, t:0, c:'#ff3d5a'}); return; }
+  if (L.type==='mega_greed' || L.type==='mega_discord'){ if(prog){ prog.megas=prog.megas||{}; prog.megas[L.type==='mega_greed'?'greed':'discord']=true; saveProg(); } addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.9); return; }
   if (L.type==='heart'){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup'); }
   else if (L.type==='soul' || /^soul\d+$/.test(L.type)){ const v=L.type==='soul'?1:parseInt(L.type.slice(4)); soulCount+=v; if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+v); addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
   else if (L.type==='stone'){ addScore(2000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.7); }
@@ -2676,6 +2679,7 @@ function draw(){
     drawTally();
   } else if (paused){
     menuPanel('Paused', [
+      {label:'Artifacts', action:()=>{ openArtifacts(); }},
       {label:'Return to Overworld', action:()=>{ enterWorld(true); }},
       {label:'Restart Act', action:()=>{ paused=false; loadStage(stageIdx); }},
       {label:'Controller', action:()=>{ ctrlReturn='play'; gpListen=null; mode='controls'; }},
@@ -3221,3 +3225,176 @@ function closeSoulBox(){
 reset(); requestAnimationFrame(loop);
 }
 main();
+
+/* ====================== Artifacts Screen (ownership-driven DOM overlay) ====================== */
+const ART_ORDER=['ruby','topaz','emerald','sapphire','amethyst','fluorite','obsidian','chaos'];
+const ART_GLOWC={ruby:'#ff3d5a',topaz:'#ffd24a',emerald:'#3ddc84',sapphire:'#4aa8ff',amethyst:'#b06bff',fluorite:'#6be0d0',obsidian:'#8a7fb0',chaos:'#ff7ad9'};
+const ART_POS=[[50.13,13.93],[74.53,25.25],[84.39,49.59],[74.39,73.93],[49.87,83.24],[25.7,74.02],[15.61,49.85],[25.78,25.33]];
+const ART_VERTS=[[49.67,14.67],[74.38,24.96],[84.02,49.53],[73.95,73.8],[49.75,82.79],[26.05,74.38],[15.54,49.75],[25.69,25.18]];
+const ART_EDGES=[[0,3],[3,6],[6,1],[1,4],[4,7],[7,2],[2,5],[5,0]];
+const ART_CTR=[49.84,49.57], ART_SCALE=14, ART_CIRCLE={c:[49.84,49.57],d:22.5,w:1};
+const ART_MSLOT={w:26,h:52,pos:[[28.95,51.24],[51.41,51.24],[71.99,51.24]]};
+const ART_INFO={
+  ruby:{name:'Ruby',zone:'Charnel Peak',power:'Hellfire Aura',desc:'Cloak yourself in burning soulfire — anything that touches you ignites.'},
+  topaz:{name:'Topaz',zone:'Crypt Depths',power:'Thunder Rush',desc:'Surge with electric speed, crackling through everything in your path.'},
+  emerald:{name:'Emerald',zone:'Witchwood',power:'Verdant Renewal',desc:'Regenerate health and pull loose souls toward you like a magnet.'},
+  sapphire:{name:'Sapphire',zone:'Drowned Harbor',power:'Time Frost',desc:'Slow the world to a crawl while you move at full speed.'},
+  amethyst:{name:'Amethyst',zone:'cReapY Cemetery',power:'Phantom Veil',desc:'Turn spectral — invincible, phasing clean through hazards.'},
+  fluorite:{name:'Fluorite',zone:'Ethereal Plains',power:'Prism Barrage',desc:'Split your soul-bolts into a homing prismatic volley.'},
+  obsidian:{name:'Obsidian',zone:'Bell Spire',power:'Void Maw',desc:'Warp your projectile into a void that drags enemies in.'},
+  chaos:{name:'Chaos',zone:'The Rift',power:'Wieldable Chaos',desc:'Unpredictable, reality-bending power. Its true effect is unknown…'},
+  holy:{name:'The Holy Stone',zone:'Forged from all 8',power:'Reaper Ascension',desc:'The Miracle Stone. Ascend into an unstoppable super-form, master of every soul.'}
+};
+const ART_MEGADEF=[
+  {id:'vigor',name:'Vigor',c:'#ff3d5a',power:'+1 Maximum Life',desc:'A bound heart-soul shattered into six shards. Each shard you reclaim permanently expands your life meter by one.',acq:'Six shards hidden across the realm'},
+  {id:'greed',name:'Greed',c:'#5fd8ff',img:'mega_siphon',power:'Double soul value',desc:'Greed feeds on greed — every soul you collect is worth double, your essence swelling twice as fast.',acq:'Hidden in the realm'},
+  {id:'discord',name:'Discord',c:'#ffae57',img:'mega_discord',power:'— yet to be unleashed —',desc:'A soul of pure discord, its chaotic power still being forged. What it will do remains unwritten.',acq:'Hidden in the realm'}
+];
+function artV(){ return (typeof ASSET_VER!=='undefined')?ASSET_VER:'1'; }
+function artStoneURL(id){ return './assets/stone_'+id+'.png?v='+artV(); }
+function artShade(h,a){ var c=h.replace('#','');var r=parseInt(c.slice(0,2),16)+a,g=parseInt(c.slice(2,4),16)+a,b=parseInt(c.slice(4,6),16)+a;return '#'+[r,g,b].map(function(v){return Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0');}).join(''); }
+const ART_CSS=`
+#artifacts{position:fixed;inset:0;z-index:380;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;
+  --a-gold:#d8b25a;--a-lime:#c8fb50;--a-viob:#9b8cff;--a-ink:#efe9ff;--a-dim:#9a8fc0;
+  background:radial-gradient(130% 80% at 50% -8%, #241546 0%, #0a0712 60%),#0a0712;
+  font-family:system-ui,-apple-system,sans-serif;color:var(--a-ink);
+  padding:max(14px,env(safe-area-inset-top)) 14px max(20px,env(safe-area-inset-bottom))}
+#artifacts.open{display:flex}
+#artifacts *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+#artifacts .art-screen{width:100%;max-width:460px;animation:artEnter .34s ease both}
+@keyframes artEnter{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+#artifacts .art-head{display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:4px;height:40px}
+#artifacts .art-t{font-family:Frijole,Creepster,serif;font-size:26px;background:linear-gradient(180deg,#fff,#e7d3a0);-webkit-background-clip:text;background-clip:text;color:transparent}
+#artifacts .art-brand{position:absolute;left:0;top:10px;font:700 10px system-ui;letter-spacing:3px;color:var(--a-gold);opacity:.8}
+#artifacts .art-x{position:absolute;right:0;top:2px;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:#1d1640;border:1px solid #33264f;color:var(--a-ink);font-size:18px;cursor:pointer}
+#artifacts .art-sec{margin-top:14px}
+#artifacts .art-seclbl{display:flex;align-items:center;gap:9px;margin:0 4px 8px}
+#artifacts .art-seclbl b{font:700 12px system-ui;letter-spacing:1.5px;color:var(--a-gold)}
+#artifacts .art-ln{flex:1;height:1px;background:linear-gradient(90deg,rgba(216,178,90,.5),transparent)}
+#artifacts .art-n{font:700 11px system-ui;color:var(--a-viob)}
+#artifacts .art-case{position:relative;width:100%;aspect-ratio:1;border-radius:22px;overflow:hidden;background:#0b0716 url(./assets/artifacts_case.png?v=art1) center/cover;box-shadow:0 18px 44px rgba(0,0,0,.55)}
+#artifacts .art-bgsvg{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+#artifacts .art-elines{filter:drop-shadow(0 0 1px rgba(200,251,80,.5));animation:artEglow 3s ease-in-out infinite}
+#artifacts .art-elines line,#artifacts .art-elines circle{stroke:#c8fb50;stroke-linecap:round;fill:none}
+@keyframes artEglow{0%,100%{opacity:.6}50%{opacity:.92}}
+#artifacts .art-stone{position:absolute;transform:translate(-50%,-50%);z-index:3;cursor:pointer}
+#artifacts .art-stone.owned{animation:artBob 3.6s ease-in-out infinite}
+@keyframes artBob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-3px)}}
+#artifacts .art-simg{position:relative;width:100%;height:100%}
+#artifacts .art-simg img{width:100%;height:100%;object-fit:contain;display:block}
+#artifacts .art-simg img.lit{filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+#artifacts .art-glow{position:absolute;inset:8%;border-radius:50%;filter:blur(11px);opacity:.5;z-index:-1;animation:artPulse 2.8s ease-in-out infinite}
+@keyframes artPulse{0%,100%{opacity:.3}50%{opacity:.62}}
+#artifacts .art-stone.full .art-glow{inset:-6%;filter:blur(15px);animation:artPulseF 2.8s ease-in-out infinite}
+@keyframes artPulseF{0%,100%{opacity:.5}50%{opacity:.82}}
+#artifacts .art-shine{position:absolute;inset:0;background:linear-gradient(115deg,transparent 44%,rgba(255,255,255,.85) 50%,transparent 56%);background-size:250% 100%;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;mix-blend-mode:screen;animation:artShim 2.5s linear infinite;pointer-events:none;opacity:0}
+@keyframes artShim{0%{background-position:135% 0;opacity:0}4%{opacity:1}24%{background-position:-35% 0;opacity:1}30%{background-position:-35% 0;opacity:0}100%{background-position:-35% 0;opacity:0}}
+#artifacts .art-core{position:absolute;left:49.84%;top:49.57%;transform:translate(-50%,-50%);z-index:4;cursor:pointer;width:16%;aspect-ratio:1;animation:artBob 3.6s ease-in-out infinite;animation-delay:-2.1s}
+#artifacts .art-core .art-ring{position:absolute;inset:-22%;border-radius:50%;border:1px solid rgba(216,178,90,.4);animation:artSpin 18s linear infinite}
+#artifacts .art-core .art-ring.r2{inset:-40%;border-color:rgba(123,92,255,.3);animation-duration:28s;animation-direction:reverse}
+@keyframes artSpin{to{transform:rotate(360deg)}}
+#artifacts .art-megacase{position:relative;width:100%;aspect-ratio:3.018;border-radius:22px;overflow:hidden;background:#0b0716 url(./assets/mega_case.png?v=art1) center/cover;box-shadow:0 18px 44px rgba(0,0,0,.55)}
+#artifacts .art-mslot{position:absolute;transform:translate(-50%,-50%);border-radius:50%;cursor:pointer}
+#artifacts .art-mslot .art-msimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#artifacts .art-comp{position:fixed;inset:0;z-index:390;background:rgba(6,4,12,.6);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:16px}
+#artifacts .art-comp.open{display:flex}
+#artifacts .art-page{width:100%;max-width:420px;max-height:100%;overflow-y:auto;border-radius:20px;position:relative;background:linear-gradient(180deg,#1b1206,#120b04);border:1px solid #5a4422;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+#artifacts .art-ribbon{height:7px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,#7a5a1e,#d8b25a,#7a5a1e)}
+#artifacts .art-cx{position:absolute;right:12px;top:16px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#241a0e;border:1px solid #5a4422;color:#e7d3a0;cursor:pointer;z-index:3;font-size:18px}
+#artifacts .art-pstone{height:184px;display:grid;place-items:center;position:relative}
+#artifacts .art-pstone img{width:140px;height:140px;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6))}
+#artifacts .art-pstone img.sil{filter:brightness(0) opacity(.6)}
+#artifacts .art-pglow{position:absolute;width:150px;height:150px;border-radius:50%;filter:blur(24px);opacity:.45}
+#artifacts .art-pname{font-family:Frijole,Creepster,serif;text-align:center;font-size:26px;margin:0 16px 2px;background:linear-gradient(180deg,#fff,#e7d3a0);-webkit-background-clip:text;background-clip:text;color:transparent}
+#artifacts .art-pclass{text-align:center;font:700 10px system-ui;letter-spacing:2px;color:#b78a3a;margin-bottom:13px}
+#artifacts .art-pblock{margin:0 18px 12px;background:rgba(0,0,0,.32);border:1px solid #4a381c;border-radius:12px;padding:11px 14px}
+#artifacts .art-pblock .bt{font:700 10px system-ui;letter-spacing:2px;color:#d8b25a;margin-bottom:4px}
+#artifacts .art-pblock .bv{font:600 14px system-ui;color:#f3ecd6}
+#artifacts .art-pblock .bv.dim{color:#6f6044}
+#artifacts .art-pblock .bd{font:500 13px system-ui;color:#bdae8e;margin-top:3px;line-height:1.45}
+#artifacts .art-pfoot{margin:8px 18px 16px;text-align:center;font:italic 600 12px system-ui;color:#8c7a52;line-height:1.5}
+@media(prefers-reduced-motion:reduce){#artifacts *{animation:none !important}}
+`;
+let artEl=null;
+function artStoneImgHTML(id,lit){
+  const g=ART_GLOWC[id]||'#fff';
+  if(lit) return '<div class="art-simg"><div class="art-glow" style="background:'+g+'"></div><img class="lit" src="'+artStoneURL(id)+'"><div class="art-shine" style="-webkit-mask-image:url('+artStoneURL(id)+');mask-image:url('+artStoneURL(id)+')"></div></div>';
+  return '';
+}
+function artBuild(){
+  const st=document.createElement('style'); st.textContent=ART_CSS; document.head.appendChild(st);
+  artEl=document.createElement('div'); artEl.id='artifacts';
+  artEl.innerHTML='<div class="art-screen">'
+    +'<div class="art-head"><div class="art-brand">REALM OF cReapZ</div><div class="art-t">Artifacts</div><div class="art-x" id="artX">✕</div></div>'
+    +'<div class="art-sec"><div class="art-seclbl"><b>cReapY STONEZ</b><div class="art-ln"></div><div class="art-n" id="artScnt">0 / 8</div></div>'
+    +'<div class="art-case"><svg class="art-bgsvg" id="artSvg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg><div id="artStones"></div><div class="art-core" id="artCore"></div></div></div>'
+    +'<div class="art-sec"><div class="art-seclbl"><b>MEGA SOULS</b><div class="art-ln"></div><div class="art-n" id="artMcnt">0 / 3</div></div>'
+    +'<div class="art-megacase" id="artMega"></div></div>'
+    +'</div><div class="art-comp" id="artComp"><div class="art-page" id="artPage"></div></div>';
+  document.body.appendChild(artEl);
+  artEl.querySelector('#artX').onclick=closeArtifacts;
+  artEl.addEventListener('pointerdown',function(e){ if(e.target===artEl) closeArtifacts(); });
+  artEl.querySelector('#artComp').addEventListener('pointerdown',function(e){ if(e.target.id==='artComp') e.currentTarget.classList.remove('open'); });
+}
+function artRender(){
+  const owned=(typeof prog!=='undefined'&&prog&&prog.owned)||[]; const oset={}; owned.forEach(function(k){oset[k]=1;});
+  const cnt=ART_ORDER.filter(function(k){return oset[k];}).length; const asc=cnt>=8;
+  // energy group: lines between owned linked stones + holy ring on ascension
+  let inner='';
+  ART_EDGES.forEach(function(e){ if(oset[ART_ORDER[e[0]]]&&oset[ART_ORDER[e[1]]]){ const a=ART_VERTS[e[0]],b=ART_VERTS[e[1]]; inner+='<line stroke-width="0.9" x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"></line>'; } });
+  if(asc) inner+='<circle cx="'+ART_CIRCLE.c[0]+'" cy="'+ART_CIRCLE.c[1]+'" r="'+(ART_CIRCLE.d/2)+'" stroke-width="'+ART_CIRCLE.w+'"></circle>';
+  artEl.querySelector('#artSvg').innerHTML = inner ? ('<g class="art-elines">'+inner+'</g>') : '';
+  // stones
+  const sw=artEl.querySelector('#artStones'); sw.innerHTML='';
+  ART_ORDER.forEach(function(id,i){ const el=document.createElement('div'); const own=!!oset[id];
+    el.className='art-stone'+(own?' owned':'')+(own&&asc?' full':'');
+    el.style.left=ART_POS[i][0]+'%'; el.style.top=ART_POS[i][1]+'%'; el.style.width=ART_SCALE+'%'; el.style.aspectRatio='1';
+    el.innerHTML=own?artStoneImgHTML(id,true):'';
+    el.onclick=function(){ openArtStone(id,own,false); }; sw.appendChild(el); });
+  artEl.querySelector('#artScnt').textContent=cnt+' / 8';
+  // core (holy)
+  const core=artEl.querySelector('#artCore'); core.style.left=ART_CTR[0]+'%'; core.style.top=ART_CTR[1]+'%';
+  core.innerHTML='<div class="art-ring"></div><div class="art-ring r2"></div>'+(asc?artStoneImgHTML('holy',true):'');
+  core.onclick=function(){ openArtStone('holy',asc,true); };
+  // mega souls
+  const megas=(typeof prog!=='undefined'&&prog&&prog.megas)||{}; const vf=megas.vigorFrags||0, greed=!!megas.greed, discord=!!megas.discord;
+  const found={vigor:vf>0, greed:greed, discord:discord};
+  const mega=artEl.querySelector('#artMega'); mega.innerHTML='';
+  ART_MEGADEF.forEach(function(m,i){ const d=document.createElement('div'); d.className='art-mslot';
+    d.style.left=ART_MSLOT.pos[i][0]+'%'; d.style.top=ART_MSLOT.pos[i][1]+'%'; d.style.width=ART_MSLOT.w+'%'; d.style.height=ART_MSLOT.h+'%';
+    if(m.id==='vigor'){ if(vf>0){ let h=''; for(let k=1;k<=vf&&k<=6;k++) h+='<img class="art-msimg" src="./assets/mega_vigor_frag'+k+'.png?v='+artV()+'">'; d.innerHTML=h; d.style.filter='drop-shadow(0 0 9px '+m.c+'cc)'; } }
+    else if(found[m.id]){ d.innerHTML='<img class="art-msimg" src="./assets/'+m.img+'.png?v='+artV()+'">'; d.style.filter='drop-shadow(0 0 9px '+m.c+'cc)'; }
+    d.onclick=function(){ openArtMega(m,found[m.id],vf); }; mega.appendChild(d); });
+  const mc=(found.vigor?1:0)+(found.greed?1:0)+(found.discord?1:0);
+  artEl.querySelector('#artMcnt').textContent=mc+' / 3';
+}
+function openArtStone(id,owned,holy){
+  const info=ART_INFO[id]||{name:'???',zone:'Unknown',power:'? ? ?',desc:''}; const lock=!owned; const c=holy?'#fff0a0':(ART_GLOWC[id]||'#c8fb50');
+  const acqV = holy?'The Myth of Ascension':('Hidden in '+info.zone); const acqD = holy?'Said to take form only when all eight stones are reunited.':(lock?('Lost somewhere in '+info.zone+'.'):'Reclaimed — it fuels the star.');
+  const page=artEl.querySelector('#artPage');
+  page.innerHTML='<div class="art-ribbon"></div><div class="art-cx" id="artCx">✕</div>'
+   +'<div class="art-pstone">'+(lock?'':'<div class="art-pglow" style="background:'+c+'"></div>')+'<img class="'+(lock?'sil':'')+'" src="'+artStoneURL(id)+'"></div>'
+   +'<div class="art-pname">'+(lock?'Undiscovered':info.name)+'</div><div class="art-pclass">'+(holy?'THE MIRACLE STONE':'ONE OF EIGHT LEGENDARY STONES')+'</div>'
+   +'<div class="art-pblock"><div class="bt">⚡ ABILITY</div><div class="bv '+(lock?'dim':'')+'">'+(lock?'? ? ?':info.power)+'</div><div class="bd">'+(lock?'Its power is sealed until the stone is reclaimed.':info.desc)+'</div></div>'
+   +'<div class="art-pblock"><div class="bt">📍 HOW TO ACQUIRE</div><div class="bv">'+acqV+'</div><div class="bd">'+acqD+'</div></div>'
+   +'<div class="art-pfoot">"When all eight are brought together, a miraculous power is unleashed — the Myth of Ascension."</div>';
+  artEl.querySelector('#artComp').classList.add('open');
+  page.querySelector('#artCx').onclick=function(){ artEl.querySelector('#artComp').classList.remove('open'); };
+}
+function openArtMega(m,found,vf){
+  const lock=!found; const page=artEl.querySelector('#artPage');
+  let heroImg;
+  if(m.id==='vigor'){ heroImg = (vf>0) ? '<div class="art-pglow" style="background:'+m.c+'"></div><img src="./assets/mega_vigor.png?v='+artV()+'">' : '<img class="sil" src="./assets/mega_vigor.png?v='+artV()+'">'; }
+  else heroImg = lock ? '<img class="sil" src="./assets/'+m.img+'.png?v='+artV()+'">' : '<div class="art-pglow" style="background:'+m.c+'"></div><img src="./assets/'+m.img+'.png?v='+artV()+'">';
+  const fragLine = (m.id==='vigor') ? '<div class="art-pblock"><div class="bt">◈ FRAGMENTS</div><div class="bv">'+vf+' / 6 reclaimed</div><div class="bd">Each shard restores one point of maximum life.</div></div>' : '';
+  page.innerHTML='<div class="art-ribbon"></div><div class="art-cx" id="artCx">✕</div>'
+   +'<div class="art-pstone">'+heroImg+'</div>'
+   +'<div class="art-pname">'+(lock?'Undiscovered':m.name)+'</div><div class="art-pclass">MEGA SOUL</div>'
+   +'<div class="art-pblock"><div class="bt">⚡ EFFECT</div><div class="bv '+(lock?'dim':'')+'">'+(lock?'? ? ?':m.power)+'</div><div class="bd">'+(lock?'Its essence is sealed until you claim one.':m.desc)+'</div></div>'
+   +fragLine
+   +'<div class="art-pblock"><div class="bt">📍 HOW TO ACQUIRE</div><div class="bv">'+(lock?'Hidden in the realm':m.acq)+'</div><div class="bd">'+(lock?'A Mega Soul lies somewhere in the realm, waiting to be claimed.':'Claimed — its power flows through you.')+'</div></div>';
+  artEl.querySelector('#artComp').classList.add('open');
+  page.querySelector('#artCx').onclick=function(){ artEl.querySelector('#artComp').classList.remove('open'); };
+}
+function openArtifacts(){ if(!artEl) artBuild(); artRender(); artEl.classList.add('open'); }
+function closeArtifacts(){ if(artEl) artEl.classList.remove('open'); }
