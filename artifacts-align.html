@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>cReapZ — Artifacts Aligner</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Frijole&family=Inter:wght@400;600;700&display=swap');
+:root{ --bg:#0a0712; --gold:#d8b25a; --lime:#c8fb50; --violet:#7b5cff; --ink:#efe9ff; --dim:#9a8fc0; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),var(--bg);
+  color:var(--ink);font-family:Inter,system-ui,sans-serif;min-height:100dvh;
+  padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center}
+.ttl{font-family:Frijole,serif;font-size:20px;color:#e7d3a0;margin:0 0 2px}
+.hint{font:600 11px Inter;color:var(--dim);text-align:center;max-width:460px;margin-bottom:10px;line-height:1.5}
+.wrap{width:100%;max-width:460px}
+.bar{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;justify-content:center}
+.bar button{font:700 12px Inter;padding:8px 12px;border-radius:10px;border:1px solid #33264f;background:#1d1640;color:var(--ink);cursor:pointer}
+.bar button.on{border-color:var(--lime);color:var(--lime);background:#1f2616}
+.case{position:relative;width:100%;aspect-ratio:1;border-radius:22px;overflow:hidden;touch-action:none;
+  background:#0b0716 url(./assets/artifacts_case.png?v=art2) center/cover;box-shadow:0 18px 44px rgba(0,0,0,.55)}
+.lines{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
+.stone{position:absolute;transform:translate(-50%,-50%);z-index:3;touch-action:none}
+.stone img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;filter:drop-shadow(0 2px 5px rgba(0,0,0,.6))}
+.stone .tag{position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);font:700 8px Inter;color:var(--gold);white-space:nowrap;pointer-events:none;text-shadow:0 1px 2px #000}
+.core{position:absolute;transform:translate(-50%,-50%);z-index:4;touch-action:none}
+.core img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+.vert{position:absolute;width:26px;height:26px;transform:translate(-50%,-50%);z-index:6;border-radius:50%;
+  border:2px solid var(--lime);background:rgba(200,251,80,.25);box-shadow:0 0 8px rgba(200,251,80,.6);touch-action:none;display:none}
+.mode-lines .vert{display:block}
+.mode-lines .stone,.mode-lines .core{pointer-events:none;opacity:.85}
+.mode-stones .vert{pointer-events:none}
+.sel{outline:2px dashed #fff;outline-offset:3px}
+.row{display:flex;align-items:center;gap:10px;margin-top:10px;width:100%;max-width:460px}
+.row label{font:700 11px Inter;color:var(--dim);white-space:nowrap}
+.row input[type=range]{flex:1}
+textarea{width:100%;max-width:460px;height:84px;margin-top:10px;background:#0e0b1d;color:#bfe4ff;border:1px solid #33264f;border-radius:10px;padding:8px;font:600 11px monospace}
+.copy{width:100%;max-width:460px;margin-top:8px;padding:12px;border-radius:12px;border:1px solid #3fbf6a;background:#16301d;color:#a8f0c0;font:700 13px Inter;cursor:pointer}
+.note{font:600 10px Inter;color:#6f6790;text-align:center;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="ttl">Artifacts Aligner</div>
+<div class="hint">Pick a mode, then drag. <b>Stones</b> moves the 8 skulls + center. <b>Lines</b> moves the lime dots that define the energy star — drag each onto the carved line. Use the slider for stone size. Then tap <b>Copy Config</b> and paste it back to me.</div>
+<div class="wrap">
+  <div class="bar">
+    <button id="mStones" class="on">◆ Move Stones</button>
+    <button id="mLines">✦ Move Lines</button>
+  </div>
+  <div class="case mode-stones" id="case">
+    <svg class="lines" id="lines" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+    <div id="stones"></div>
+    <div class="core" id="core"></div>
+    <div id="verts"></div>
+  </div>
+</div>
+<div class="row"><label>Stone size</label><input type="range" id="size" min="8" max="22" step="0.5" value="13.5"><span id="sizeV" style="font:700 11px Inter;color:var(--lime)">13.5%</span></div>
+<textarea id="cfg" readonly></textarea>
+<button class="copy" id="copyBtn">📋 Copy Config</button>
+<div class="note">paste the copied text back into the chat</div>
+
+<script>
+const ORDER=['ruby','topaz','emerald','sapphire','amethyst','fluorite','obsidian','chaos'];
+// seed positions (current best guess) — drag to perfect
+let STONES=[[49.7,11.0],[74.22,23.33],[84.0,48.0],[74.0,72.06],[49.72,81.5],[25.72,72.33],[15.67,48.22],[25.78,22.89]];
+let CENTER=[49.83,47.83];
+let VERTS=STONES.map(p=>p.slice());   // line star vertices start at the stones
+let SCALE=13.5;
+const caseEl=document.getElementById('case'), sw=document.getElementById('stones'), vw=document.getElementById('verts'), lines=document.getElementById('lines'), core=document.getElementById('core');
+function url(id){return './assets/stone_'+id+'.png?v=art2';}
+// build stones
+const stoneEls=[];
+ORDER.forEach((id,i)=>{ const el=document.createElement('div'); el.className='stone'; el.style.width=SCALE+'%'; el.style.aspectRatio='1';
+  el.style.left=STONES[i][0]+'%'; el.style.top=STONES[i][1]+'%';
+  el.innerHTML=`<img src="${url(id)}"><div class="tag">${id.toUpperCase()}</div>`;
+  makeDrag(el,(x,y)=>{STONES[i]=[x,y]; el.style.left=x+'%'; el.style.top=y+'%'; sync();});
+  sw.appendChild(el); stoneEls.push(el); });
+core.style.width=SCALE+'%'; core.style.aspectRatio='1'; core.style.left=CENTER[0]+'%'; core.style.top=CENTER[1]+'%';
+core.innerHTML=`<img src="${url('holy')}"><div class="tag" style="color:#fff0a0">HOLY</div>`;
+makeDrag(core,(x,y)=>{CENTER=[x,y]; core.style.left=x+'%'; core.style.top=y+'%'; sync();});
+// build vert handles
+const vertEls=[];
+VERTS.forEach((p,i)=>{ const el=document.createElement('div'); el.className='vert'; el.style.left=p[0]+'%'; el.style.top=p[1]+'%';
+  makeDrag(el,(x,y)=>{VERTS[i]=[x,y]; el.style.left=x+'%'; el.style.top=y+'%'; sync();});
+  vw.appendChild(el); vertEls.push(el); });
+
+function makeDrag(el,onMove){
+  el.addEventListener('pointerdown',e=>{ e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('sel');
+    const move=ev=>{ const r=caseEl.getBoundingClientRect(); let x=(ev.clientX-r.left)/r.width*100, y=(ev.clientY-r.top)/r.height*100;
+      x=Math.max(0,Math.min(100,x)); y=Math.max(0,Math.min(100,y)); onMove(+x.toFixed(2),+y.toFixed(2)); };
+    const up=()=>{ el.classList.remove('sel'); el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up); };
+    el.addEventListener('pointermove',move); el.addEventListener('pointerup',up); });
+}
+const OC=[0,3,6,1,4,7,2,5,0];
+function sync(){
+  lines.innerHTML=`<polyline points="${OC.map(i=>VERTS[i].join(',')).join(' ')}" fill="none" stroke="#7df3c0" stroke-width="0.8" stroke-linejoin="round" opacity="0.85" stroke-linecap="round"/>`;
+  document.getElementById('cfg').value=JSON.stringify({scale:SCALE,stones:STONES,center:CENTER,verts:VERTS});
+}
+document.getElementById('size').addEventListener('input',e=>{ SCALE=+e.target.value; document.getElementById('sizeV').textContent=SCALE+'%';
+  stoneEls.forEach(el=>el.style.width=SCALE+'%'); core.style.width=SCALE+'%'; sync(); });
+document.getElementById('mStones').onclick=()=>{ caseEl.className='case mode-stones'; document.getElementById('mStones').classList.add('on'); document.getElementById('mLines').classList.remove('on'); };
+document.getElementById('mLines').onclick=()=>{ caseEl.className='case mode-lines'; document.getElementById('mLines').classList.add('on'); document.getElementById('mStones').classList.remove('on'); };
+document.getElementById('copyBtn').onclick=()=>{ const t=document.getElementById('cfg'); t.select();
+  navigator.clipboard.writeText(t.value).then(()=>{ const b=document.getElementById('copyBtn'); b.textContent='✓ Copied — paste it to me'; setTimeout(()=>b.textContent='📋 Copy Config',2000); }).catch(()=>{ document.execCommand('copy'); }); };
+sync();
+</script>
+</body>
+</html>
