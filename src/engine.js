@@ -1,4 +1,4 @@
-const ASSET_VER='1781030000';
+const ASSET_VER='1781032000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -3048,6 +3048,7 @@ function sbStartFrom(off){
   sbAudioInit(); if(!AC) return;
   const t=SB_TRACKS[sbIdx]; if(!t) return;
   sbStop(); const tok=++sbToken;
+  sbSyncUI();
   getMusicBuf(t.key).then(buf=>{
     if(tok!==sbToken || !sbOpen) return;
     if(!buf){ sbPlaying=false; sbSyncUI(); return; }
