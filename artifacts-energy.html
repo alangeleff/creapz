@@ -30,6 +30,8 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 .stone img.sil{filter:brightness(0) opacity(.5) drop-shadow(0 0 1.2px rgba(159,142,205,.8))}
 @keyframes bob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-3px)}}
 .glow{position:absolute;inset:8%;border-radius:50%;filter:blur(11px);opacity:.5;z-index:-1}
+.stone.full .glow{inset:-6%;filter:blur(15px);opacity:.7;animation:pulse 2.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:.82}}
 .core{position:absolute;left:49.84%;top:49.57%;transform:translate(-50%,-50%);z-index:4;width:16%;aspect-ratio:1;pointer-events:none}
 .core.lit{animation:bob 3.6s ease-in-out infinite}
 .core img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 7px rgba(0,0,0,.6))}
@@ -53,7 +55,7 @@ body{background:radial-gradient(130% 80% at 50% -8%, #241546 0%, var(--bg) 60%),
 </defs></svg>
 
 <div class="ttl">Energy Line Scenarios</div>
-<div class="hint">Flat lime line with a periodic glow pulse contained inside it. A line shows only when <b>both</b> connected stones are collected (per the star's links). After Ascension (Holy Stone), every line shifts to the lime&rarr;violet gradient glow.</div>
+<div class="hint">Flat lime line with a periodic glow pulse contained inside it. A line shows only when <b>both</b> connected stones are collected (per the star's links). After Ascension (Holy Stone), the full grid lights every stone with a glow (lines stay green).</div>
 <div class="grid" id="grid"></div>
 
 <script>
@@ -68,24 +70,24 @@ var SCEN=[
   {t:'3 / 8 — No connecting lines', d:'Ruby, Topaz, Emerald — adjacent on the case but not linked on the star, so no lines.', own:[0,1,2], holy:false},
   {t:'4 / 8 — Connected lines appear', d:'Ruby + Sapphire + Obsidian + Topaz form linked pairs — 3 lines light up.', own:[0,3,6,1], holy:false},
   {t:'8 / 8 — All stones, pre-Ascension', d:'Full star, still flat lime (Holy not yet earned).', own:[0,1,2,3,4,5,6,7], holy:false},
-  {t:'8 / 8 + Holy — Ascended', d:'Grid complete and fully powered — lines go lime → violet.', own:[0,1,2,3,4,5,6,7], holy:true}
+  {t:'8 / 8 + Holy — Ascended', d:'Grid complete and fully powered — lines stay green, each stone gets a glow. (Holy-circle ring added next via the aligner.)', own:[0,1,2,3,4,5,6,7], holy:true}
 ];
 var grid=document.getElementById('grid');
 SCEN.forEach(function(sc,n){
   var owned={}; sc.own.forEach(function(i){owned[i]=1;});
   var opt=document.createElement('div'); opt.className='opt';
-  opt.innerHTML='<div class="lbl"><b class="'+(sc.holy?'v':'')+'">'+sc.t+'</b><div>'+sc.d+'</div></div>'+
+  opt.innerHTML='<div class="lbl"><b>'+sc.t+'</b><div>'+sc.d+'</div></div>'+
     '<div class="case"><svg class="bgsvg" viewBox="0 0 100 100" preserveAspectRatio="none" id="svg'+n+'"></svg>'+
     '<div class="stones" id="st'+n+'"></div><div class="core'+(sc.holy?' lit':'')+'" id="co'+n+'"></div></div>';
   grid.appendChild(opt);
   // lines
   var inner='';
   EDGES.forEach(function(e){ if(owned[e[0]]&&owned[e[1]]){ var a=VERTS[e[0]],b=VERTS[e[1]];
-    inner+='<line class="eline'+(sc.holy?' asc':'')+'" x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"></line>'; } });
+    inner+='<line class="eline" x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"></line>'; } });
   document.getElementById('svg'+n).innerHTML=inner;
   // stones
   var sw=document.getElementById('st'+n);
-  ORDER.forEach(function(id,i){ var el=document.createElement('div'); el.className='stone'+(owned[i]?' own':'');
+  var full=sc.own.length===8; ORDER.forEach(function(id,i){ var el=document.createElement('div'); el.className='stone'+(owned[i]?' own':'')+(owned[i]&&full?' full':'');
     el.style.width=SCALE+'%'; el.style.aspectRatio='1'; el.style.left=POS[i][0]+'%'; el.style.top=POS[i][1]+'%';
     el.innerHTML=(owned[i]?'<div class="glow" style="background:radial-gradient(circle,'+GLOW[id]+',transparent 70%)"></div>':'')+
       '<img class="'+(owned[i]?'lit':'sil')+'" src="'+url(id)+'">';
