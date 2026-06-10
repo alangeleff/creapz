@@ -1253,7 +1253,7 @@ function update(dt){
   }
   loots=loots.filter(L=>!L.collected || (L.fade||0)<1);
   if (powerActive){
-    powerT-=dt; if(powerBoom>0)powerBoom-=dt; powerPulse+=dt; p.inv=Math.max(p.inv,0.2);
+    powerT-=dt; if(powerBoom>0)powerBoom-=dt; powerPulse+=dt;
     if (equippedStone==='ruby'){
       const aura={x:p.x-58,y:p.y-118,w:116,h:120};
       for (const z of zombies){ if(z.dead) continue; if(z.hitCd<=0 && overlap(aura,zBodyBox(z))){ z.hp-=1; z.hitCd=0.25; z.shown=3;
@@ -1264,6 +1264,10 @@ function update(dt){
       // Verdant Renewal: pull loose souls in like a magnet + regenerate health
       for(const s of souls){ if(s.got) continue; const dx=p.x-s.x, dy=(p.y-50)-s.y, d=Math.hypot(dx,dy); if(d>2 && d<470){ const pull=Math.min(0.9, dt*(3.0+360/d)); s.x+=dx*pull; s.y+=dy*pull; } }
       emHealAcc+=dt; if(emHealAcc>=1.2){ emHealAcc-=1.2; if(p.hp<PMAXHP){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup',0.6); for(let i=0;i<9;i++) zbits.push({x:p.x,y:p.y-50,vx:(Math.random()-0.5)*120,vy:-40-Math.random()*95,sz:2+Math.random()*2.5,life:0.5+Math.random()*0.4,t:0,c:'#3ddc84'}); } }
+    }
+    else if (equippedStone==='amethyst'){
+      // Phantom Veil: go spectral — invincible and phase clean through enemies & hazards
+      p.inv=Math.max(p.inv,0.35);
     }
     if (powerT<=0){ powerActive=false; stoneCharge=0; }
   }
@@ -2496,7 +2500,7 @@ function drawPlayerLayer(){
       ctx.restore();
     }
     else if ((powerActive && transformT>0)) {} 
-    else if (!(p.invHurt>0 && !powerActive && Math.floor(gt*16)%2===0)) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0);
+    else if (!(p.invHurt>0 && !powerActive && Math.floor(gt*16)%2===0)){ const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0); if(_spec){ ctx.save(); ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); } drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0); if(_spec) ctx.restore(); }
     if (p.muzzleT>0){
       const k=1-p.muzzleT/0.14, hx=sx+p.facing*42, hy=p.y-56;
       // soft rim glow washing over the character
