@@ -2265,7 +2265,6 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       ctx.globalAlpha=(0.12+0.5*ph)*(0.45+0.55*(1-k)); const pg=ctx.createRadialGradient(px,py,0.4,px,py,pr); pg.addColorStop(0,'rgba(255,250,235,0.95)'); pg.addColorStop(0.45,col); pg.addColorStop(1,col+'00'); ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(px,py,pr,0,7); ctx.fill(); }
     ctx.globalAlpha=1; ctx.restore();
     ctx.globalAlpha=1;
-    if(k<0.55 && Math.random()<0.7){ ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.globalAlpha=0.85; let ax=sx+(Math.random()-0.5)*64, ay=cy-46; ctx.beginPath(); ctx.moveTo(ax,ay); for(let j=0;j<3;j++){ ax+=(Math.random()-0.5)*30; ay+=28; ctx.lineTo(ax,ay);} ctx.stroke(); ctx.globalAlpha=1; }
     if(equippedStone){ const simg=STONE_IMGS[equippedStone]; if(simg&&simg.naturalWidth){ const kk=1-k; const ry=cy-12-kk*112, ssz=34+kk*36;
       const sg=ctx.createRadialGradient(sx,ry,2,sx,ry,ssz); sg.addColorStop(0,col); sg.addColorStop(0.5,col+'88'); sg.addColorStop(1,col+'00'); ctx.globalAlpha=0.85; ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sx,ry,ssz,0,7); ctx.fill(); ctx.globalAlpha=1;
       const sw=ssz*simg.naturalWidth/simg.naturalHeight; ctx.imageSmoothingEnabled=true; ctx.drawImage(simg, sx-sw/2, ry-ssz/2, sw, ssz); } }
