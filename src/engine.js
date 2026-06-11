@@ -2289,11 +2289,20 @@ function drawPoweredFrame(sx, yy, fc){
   ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
   ctx.drawImage(pimg, sx-ww/2, yy - hh + 16, ww, hh); ctx.restore();
 }
+function drawGlitchShard(img,w,h,seed){
+  // ominous purple glow behind the shard
+  ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(0,0,1,0,0,w*0.62); g.addColorStop(0,'rgba(150,90,255,0.5)'); g.addColorStop(0.5,'rgba(110,90,235,0.22)'); g.addColorStop(1,'rgba(90,60,200,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,w*0.62,0,7); ctx.fill(); ctx.restore();
+  // base shard with the ripple band cut out
+  const bandY=-h/2+((gt*1.3+seed)%1)*h, bandH=Math.max(4,h*0.3);
+  ctx.save(); ctx.beginPath(); ctx.rect(-w,-h,w*2,h*2); ctx.rect(-w/2-2,bandY,w+4,bandH); ctx.clip('evenodd'); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,-w/2,-h/2,w,h); ctx.restore();
+  // displaced/stretched slices warping the shard along the wave
+  const NS=4; for(let k=0;k<NS;k++){ const yy=bandY+k*(bandH/NS), hh=bandH/NS+1, env=Math.sin((k+0.5)/NS*Math.PI), dx=(Math.sin(gt*30+seed*5+k*2)*w*0.2+(Math.random()-0.5)*w*0.12)*env, sxk=1+(Math.random()<0.3?Math.random()*0.4:0);
+    ctx.save(); ctx.beginPath(); ctx.rect(-w/2-5,yy,w+10,hh); ctx.clip(); ctx.scale(sxk,1); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,-w/2+dx,-h/2,w,h); ctx.restore(); }
+}
 function drawChaosPile(behind){
   for(const e of chaosPile){ if(!!e.behind!==behind) continue; const img=CHAOS_FRAGS[e.v]; if(!img||!img.complete||!img.naturalWidth) continue;
     const ex=e.wx-camX, ey=e.wy, h=24*(e.sc||1), w=h*img.naturalWidth/img.naturalHeight;
-    ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,h*0.75); g.addColorStop(0,'rgba(140,170,255,0.4)'); g.addColorStop(1,'rgba(90,120,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,h*0.75,0,7); ctx.fill(); ctx.restore();
-    ctx.save(); ctx.translate(ex,ey); ctx.rotate(e.rot+Math.sin(gt*1.5+e.sp)*0.16); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,-w/2,-h/2,w,h); ctx.restore();
+    ctx.save(); ctx.translate(ex,ey); ctx.rotate(e.rot+Math.sin(gt*1.5+e.sp)*0.16); drawGlitchShard(img,w,h,e.sp); ctx.restore();
   }
 }
 function drawChaosBack(){
@@ -2448,6 +2457,13 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
     }
     else if(equippedStone==='chaos'){
       drawChaosPile(false);
+      // flashing glitch pixels floating up/down around the body
+      ctx.save();
+      for(let i=0;i<16;i++){ if(Math.random()<0.5) continue; const a=i*1.7,
+          px2=sx+Math.cos(a+gt*0.6)*(18+(i%5)*8), py2=(p.y-50)+Math.sin(a*1.3+gt*0.8)*(34+(i%4)*9)+Math.sin(gt*2.2+i)*7,
+          ps=(Math.random()<0.28?3:1.5), c=['#ffffff','#b06bff','#ff3d5a','#5fe0ff','#e24dff'][i%5];
+        ctx.fillStyle=c; ctx.globalAlpha=0.5+0.5*Math.random(); ctx.fillRect(px2-ps/2,py2-ps/2,ps,ps); }
+      ctx.globalAlpha=1; ctx.restore();
     }
     else if(equippedStone!=='fluorite'){
       const pr=48+6*Math.sin(gt*6); const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.7,col+'44'); g.addColorStop(1,col+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
@@ -2922,12 +2938,9 @@ function draw(){
     }
     if (bo.kind==='chaosshard'){
       const img=CHAOS_FRAGS[bo.v||0], ang=Math.atan2(bo.vy||0,bo.vx);
-      ctx.save(); ctx.globalCompositeOperation='lighter';
-      const tg=ctx.createRadialGradient(bx,bo.y,1,bx,bo.y,18); tg.addColorStop(0,'rgba(150,180,255,0.55)'); tg.addColorStop(0.5,'rgba(110,90,255,0.28)'); tg.addColorStop(1,'rgba(90,120,255,0)'); ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(bx,bo.y,18,0,7); ctx.fill();
-      ctx.restore();
       if(img&&img.complete&&img.naturalWidth){ const h=28*(bo.scl||1), w=h*img.naturalWidth/img.naturalHeight;
-        ctx.save(); ctx.translate(bx,bo.y); ctx.rotate(ang); if(bo.vx<0) ctx.scale(1,-1); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,-w/2,-h/2,w,h); ctx.restore(); }
-      if(Math.random()<0.6) zbits.push({x:bo.x,y:bo.y,vx:(Math.random()-0.5)*46,vy:(Math.random()-0.5)*46,sz:1+Math.random()*1.7,life:0.2+Math.random()*0.26,t:0,c:['#9fb6ff','#7b5cff','#bfe0ff','#ffffff'][(Math.random()*4)|0]});
+        ctx.save(); ctx.translate(bx,bo.y); ctx.rotate(ang); if(bo.vx<0) ctx.scale(1,-1); drawGlitchShard(img,w,h,(bo.v||0)*1.3+bo.t); ctx.restore(); }
+      if(Math.random()<0.55) zbits.push({x:bo.x,y:bo.y,vx:(Math.random()-0.5)*46,vy:(Math.random()-0.5)*46,sz:1+Math.random()*1.7,life:0.2+Math.random()*0.26,t:0,c:['#9fb6ff','#7b5cff','#bfe0ff','#ffffff'][(Math.random()*4)|0]});
       continue;
     }
     for (let g2=2; g2>=0; g2--){
