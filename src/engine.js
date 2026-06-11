@@ -833,7 +833,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>(p.deathHurt?3.05:2.3)) || (p && p.won); }
-const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2'];
+const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum'];
 function bootIntoWorld(){ primeAudio(); SFXLIST.forEach(loadSfx); banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); enterWorld(false); }
 function startGame(ck){
   if (selMode==='skin'){ chosen=ck; saveProg(); }
@@ -1166,7 +1166,7 @@ function update(dt){
     if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
       if (powerActive && equippedStone==='obsidian'){
-        bolts.push({x:p.x+p.facing*40, y:p.y-58, vx:p.facing*210, t:0, dead:false, kind:'void', pullCd:0}); playSfx('sfx_bolt',0.7); playSfx('sfx_wportal',0.45);
+        bolts.push({x:p.x+p.facing*40, y:p.y-58, vx:p.facing*210, t:0, dead:false, kind:'void', pullCd:0}); playSfx('sfx_portalblast',0.9); playSfx('sfx_portalhum',0.6);
       }
       else if (powerActive && equippedStone==='fluorite'){
         const dir=p.facing, oy=p.y-58;
@@ -2453,8 +2453,8 @@ function drawZHP(z){
   for(let i=1;i<z.maxhp;i++){ const sn=x+w*i/z.maxhp; ctx.beginPath(); ctx.moveTo(sn,y); ctx.lineTo(sn,y+h); ctx.stroke(); }
 }
 
-function voidErase(z,bo){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; z.erase={x:bo.x,y:bo.y}; killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_wportal',0.4); }
-function voidEraseBat(b,bo){ b.dead=true; b.dieT=0; b.erase={x:bo.x,y:bo.y}; killCount++; addScore(KPTS.bat); playSfx('sfx_wportal',0.4); }
+function voidErase(z,bo){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; z.erase={x:bo.x,y:bo.y}; killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_dportal',0.6); }
+function voidEraseBat(b,bo){ b.dead=true; b.dieT=0; b.erase={x:bo.x,y:bo.y}; killCount++; addScore(KPTS.bat); playSfx('sfx_dportal',0.6); }
 function drawZombie(z){
   if(z.dead && z.erase){ const a=SPR[z.kw][z.dstate], k=Math.min(1,z.dieT/0.55); if(k>=1) return; const sx2=z.x-camX, ex=z.erase.x-camX, ey=z.erase.y, lx=sx2+(ex-sx2)*k, ly=z.y+(ey-z.y)*k, sc=Math.max(0.02,1-k);
     ctx.save(); ctx.globalAlpha=Math.max(0,1-k*0.9); ctx.translate(lx,ly); ctx.rotate(k*7*(z.facing<0?-1:1)); ctx.scale(sc*(z.facing<0?-1:1),sc); ctx.imageSmoothingEnabled=true; ctx.drawImage(a.img, z.dframe*a.sw,0,a.sw,a.sh, -a.w/2,-a.h/2, a.w,a.h); ctx.restore(); return; }
