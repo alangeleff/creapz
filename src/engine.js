@@ -38,7 +38,7 @@ const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_pow
 const CREAPER_PRAY_IMG=new Image(); CREAPER_PRAY_IMG.src='./assets/creaper_pray.png?v='+ASSET_VER;
 const DINGBAT_PRAY_IMG=new Image(); DINGBAT_PRAY_IMG.src='./assets/dingbat_pray.png?v='+ASSET_VER;
 function prayImg(){ const im=isDing(chosen)?DINGBAT_PRAY_IMG:CREAPER_PRAY_IMG; return (im&&im.complete&&im.naturalWidth)?im:null; }
-function drawPrayFrame(sx,yy,fc){ const pimg=prayImg(); if(!pimg) return; const hh=isDing(chosen)?122:163, ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, yy-hh+16, ww, hh); ctx.restore(); }
+function drawPrayFrame(sx,yy,fc){ const pimg=prayImg(); if(!pimg) return; const hh=isDing(chosen)?107:142, ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, yy-hh+14, ww, hh); ctx.restore(); }
 const POWER_IMGS={};
 function poweredImg(){ const ck=chosen; if(!POWER_IMGS[ck]){ const im=new Image(); im._ok=null; im.onload=()=>{im._ok=true;}; im.onerror=()=>{im._ok=false;}; im.src='./assets/power_'+ck+'.png?v='+ASSET_VER; POWER_IMGS[ck]=im; } const sk=POWER_IMGS[ck]; if(sk && sk._ok && sk.naturalWidth) return sk; return isDing(ck)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; }
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
@@ -228,6 +228,7 @@ const DOUBLE_TAP = 350;
 const lastRelease = { ArrowLeft:-1e9, ArrowRight:-1e9 };
 const runHeld = { ArrowLeft:false, ArrowRight:false };
 let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0, chaosGlitchT=0, chaosSpawnQ=[], chaosSpawnN=0, chaosSpawnT=0;   // Power Dive trail + Sapphire after-image trail
+let maxHPShown=4, hpGrowPending=0, vigorFlash=0;   // Vigor HP-slot grow animation
 let slamReq=null, slamGhosts=[], slamFx=[], zapFx=[];   // Crush Drop + Topaz dash-impact white flashes
 let shakeT=0, shakeMag=0;
 function press(code){
@@ -878,7 +879,7 @@ function reset(keep){
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
   for(const bo of (bolts||[])){ if(bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
-  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; shakeT=0; shakeMag=0;
+  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; shakeT=0; shakeMag=0; maxHPShown=curMaxHP(); hpGrowPending=0; vigorFlash=0;
   if (!keep){
     soulCount=0; soulOrbGot=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],val:(s[2]||1),got:false,pop:0,ph:i*0.31}));
@@ -1093,6 +1094,7 @@ function update(dt){
   if (p.barrierT>0) p.barrierT-=dt;
   if (p.hurtT>0) p.hurtT-=dt;
   p.hpShown += (p.hp-p.hpShown)*Math.min(1,dt*8);
+  { const cm=curMaxHP(); maxHPShown += (cm-maxHPShown)*Math.min(1,dt*6); if(hpGrowPending && cm-maxHPShown<0.06){ maxHPShown=cm; vigorFlash=0.5; hpGrowPending=0; } if(vigorFlash>0) vigorFlash-=dt; }
   if (powerActive && transformT>0 && !p.dead){
     transformT-=dt; powerPulse+=dt; p.vx=0; p.vy=0; p.onGround=false; p.y-=16*dt; p.inv=Math.max(p.inv,0.5);
     if(p.state!=='jump'){ p.state='jump'; p.clock=0; } p.clock+=dt;
@@ -1218,7 +1220,7 @@ function update(dt){
     }
   }
   p.x=nx;
-  const prevFeet=p.y; if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else if (p.slamT>0) p.vy=SLAM_VY; else p.vy+=GRAV; p.y+=p.vy;
+  const prevFeet=p.y; if (powerActive && equippedStone==='chaos' && chaosSpawnN>0 && !p.dead){ p.vy=0; p.onGround=false; } else if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else if (p.slamT>0) p.vy=SLAM_VY; else p.vy+=GRAV; p.y+=p.vy;
   if (p.vy>=0){
     let cand=[]; for(const fy of segFloorsAt(p.x)) cand.push({t:fy,q:null});
     for (const s of SOLID){ if(p.x>=s.l&&p.x<=s.r) cand.push({t:s.top,q:null}); }
@@ -1826,7 +1828,7 @@ function collectLoot(L){
     for(let i=0;i<18;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*230, vy:-30-Math.random()*180, sz:2.5+Math.random()*3.5, life:0.5+Math.random()*0.5, t:0, c:col});
     if(key!=='master'){ const _ps=artProg(); _ps.owned=_ps.owned||[]; if(_ps.owned.indexOf(key)<0){ _ps.owned.push(key); if(prog) saveProg(); } }
     return; }
-  if (/^vigorfrag[1-6]$/.test(L.type)){ const k=parseInt(L.type.slice(9)); const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas.vigorShards=_ps.megas.vigorShards||[]; if(_ps.megas.vigorShards.indexOf(k)<0){ _ps.megas.vigorShards.push(k); if(prog) saveProg(); } addScore(2500); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85); const cy=L.restY!==undefined?L.restY:L.y; for(let i=0;i<14;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*210, vy:-30-Math.random()*170, sz:2.5+Math.random()*3, life:0.5+Math.random()*0.5, t:0, c:'#ff3d5a'}); return; }
+  if (/^vigorfrag[1-6]$/.test(L.type)){ const k=parseInt(L.type.slice(9)); const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas.vigorShards=_ps.megas.vigorShards||[]; if(_ps.megas.vigorShards.indexOf(k)<0){ _ps.megas.vigorShards.push(k); if(prog) saveProg(); p.hp=Math.min(curMaxHP(),p.hp+1); hpGrowPending=1; } addScore(2500); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85); const cy=L.restY!==undefined?L.restY:L.y; for(let i=0;i<14;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*210, vy:-30-Math.random()*170, sz:2.5+Math.random()*3, life:0.5+Math.random()*0.5, t:0, c:'#ff3d5a'}); return; }
   if (L.type==='mega_greed' || L.type==='mega_discord'){ { const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas[L.type==='mega_greed'?'greed':'discord']=true; if(prog) saveProg(); } addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.9); return; }
   if (L.type==='heart'){ p.hp=Math.min(curMaxHP(),p.hp+1); playSfx('sfx_healthup'); }
   else if (L.type==='soul' || /^soul\d+$/.test(L.type)){ const v=L.type==='soul'?1:parseInt(L.type.slice(4)); soulCount+=v; if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+v*greedMult()); addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
@@ -2524,16 +2526,17 @@ function drawPlayerHP(){
   const hi=SPR.hpicon[chosen]||SPR.hpicon[isDing(chosen)?'dingbat':chosen];
   if (hi){ const ih=30, iw=hi.w*ih/hi.h; ctx.drawImage(hi.img, x+16-iw/2, y+h/2-ih/2, iw, ih); }
   ctx.fillStyle='rgba(0,0,0,.55)'; roundRect(bx,y+4,bw,h-8,6); ctx.fill();
-  const frac=Math.max(0,Math.min(1,p.hpShown/curMaxHP()));
+  const frac=Math.max(0,Math.min(1,p.hpShown/maxHPShown));
   const low = frac<0.34 ? (0.55+0.45*Math.sin(gt*9)) : 0;
   const c=hpColor(frac);
   ctx.save(); roundRect(bx,y+4,bw,h-8,6); ctx.clip();
   const g=ctx.createLinearGradient(bx,0,bx+bw,0); g.addColorStop(0,c.d); g.addColorStop(1,c.l);
   ctx.fillStyle=g; ctx.fillRect(bx,y+4,bw*frac,h-8);
   ctx.fillStyle='rgba(255,255,255,.18)'; ctx.fillRect(bx,y+5,bw*frac,3);
+  if(vigorFlash>0){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.fillStyle='rgba(255,255,255,'+(0.78*(vigorFlash/0.5)).toFixed(2)+')'; ctx.fillRect(bx,y+4,bw,h-8); ctx.restore(); }
   ctx.restore();
   ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=2;
-  const _mx=curMaxHP(); for(let i=1;i<_mx;i++){ const sn=bx+bw*i/_mx; ctx.beginPath(); ctx.moveTo(sn,y+5); ctx.lineTo(sn,y+h-5); ctx.stroke(); }
+  const _mx=maxHPShown, _segs=Math.round(_mx); for(let i=1;i<_segs;i++){ const sn=bx+bw*i/_mx; ctx.beginPath(); ctx.moveTo(sn,y+5); ctx.lineTo(sn,y+h-5); ctx.stroke(); }
   if(low>0){ ctx.strokeStyle='rgba(230,50,50,'+(0.25+0.5*low)+')'; ctx.lineWidth=2.5; roundRect(bx,y+4,bw,h-8,6); ctx.stroke(); }
 }
 function drawProgress(){
@@ -3676,7 +3679,7 @@ const ART_CSS=`
 @media(prefers-reduced-motion:reduce){#artifacts *{animation:none !important}}
 `;
 let artEl=null;
-function artProg(){ if(typeof prog!=='undefined'&&prog) return prog; if(!window.__artProg) window.__artProg={owned:[],megas:{greed:true,discord:true,vigorShards:[1,2,3,4,5,6]}}; return window.__artProg; }
+function artProg(){ if(typeof prog!=='undefined'&&prog) return prog; if(!window.__artProg) window.__artProg={owned:[],megas:{greed:true,discord:true}}; return window.__artProg; }
 function artStoneImgHTML(id,lit){
   const g=ART_GLOWC[id]||'#fff';
   if(lit) return '<div class="art-simg"><div class="art-glow" style="background:'+g+'"></div><img class="lit" src="'+artStoneURL(id)+'"><div class="art-shine" style="-webkit-mask-image:url('+artStoneURL(id)+');mask-image:url('+artStoneURL(id)+')"></div></div>';
