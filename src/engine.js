@@ -38,7 +38,7 @@ const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_pow
 const CREAPER_PRAY_IMG=new Image(); CREAPER_PRAY_IMG.src='./assets/creaper_pray.png?v='+ASSET_VER;
 const DINGBAT_PRAY_IMG=new Image(); DINGBAT_PRAY_IMG.src='./assets/dingbat_pray.png?v='+ASSET_VER;
 function prayImg(){ const im=isDing(chosen)?DINGBAT_PRAY_IMG:CREAPER_PRAY_IMG; return (im&&im.complete&&im.naturalWidth)?im:null; }
-function drawPrayFrame(sx,yy,fc){ const pimg=prayImg(); if(!pimg) return; const hh=isDing(chosen)?107:142, ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, yy-hh+14, ww, hh); ctx.restore(); }
+function drawPrayFrame(sx,yy,fc,scl){ const pimg=prayImg(); if(!pimg) return; const hh=(isDing(chosen)?107:142)*(scl||1), ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, yy-hh+14, ww, hh); ctx.restore(); }
 const POWER_IMGS={};
 function poweredImg(){ const ck=chosen; if(!POWER_IMGS[ck]){ const im=new Image(); im._ok=null; im.onload=()=>{im._ok=true;}; im.onerror=()=>{im._ok=false;}; im.src='./assets/power_'+ck+'.png?v='+ASSET_VER; POWER_IMGS[ck]=im; } const sk=POWER_IMGS[ck]; if(sk && sk._ok && sk.naturalWidth) return sk; return isDing(ck)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; }
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
@@ -1152,14 +1152,14 @@ function update(dt){
   if (p.diveT>0){ diveGhosts.push({x:p.x,y:p.y}); if(diveGhosts.length>9) diveGhosts.shift(); }
   else if (diveGhosts.length) diveGhosts.shift();
   { const _down=(keys['ArrowDown']||keys['KeyS']);
-    if (_down && !p._downPrev && !p.onGround && !p.dead && !p.won && !p.winning && p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ p.slamT=1; p.vx=0; p.vy=SLAM_VY; slamGhosts=[]; playSfx('sfx_rwhoosh',1.0); }
+    if (_down && !p._downPrev && !p.onGround && !keys['KeyX'] && !p.dead && !p.won && !p.winning && p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ p.slamT=1; p.vx=0; p.vy=SLAM_VY; slamGhosts=[]; playSfx('sfx_rwhoosh',1.0); }
     p._downPrev=_down; }
   if (p.slamRec>0){ p.slamRec-=dt; p.vx=0; }
   if (p.slamT>0){ slamGhosts.push({x:p.x,y:p.y}); if(slamGhosts.length>9) slamGhosts.shift(); p.vx=0; }
   else if (slamGhosts.length) slamGhosts.shift();
   if (powerActive && equippedStone==='sapphire' && transformT<=0){ if(Math.abs(p.vx)>1.5||!p.onGround){ sapTrail.push({x:p.x,y:p.y,st:p.state,fi:curFrame(),f:p.facing}); if(sapTrail.length>10) sapTrail.shift(); } else if(sapTrail.length) sapTrail.shift(); }
   else if (sapTrail.length) sapTrail.length=0;
-  const kneeling = p.onGround && (keys['ArrowDown']||keys['KeyS']) && p.attackT<=0 && p.castT<=0 && p.hurtT<=0;
+  const kneeling = false;   // crouch removed; Down is now a modifier (Down+cast = upward attack)
   let dir=0;
   if (!kneeling){ if (keys['ArrowLeft']) dir=-1; else if (keys['ArrowRight']) dir=1; }
   const dc=dir<0?'ArrowLeft':'ArrowRight';
@@ -1168,7 +1168,7 @@ function update(dt){
   if(p.inv<=0){ for(const z of GHURT){ if(p.x+26>z.l && p.x-26<z.r && p.y>z.top && (p.y-PH)<z.bot){ hurtPlayer((z.l+z.r)/2,1); break; } } }
   const speed=(running?RUN:WALK)*(inTar?0.4:1)*((powerActive&&equippedStone==='topaz')?1.7:1);
   if (p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
-  if (!kneeling && p.diveRec<=0 && p.slamRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround && !(keys['ArrowUp']&&keys['KeyX'])){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
+  if (!kneeling && p.diveRec<=0 && p.slamRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
   if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamRec<=0&&p.onGround&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
     playSfx(isDing(chosen)?'sfx_wing':'sfx_slash');
@@ -1183,7 +1183,7 @@ function update(dt){
   if (p.castCd>0) p.castCd-=dt;
   if (p.muzzleT>0) p.muzzleT-=dt;
   if (keys['KeyX']&&p.castT<=0&&p.castCd<=0&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamT<=0&&p.slamRec<=0){
-    p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false; p.castUp = !!keys['ArrowUp'] && !(powerActive && (equippedStone==='obsidian'||equippedStone==='fluorite'||equippedStone==='chaos'));
+    p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false; p.castUp = (keys['ArrowDown']||keys['KeyS']) && !(powerActive && (equippedStone==='obsidian'||equippedStone==='fluorite'||equippedStone==='chaos'));
   }
   if (p.castT>0){
     p.castT-=dt;
@@ -2773,7 +2773,7 @@ function drawPlayerLayer(){
       if(powerActive&&equippedStone==='sapphire'&&transformT<=0){ for(let gi=0;gi<sapTrail.length;gi++){ const g=sapTrail[gi]; ctx.save(); ctx.globalAlpha=0.08+0.26*(gi/Math.max(1,sapTrail.length)); drawCharSprite(chosen,g.st,g.fi,g.x-camX,g.y,g.f,1,0); ctx.restore(); } }
       const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0), _obs=(powerActive&&equippedStone==='obsidian'&&transformT<=0), _top=(powerActive&&equippedStone==='topaz'&&transformT<=0), _chaos=(powerActive&&equippedStone==='chaos'&&transformT<=0), _upcast=(p.castT>0 && p.castUp && !!prayImg());
       let _skip=false; ctx.save();
-      if(_upcast){ _skip=true; const fast=Math.floor(gt*24)%2; ctx.filter= fast ? 'grayscale(1) invert(1) brightness(1.15)' : 'grayscale(1) brightness(1.7) contrast(1.25)'; drawPrayFrame(sx,p.y,p.facing); ctx.filter='none'; }
+      if(_upcast){ _skip=true; const fast=Math.floor(gt*24)%2; ctx.filter= fast ? 'grayscale(1) invert(1) brightness(1.15)' : 'grayscale(1) brightness(1.7) contrast(1.25)'; drawPrayFrame(sx,p.y,p.facing,0.82); ctx.filter='none'; }
       if(_spec){ ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); }
       if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
       if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
