@@ -42,7 +42,7 @@ const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidi
 const PMETER=20, PDUR=7;
 const STONE_HROT={ruby:-38,topaz:12,emerald:100,sapphire:180,amethyst:235,fluorite:130,obsidian:215,chaos:270,holy:12,master:-10};
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, emHealAcc=0, powerDur=7, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
-function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_screamchorus',1.05); }
+function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',0.6); playSfx('sfx_screamchorus',1.05); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
 function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Classic','ding_swamp':'Swamp','ding_azure':'Azure','ding_blood':'Blood','ding_magic':'Magic','ding_mystic':'Mystic','ding_wisp':'Wisp','ding_news':'Newspaper','ding_noir':'Noir'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
@@ -631,7 +631,9 @@ async function loadSfx(key){
   }catch(e){}
 }
 function ensureSfxGain(){
-  if (AC && !sfxGain){ sfxGain=AC.createGain(); sfxGain.gain.value=0.45*sfxVol; sfxGain.connect(AC.destination); }
+  if (AC && !sfxGain){ sfxGain=AC.createGain(); sfxGain.gain.value=0.45*sfxVol;
+    try{ const comp=AC.createDynamicsCompressor(); comp.threshold.value=-20; comp.knee.value=26; comp.ratio.value=5; comp.attack.value=0.003; comp.release.value=0.18; sfxGain.connect(comp); comp.connect(AC.destination); }
+    catch(e){ sfxGain.connect(AC.destination); } }
 }
 let runSrc=null;
 function setRunLoop(state){
@@ -653,9 +655,11 @@ function sfxFire(key, vol, delay){
   s.start(delay ? AC.currentTime+delay : 0);
   return s;
 }
+let sfxLast={};
 function playSfx(key, vol, delay){
   if (!AC) return;
   ensureSfxGain();
+  if (!delay){ const now=AC.currentTime||0, lt=sfxLast[key]; if (lt!==undefined && now-lt<0.04) return null; sfxLast[key]=now; }
   if (!sfxBuf[key]){ loadSfx(key).then(()=>{ if (AC && sfxBuf[key]) sfxFire(key, vol, 0); }); return null; }
   return sfxFire(key, vol, delay);
 }
