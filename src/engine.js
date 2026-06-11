@@ -1156,7 +1156,10 @@ function update(dt){
     const fireAt = chosen==='dingbat' ? 2 : 3;   // dingbat: bolt leaves on the open-mouth frame (11f @40fps)
     if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
-      if (powerActive && equippedStone==='fluorite'){
+      if (powerActive && equippedStone==='obsidian'){
+        bolts.push({x:p.x+p.facing*40, y:p.y-58, vx:p.facing*210, t:0, dead:false, kind:'void', pullCd:0}); playSfx('sfx_bolt',0.7); playSfx('sfx_wportal',0.45);
+      }
+      else if (powerActive && equippedStone==='fluorite'){
         const dir=p.facing, oy=p.y-58;
         for(let k=-1;k<=1;k++){ bolts.push({x:p.x+dir*36, y:oy, vx:dir*560, vy:k*160, t:0, dead:false, kind:'prism', homing:true, ph:Math.random()*6.28}); }
         playSfx('sfx_bolt'); playSfx('sfx_bolt',0.45,0.07);
@@ -1365,6 +1368,22 @@ function update(dt){
   for (const bo of bolts){
     if (bo.dead) continue;
     bo.t+=dt;
+    if(bo.kind==='void'){
+      bo.x+=bo.vx*dt*(bo.t<0.5?1:0.35); if(bo.pullCd>0) bo.pullCd-=dt;
+      const R=185, tick=(bo.pullCd<=0);
+      for(const z of zombies){ if(z.dead) continue; const dx=bo.x-z.x, dy=bo.y-(z.y-40), d=Math.hypot(dx,dy);
+        if(d<R && d>1){ const pull=Math.min(28, dt*(160+9000/d)); z.x+=Math.sign(dx)*Math.min(Math.abs(dx),pull);
+          if(d<52 && tick){ z.hp-=1; z.shown=3; if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.6); } } } }
+      for(const b of bats){ if(b.dead) continue; const dx=bo.x-b.x, dy=bo.y-b.y, d=Math.hypot(dx,dy);
+        if(d<R && d>1){ const pull=Math.min(26, dt*(150+8000/d)); b.x+=Math.sign(dx)*Math.min(Math.abs(dx),pull); b.y+=Math.sign(dy)*Math.min(Math.abs(dy),pull*0.7);
+          if(d<48 && tick){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_die',0.6); } } }
+      if(tick) bo.pullCd=0.22;
+      if(Math.random()<0.7){ const ang=Math.random()*6.28, rr=40+Math.random()*70; zbits.push({x:bo.x+Math.cos(ang)*rr, y:bo.y+Math.sin(ang)*rr, vx:-Math.cos(ang)*(120+Math.random()*120), vy:-Math.sin(ang)*(120+Math.random()*120), sz:1.4+Math.random()*2, life:0.3+Math.random()*0.25, t:0, c:['#9a7fd0','#7b5cff','#c8a8ff'][(Math.random()*3)|0]}); }
+      if(bo.t>1.7){ bo.dead=true; impacts.push({x:bo.x,y:bo.y,t:0}); playSfx('sfx_wportal',0.7);
+        for(const z of zombies){ if(z.dead) continue; if(Math.hypot(bo.x-z.x,bo.y-(z.y-40))<96){ z.hp-=2; z.shown=3; if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,18); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.6); } } }
+        for(let i=0;i<22;i++) zbits.push({x:bo.x,y:bo.y,vx:(Math.random()-0.5)*340,vy:(Math.random()-0.5)*340,sz:2+Math.random()*3,life:0.3+Math.random()*0.3,t:0,c:['#9a7fd0','#7b5cff','#ffffff'][(Math.random()*3)|0]}); }
+      continue;
+    }
     if(bo.homing){ let best=null,bd=1e9;
       for(const z of zombies){ if(z.dead) continue; const d=Math.hypot(z.x-bo.x,(z.y-40)-bo.y); if(d<bd){bd=d;best={x:z.x,y:z.y-40};} }
       for(const b of bats){ if(b.dead) continue; const d=Math.hypot(b.x-bo.x,b.y-bo.y); if(d<bd){bd=d;best={x:b.x,y:b.y};} }
@@ -2682,6 +2701,17 @@ function draw(){
   for (const bo of bolts){
     if (bo.dead) continue;
     const bx=bo.x-camX; if(bx<-60||bx>W+60) continue;
+    if (bo.kind==='void'){
+      const k=Math.min(1,bo.t*4), R=22*k+3*Math.sin(gt*8);
+      ctx.save();
+      const g=ctx.createRadialGradient(bx,bo.y,2,bx,bo.y,R+20); g.addColorStop(0,'rgba(15,0,26,0.96)'); g.addColorStop(0.5,'rgba(70,30,130,0.5)'); g.addColorStop(1,'rgba(123,92,255,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(bx,bo.y,R+20,0,7); ctx.fill();
+      ctx.fillStyle='#0a0414'; ctx.beginPath(); ctx.arc(bx,bo.y,R*0.62,0,7); ctx.fill();
+      ctx.strokeStyle='rgba(170,120,255,0.85)'; ctx.lineWidth=2.2;
+      for(let s=0;s<3;s++){ const a0=gt*4.5+s*2.1; ctx.beginPath(); ctx.arc(bx,bo.y,R+2+s*3,a0,a0+2.3); ctx.stroke(); }
+      ctx.restore();
+      continue;
+    }
     if (bo.kind==='prism'){
       const hue=((gt*240 + (bo.ph||0)*57)%360);
       for(let g2=2;g2>=0;g2--){ const gx2=bx-Math.sign(bo.vx)*g2*10, gy2=bo.y-Math.sign(bo.vy||0)*g2*10, ga=[0.95,0.5,0.22][g2], r=[8,6,4][g2];
