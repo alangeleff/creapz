@@ -1281,8 +1281,9 @@ function update(dt){
     }
     if (powerT<=0){ powerActive=false; stoneCharge=0; }
   }
+  const FROST=(powerActive&&equippedStone==='sapphire'), efr=FROST?0.32:1;
   for (const z of zombies){
-    z.t+=dt; const zpx=z.x;
+    z.t+=dt*efr; const zpx=z.x;
     if (z.hitCd>0) z.hitCd-=dt;
     if (z.shown>0) z.shown-=dt;
     z.hpShown += (z.hp-z.hpShown)*Math.min(1,dt*10);
@@ -1307,15 +1308,15 @@ function update(dt){
     }
     // zombie behavior + its sword strikes player
     if (z.atkT>0){
-      z.atkT-=dt; z.state='attack';
+      z.atkT-=dt*efr; z.state='attack';
       const zfi=Math.floor(z.t*FZK[z.kw].attack)%SPR[z.kw].attack.frames;
       const zwb=worldWeaponBox(SPR[z.kw].attack, zfi, z.x, z.y, z.facing);
       if (zwb && p.inv<=0 && !p.dead && overlap(zwb, pBodyBox())) hurtPlayer(z.x, z.kw==='zgen'?2:1);
     } else if (ad<KRNG[z.kw]){ z.state='attack'; z.atkT=SPR[z.kw].attack.frames/FZK[z.kw].attack; if (z.kw==='gob') playSfx('sfx_gspear',0.8,0.18); else playSfx('sfx_zswing',0.8); }
-    else if (ad<340){ z.state='walk'; z.x=clamp(z.x+z.facing*KSPD[z.kw], z.min, z.max); }
+    else if (ad<340){ z.state='walk'; z.x=clamp(z.x+z.facing*KSPD[z.kw]*efr, z.min, z.max); }
     else if (z.kw==='bd'){
       z.state='walk';
-      z.x+=z.pdir*KSPD.bd;
+      z.x+=z.pdir*KSPD.bd*efr;
       if (z.x>=z.max){ z.x=z.max; z.pdir=-1; } else if (z.x<=z.min){ z.x=z.min; z.pdir=1; }
       z.facing=z.pdir;
     }
@@ -1324,25 +1325,25 @@ function update(dt){
     if (p.inv<=0 && !p.dead && overlap(pBodyBox(), zBodyBox(z))) hurtPlayer(z.x);
   }
   for (const b of bats){
-    b.t+=dt;
+    b.t+=dt*efr;
     if (b.dead){ b.dieT+=dt; if(b.dieT<0.45&&Math.random()<0.5) batBits(b,1); continue; }
     if (b.biteCd>0) b.biteCd-=dt;
     const tx=p.x, ty=p.y-58;
     const dxp=tx-b.x, dyp=ty-b.y, dist=Math.hypot(dxp,dyp);
     if (b.state==='bite'){
-      b.bt+=dt;
+      b.bt+=dt*efr;
       const bf=b.bt*BITE_FPS;
       let lv; if (bf<8) lv=1.2; else if (bf<15) lv=5.0; else if (bf<23) lv=0.35; else lv=-2.2;
-      b.x+=b.facing*lv;
+      b.x+=b.facing*lv*efr;
       if (bf<15){ const dy3=(p.y-58)-b.y; b.y+=Math.sign(dy3)*Math.min(1.6,Math.abs(dy3)); }
       if (b.bt>=SPR.bat.bite.frames/BITE_FPS){ b.state='idle'; b.biteCd=0.7; }
     } else if (dist<BAT_AGGRO && !p.dead){
-      b.x+=Math.sign(dxp)*Math.min(BAT_CHASE,Math.abs(dxp));
-      b.y+=Math.sign(dyp)*Math.min(1.5,Math.abs(dyp));
+      b.x+=Math.sign(dxp)*Math.min(BAT_CHASE,Math.abs(dxp))*efr;
+      b.y+=Math.sign(dyp)*Math.min(1.5,Math.abs(dyp))*efr;
       if (Math.abs(dxp)>6) b.facing=Math.sign(dxp);
       if (dist<185 && b.biteCd<=0){ b.state='bite'; b.bt=0; if (Math.abs(dxp)>6) b.facing=Math.sign(dxp); playSfx('sfx_rwhoosh',0.8); }
     } else {
-      b.x+=b.dir*BAT_PATROL;
+      b.x+=b.dir*BAT_PATROL*efr;
       if (b.x>=b.max){ b.dir=-1; } else if (b.x<=b.min){ b.dir=1; }
       b.facing=b.dir;
       b.y+=(b.y0-b.y)*0.03;
@@ -1398,7 +1399,7 @@ function update(dt){
   }
   chkFx=chkFx.filter(fx=>fx.t<1.1);
   bolts=bolts.filter(bo=>!bo.dead||bo.t<1.2);
-  updateHazards(dt);
+  updateHazards(dt*efr);
   updateZbits(dt);
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
   const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
@@ -2270,6 +2271,14 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       for(let i=0;i<3;i++){ if(Math.random()<0.85){ ctx.lineWidth=1.4+Math.random(); ctx.globalAlpha=0.6+Math.random()*0.4; let ax=sx+(Math.random()-0.5)*30, ay=p.y-92+Math.random()*72; ctx.beginPath(); ctx.moveTo(ax,ay); for(let j=0;j<4;j++){ ax+=(Math.random()-0.5)*26; ay+=14; ctx.lineTo(ax,ay);} ctx.stroke(); } }
       ctx.globalAlpha=1; ctx.restore();
       if(Math.random()<0.55) zbits.push({x:p.x+(Math.random()-0.5)*36, y:p.y-50+(Math.random()-0.5)*64, vx:(Math.random()-0.5)*130, vy:(Math.random()-0.5)*130, sz:1+Math.random()*1.4, life:0.18+Math.random()*0.2, t:0, c:'#fff2a0'});
+    }
+    else if(equippedStone==='sapphire'){
+      // Time Frost: icy world tint + frost aura + drifting crystals
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      ctx.fillStyle='rgba(90,170,255,0.06)'; ctx.fillRect(0,camY,W,H);
+      const g=ctx.createRadialGradient(sx,cy,6,sx,cy,72); g.addColorStop(0,'rgba(130,200,255,0.32)'); g.addColorStop(0.6,'rgba(77,140,255,0.14)'); g.addColorStop(1,'rgba(77,140,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy,74,0,7); ctx.fill();
+      ctx.restore();
+      if(Math.random()<0.5) zbits.push({x:p.x+(Math.random()-0.5)*64, y:p.y-36-Math.random()*44, vx:(Math.random()-0.5)*28, vy:-8-Math.random()*26, sz:1.2+Math.random()*1.8, life:0.6+Math.random()*0.5, t:0, c:['#bfe4ff','#7fc8ff','#ffffff'][(Math.random()*3)|0]});
     }
     else {
       const pr=48+6*Math.sin(gt*6); const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.7,col+'44'); g.addColorStop(1,col+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
