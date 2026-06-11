@@ -2782,7 +2782,7 @@ function drawTitle(){
     const pu=0.5+0.5*Math.sin(gt*3.5);
     ctx.fillStyle='rgba(234,230,255,'+(0.35+0.6*pu).toFixed(2)+')';
     ctx.font='600 19px sans-serif';
-    ctx.fillText('PRESS ANY BUTTON', W/2, 268);
+    ctx.fillText('PRESS ANY BUTTON', W/2, 312);
   } else {
     const items=[['Play','play'],['Options','options'],['Soul Box','soulbox']];
     const bw2=150, bh2=44, gap2=16, x0=W/2-(items.length*bw2+(items.length-1)*gap2)/2;
