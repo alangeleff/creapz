@@ -555,7 +555,7 @@ let slotSel=0, slotConfirm=-1, confSel=1, selMode='new', slotRects=[], delRects=
 let TIMG=null;
 const TITLEBG=new Image(); TITLEBG.src='./assets/title_keyart.png?v='+ASSET_VER;
 const FLAME_FX=new Image(); FLAME_FX.src='./assets/fx_flame.png?v='+ASSET_VER; const FLAME_N=6;
-const RUBY_ORB=new Image(); RUBY_ORB.src='./assets/fx_ruby_orb.png?v='+ASSET_VER;
+const RUBY_ORB=new Image(); RUBY_ORB.src='./assets/fx_ruby_orb_v2.png?v='+ASSET_VER;
 let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicReady={}, musicKey=null, musicReq=0;
 function audioInit(){
   if (AC) return;
@@ -2276,7 +2276,7 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
   // SUSTAINED — per-stone signature FX while active (no generic ring)
   if(powerActive && transformT<=0){
     if(equippedStone==='ruby'){
-      const cx=sx, cy=p.y-46, Rb=58, ORB=4, haveOrb=(RUBY_ORB.complete&&RUBY_ORB.naturalWidth);
+      const cx=sx, cy=p.y-50, Rb=78, ORB=4, haveOrb=(RUBY_ORB.complete&&RUBY_ORB.naturalWidth);
       const flick=0.72+0.28*Math.sin(gt*12)+0.12*Math.sin(gt*27);
       // back orbs (upper half = behind) — small, dim flame glow + tiny orb
       for(let o=0;o<ORB;o++){ const ph=o/ORB*6.283, th=gt*2.2+ph; if(Math.sin(th)>=0) continue;
@@ -2284,7 +2284,7 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
         ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,r); g.addColorStop(0,'hsla('+hue+',100%,70%,0.45)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
         if(haveOrb){ ctx.globalAlpha=0.6; ctx.drawImage(RUBY_ORB, ex-7, ey-7, 14, 14); ctx.globalAlpha=1; } }
       // transparent glass barrier — the character shows through
-      if(haveOrb){ ctx.globalAlpha=0.42; ctx.drawImage(RUBY_ORB, cx-Rb, cy-Rb, Rb*2, Rb*2); ctx.globalAlpha=1; }
+      if(haveOrb){ ctx.globalAlpha=0.46; ctx.drawImage(RUBY_ORB, cx-Rb, cy-Rb, Rb*2, Rb*2); ctx.globalAlpha=1; }
       // fiery glowing rim along the border (flickering)
       ctx.save(); ctx.globalCompositeOperation='lighter';
       const bg2=ctx.createRadialGradient(cx,cy,Rb*0.72,cx,cy,Rb+15); bg2.addColorStop(0,'rgba(255,80,20,0)'); bg2.addColorStop(0.8,'rgba(255,90,20,'+(0.14*flick).toFixed(2)+')'); bg2.addColorStop(0.93,'hsla('+(18+12*Math.sin(gt*5))+',100%,55%,'+(0.55*flick).toFixed(2)+')'); bg2.addColorStop(1,'rgba(255,170,60,0)');
