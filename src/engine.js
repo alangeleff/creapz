@@ -2735,15 +2735,19 @@ function drawPlayerLayer(){
       if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
       if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
       if(_chaos){ _skip=true; const cf=curFrame(), gl=chaosGlitchT>0, jx=gl?(Math.random()-0.5)*9:0;
-        // base: negative-inverted sprite
-        ctx.save(); ctx.filter='invert(1)'; drawCharSprite(chosen, p.state, cf, sx+jx, p.y, p.facing, 1, 0); ctx.restore();
-        // sweeping color ripple band (dark red -> purple -> grey)
-        { const spd=0.85, bandPhase=(gt*spd)%1, bodyTop=p.y-94, bodyH=94, bandY=bodyTop+bandPhase*bodyH,
-            ci=Math.floor(gt*spd)%3, filt=['invert(1) sepia(1) saturate(7) hue-rotate(-22deg) brightness(0.7)','invert(1) sepia(1) saturate(6) hue-rotate(248deg) brightness(0.85)','invert(1) saturate(0) brightness(1.15)'][ci];
-          ctx.save(); ctx.beginPath(); ctx.rect(sx-46+jx, bandY, 92, 26); ctx.clip(); ctx.filter=filt; ctx.globalAlpha=0.9; drawCharSprite(chosen,p.state,cf,sx+jx,p.y,p.facing,1,0); ctx.restore(); }
-        // blast glitch: sliced, offset, hue-shifted copies
-        if(gl){ for(let gI=0;gI<3;gI++){ const sy=p.y-92+Math.random()*86, sh=5+Math.random()*13, dx=(Math.random()-0.5)*16;
-          ctx.save(); ctx.beginPath(); ctx.rect(sx-46, sy, 92, sh); ctx.clip(); ctx.filter='invert(1) saturate(3) hue-rotate('+((Math.random()*300)|0)+'deg)'; ctx.globalAlpha=0.85; drawCharSprite(chosen,p.state,cf,sx+dx,p.y,p.facing,1,0); ctx.restore(); } } }
+        const spd=0.8, bandY=(p.y-94)+((gt*spd)%1)*100, bandH=24;
+        // base inverted sprite with the ripple band CUT OUT (distorted slices replace those rows)
+        ctx.save(); ctx.beginPath(); ctx.rect(-9999,-9999,19998,19998); ctx.rect(sx-56+jx, bandY, 112, bandH); ctx.clip('evenodd'); ctx.filter='invert(1)'; drawCharSprite(chosen,p.state,cf,sx+jx,p.y,p.facing,1,0); ctx.restore();
+        // glitchy distortion ripple: thin slices shoved + stretched sideways along the wave (warps the body)
+        const NS=7; for(let k=0;k<NS;k++){ const yy=bandY+k*(bandH/NS), hh=bandH/NS+1, env=Math.sin((k+0.5)/NS*Math.PI),
+            dxs=(Math.sin(gt*24+k*1.9)*12+(Math.random()-0.5)*8)*env, sxk=1+(Math.random()<0.32?Math.random()*0.7:0);
+          ctx.save(); ctx.beginPath(); ctx.rect(sx-58, yy, 116, hh); ctx.clip();
+          ctx.translate(sx+jx,0); ctx.scale(sxk,1); ctx.translate(-(sx+jx),0);
+          ctx.filter=Math.random()<0.3?'invert(1) brightness(1.7)':'invert(1)';
+          drawCharSprite(chosen,p.state,cf,sx+jx+dxs,p.y,p.facing,1,0); ctx.restore(); }
+        // blast glitch burst on each launch
+        if(gl){ for(let gI=0;gI<3;gI++){ const sy=p.y-92+Math.random()*86, sh=5+Math.random()*13, dx=(Math.random()-0.5)*18;
+          ctx.save(); ctx.beginPath(); ctx.rect(sx-56, sy, 112, sh); ctx.clip(); ctx.filter='invert(1) saturate(3) hue-rotate('+((Math.random()*300)|0)+'deg)'; ctx.globalAlpha=0.85; drawCharSprite(chosen,p.state,cf,sx+dx,p.y,p.facing,1,0); ctx.restore(); } } }
       if(!_skip) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0);
       ctx.filter='none'; ctx.restore();
     }
