@@ -73,8 +73,8 @@ body{background:#08060f;color:#e8e6f5;font-family:Inter,system-ui,sans-serif;min
     <button data-t="pos" data-v="bot">Lower</button>
   </div>
   <div class="grp"><span class="lbl">MENU STATE</span>
-    <button data-t="mini" data-v="off" class="on">Logo hides</button>
-    <button data-t="mini" data-v="on">Mini corner</button>
+    <button data-t="mini" data-v="off">Logo hides</button>
+    <button data-t="mini" data-v="on" class="on">Mini corner</button>
   </div>
   <div class="grp"><button id="reset">↺ Replay intro</button></div>
 </div>
@@ -85,7 +85,7 @@ body{background:#08060f;color:#e8e6f5;font-family:Inter,system-ui,sans-serif;min
   <div class="topscrim"></div>
   <div class="scrim"></div>
   <div class="brand">REALM OF cReapZ</div>
-  <div class="logo"><div class="t">cReapZ</div><div class="sub">THE REAPING BEGINS</div></div>
+  <div class="logo"><div class="t">cReapZ</div><div class="sub">The Myth of Ascension</div></div>
   <div class="miniLogo">cReapZ</div>
   <div class="press">TAP TO BEGIN</div>
   <div class="menu">
@@ -98,7 +98,7 @@ body{background:#08060f;color:#e8e6f5;font-family:Inter,system-ui,sans-serif;min
 
 <script>
 var sc=document.getElementById('screen');
-sc.className='screen vivid';   // default: vivid, logo high, attract state
+sc.className='screen vivid mini';   // locked: vivid, logo High, Mini-corner after press
 sc.addEventListener('click',function(e){ if(e.target.closest('.menu button')) return; sc.classList.add('menuon'); });
 document.getElementById('reset').onclick=function(e){ e.stopPropagation(); sc.classList.remove('menuon'); };
 document.querySelectorAll('.bar button[data-t]').forEach(function(b){ b.onclick=function(e){ e.stopPropagation();
