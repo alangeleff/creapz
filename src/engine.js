@@ -258,8 +258,8 @@ addEventListener('keydown', e => {
       return;
     }
     if (!menuShown){ menuShown=true; menuSel=0; playSfx('sfx_mtog'); return; }
-    if (e.code==='ArrowLeft'||e.code==='ArrowRight'){ menuSel=(menuSel+(e.code==='ArrowRight'?1:3))%4; playSfx('sfx_mtog'); }
-    else if (e.code==='Enter'||e.code==='Space'){ titleMenuAction(['play','crypt','options','soulbox'][menuSel]); }
+    if (e.code==='ArrowLeft'||e.code==='ArrowRight'){ menuSel=(menuSel+(e.code==='ArrowRight'?1:2))%3; playSfx('sfx_mtog'); }
+    else if (e.code==='Enter'||e.code==='Space'){ titleMenuAction(['play','options','soulbox'][menuSel]); }
     return;
   }
   if (['ArrowLeft','ArrowRight','ArrowUp','Space',' '].includes(e.key)||e.code==='Space') e.preventDefault();
@@ -2782,9 +2782,9 @@ function drawTitle(){
     const pu=0.5+0.5*Math.sin(gt*3.5);
     ctx.fillStyle='rgba(234,230,255,'+(0.35+0.6*pu).toFixed(2)+')';
     ctx.font='600 19px sans-serif';
-    ctx.fillText('PRESS ANY BUTTON', W/2, 404);
+    ctx.fillText('PRESS ANY BUTTON', W/2, 268);
   } else {
-    const items=[['Play','play'],['Crypt','crypt'],['Options','options'],['Soul Box','soulbox']];
+    const items=[['Play','play'],['Options','options'],['Soul Box','soulbox']];
     const bw2=150, bh2=44, gap2=16, x0=W/2-(items.length*bw2+(items.length-1)*gap2)/2;
     items.forEach((it,k)=>{
       const bx2=x0+k*(bw2+gap2), by2=378;
