@@ -1156,7 +1156,12 @@ function update(dt){
     const fireAt = chosen==='dingbat' ? 2 : 3;   // dingbat: bolt leaves on the open-mouth frame (11f @40fps)
     if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
-      if (isDing(chosen)){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
+      if (powerActive && equippedStone==='fluorite'){
+        const dir=p.facing, oy=p.y-58;
+        for(let k=-1;k<=1;k++){ bolts.push({x:p.x+dir*36, y:oy, vx:dir*560, vy:k*160, t:0, dead:false, kind:'prism', homing:true, ph:Math.random()*6.28}); }
+        playSfx('sfx_bolt'); playSfx('sfx_bolt',0.45,0.07);
+      }
+      else if (isDing(chosen)){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
       else { bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'}); playSfx('sfx_bolt'); }
     }
   }
@@ -1359,7 +1364,14 @@ function update(dt){
   }
   for (const bo of bolts){
     if (bo.dead) continue;
-    bo.t+=dt; bo.x+=bo.vx*dt;
+    bo.t+=dt;
+    if(bo.homing){ let best=null,bd=1e9;
+      for(const z of zombies){ if(z.dead) continue; const d=Math.hypot(z.x-bo.x,(z.y-40)-bo.y); if(d<bd){bd=d;best={x:z.x,y:z.y-40};} }
+      for(const b of bats){ if(b.dead) continue; const d=Math.hypot(b.x-bo.x,b.y-bo.y); if(d<bd){bd=d;best={x:b.x,y:b.y};} }
+      if(best && bd<560){ const want=Math.atan2(best.y-bo.y,best.x-bo.x), cur=Math.atan2(bo.vy||0,bo.vx);
+        let dd=((want-cur+Math.PI*3)%(Math.PI*2))-Math.PI; dd=Math.max(-0.13,Math.min(0.13,dd));
+        const sp=Math.hypot(bo.vx,bo.vy||0)||560, na=cur+dd; bo.vx=Math.cos(na)*sp; bo.vy=Math.sin(na)*sp; } }
+    bo.x+=bo.vx*dt; bo.y+=(bo.vy||0)*dt;
     if (bo.t>1.1){ bo.dead=true; continue; }
     let hit=false;
     // projectiles pass through terrain/platforms/decor — only enemies stop them (Alan 2026-06-09)
@@ -2670,6 +2682,13 @@ function draw(){
   for (const bo of bolts){
     if (bo.dead) continue;
     const bx=bo.x-camX; if(bx<-60||bx>W+60) continue;
+    if (bo.kind==='prism'){
+      const hue=((gt*240 + (bo.ph||0)*57)%360);
+      for(let g2=2;g2>=0;g2--){ const gx2=bx-Math.sign(bo.vx)*g2*10, gy2=bo.y-Math.sign(bo.vy||0)*g2*10, ga=[0.95,0.5,0.22][g2], r=[8,6,4][g2];
+        ctx.fillStyle='hsla('+((hue+g2*30)%360)+',100%,'+(70-g2*6)+'%,'+ga+')'; ctx.beginPath(); ctx.arc(gx2,gy2,r,0,7); ctx.fill(); }
+      ctx.fillStyle='rgba(255,255,255,'+(0.7+0.3*Math.sin(gt*40)).toFixed(2)+')'; ctx.beginPath(); ctx.arc(bx,bo.y,2.4,0,7); ctx.fill();
+      continue;
+    }
     if (bo.kind==='wave'){
       // soundwave: stacked crescent rings rippling forward from the mouth
       const dir=Math.sign(bo.vx), grow=Math.min(1, bo.t*1.8);
