@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>cReapZ — Title Screen Preview</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Frijole&family=Creepster&family=Inter:wght@600;700;800&display=swap');
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:#08060f;color:#e8e6f5;font-family:Inter,system-ui,sans-serif;min-height:100dvh;
+  padding:max(12px,env(safe-area-inset-top)) 12px max(20px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center}
+.ttl{font-family:Frijole,serif;font-size:18px;color:#e7d3a0;margin:2px 0 2px;text-align:center}
+.hint{font:600 11px Inter;color:#9a8fc0;text-align:center;max-width:560px;margin-bottom:10px;line-height:1.5}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:6px}
+.bar .grp{display:flex;gap:6px;background:#140f28;border:1px solid #2a2150;border-radius:10px;padding:5px}
+.bar button{font:700 11px Inter;padding:7px 11px;border-radius:7px;border:1px solid #33264f;background:#1d1640;color:#e8e6f5;cursor:pointer}
+.bar button.on{border-color:#c8fb50;color:#c8fb50;background:#1f2616}
+.lbl{font:700 9px Inter;letter-spacing:1px;color:#6f6790;align-self:center;padding:0 4px}
+
+/* the title frame at the game's real 960:440 viewport ratio */
+.screen{width:100%;max-width:760px;aspect-ratio:960/440;position:relative;border-radius:14px;overflow:hidden;
+  box-shadow:0 22px 60px rgba(0,0,0,.6);border:1px solid #2a2150;background:#000}
+.art{position:absolute;inset:0;background-image:url('./assets/title_keyart.png?v=t1');background-position:center 42%;background-repeat:no-repeat;background-size:cover;transition:filter .2s}
+.screen.fit .art{background-size:contain;background-color:#06040c}
+/* treatments */
+.screen.vivid .art{filter:saturate(1.22) brightness(1.09) contrast(1.05)}
+.screen.spot .art{filter:saturate(1.12) brightness(1.02)}
+.spotlight{position:absolute;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen;
+  background:radial-gradient(46% 60% at 50% 50%, rgba(255,240,210,.28), rgba(255,200,150,.08) 45%, transparent 70%)}
+.screen.spot .spotlight{opacity:1}
+
+/* menu overlay */
+.scrim{position:absolute;left:0;right:0;bottom:0;height:48%;pointer-events:none;
+  background:linear-gradient(to top, rgba(5,3,12,.9) 0%, rgba(5,3,12,.55) 38%, transparent 100%)}
+.topscrim{position:absolute;left:0;right:0;top:0;height:24%;pointer-events:none;
+  background:linear-gradient(to bottom, rgba(5,3,12,.5), transparent)}
+.brand{position:absolute;top:5%;left:0;right:0;text-align:center;font:700 clamp(8px,1.5vw,12px) Inter;letter-spacing:4px;color:#d8b25a;opacity:.92;text-shadow:0 2px 6px #000;z-index:3}
+.logo{position:absolute;left:0;right:0;bottom:30%;text-align:center;z-index:3}
+.logo .t{font-family:Frijole,Creepster,serif;font-size:clamp(30px,8.4vw,68px);line-height:.9;color:#c8fb50;
+  text-shadow:0 0 18px rgba(200,251,80,.45), 0 3px 0 #16102e, 0 5px 16px rgba(0,0,0,.8)}
+.menu{position:absolute;left:0;right:0;bottom:6%;display:flex;gap:clamp(6px,1.4vw,16px);justify-content:center;z-index:3;padding:0 12px}
+.menu button{font:700 clamp(10px,1.7vw,15px) Inter;padding:clamp(7px,1.3vw,11px) clamp(10px,2.2vw,22px);border-radius:9px;cursor:pointer;
+  background:rgba(20,16,40,.82);border:1.5px solid rgba(155,140,255,.5);color:#e8e6f5;backdrop-filter:blur(2px)}
+.menu button.play{border-color:#c8fb50;color:#c8fb50;background:rgba(31,38,22,.82)}
+</style>
+</head>
+<body>
+<div class="ttl">cReapZ — Title Screen Preview</div>
+<div class="hint">Your key art as the FULL title screen, at the game's real proportions, with the menu overlaid. Toggle the color treatment and framing to compare.</div>
+<div class="bar">
+  <div class="grp"><span class="lbl">COLOR</span>
+    <button data-t="treat" data-v="orig" class="on">Original</button>
+    <button data-t="treat" data-v="vivid">Vivid</button>
+    <button data-t="treat" data-v="spot">Center Spotlight</button>
+  </div>
+  <div class="grp"><span class="lbl">FRAME</span>
+    <button data-t="frame" data-v="fill" class="on">Fill (crop)</button>
+    <button data-t="frame" data-v="fit">Fit (full art)</button>
+  </div>
+  <div class="grp"><span class="lbl">LOGO</span>
+    <button data-t="logo" data-v="on" class="on">Show</button>
+    <button data-t="logo" data-v="off">Hide</button>
+  </div>
+</div>
+
+<div class="screen" id="screen">
+  <div class="art"></div>
+  <div class="spotlight"></div>
+  <div class="topscrim"></div>
+  <div class="scrim"></div>
+  <div class="brand">REALM OF cReapZ</div>
+  <div class="logo" id="logo"><div class="t">cReapZ</div></div>
+  <div class="menu">
+    <button class="play">Play</button>
+    <button>Crypt</button>
+    <button>Options</button>
+    <button>Soul Box</button>
+  </div>
+</div>
+
+<script>
+var sc=document.getElementById('screen');
+document.querySelectorAll('.bar button').forEach(function(b){ b.onclick=function(){
+  var t=b.dataset.t, v=b.dataset.v;
+  document.querySelectorAll('.bar button[data-t="'+t+'"]').forEach(function(x){x.classList.toggle('on',x===b);});
+  if(t==='treat'){ sc.classList.remove('vivid','spot'); if(v==='vivid')sc.classList.add('vivid'); if(v==='spot')sc.classList.add('spot'); }
+  if(t==='frame'){ sc.classList.toggle('fit', v==='fit'); }
+  if(t==='logo'){ document.getElementById('logo').style.display = (v==='off')?'none':'block'; }
+};});
+</script>
+</body>
+</html>
