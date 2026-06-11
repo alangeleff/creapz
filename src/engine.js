@@ -40,8 +40,9 @@ function poweredImg(){ const ck=chosen; if(!POWER_IMGS[ck]){ const im=new Image(
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
 const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidian','fluorite','chaos','none'];
 const PMETER=20, PDUR=7;
-let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, emHealAcc=0, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
-function activatePower(){ powerActive=true; powerT=PDUR; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
+const STONE_HROT={ruby:-38,topaz:12,emerald:100,sapphire:180,amethyst:235,fluorite:130,obsidian:215,chaos:270,holy:12,master:-10};
+let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, emHealAcc=0, powerDur=7, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
+function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_shriek',0.5); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
 function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Classic','ding_swamp':'Swamp','ding_azure':'Azure','ding_blood':'Blood','ding_magic':'Magic','ding_mystic':'Mystic','ding_wisp':'Wisp','ding_news':'Newspaper','ding_noir':'Noir'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
@@ -2234,7 +2235,7 @@ function drawStoneMeter(){ if(!equippedStone) return;
   if(img&&img.naturalWidth){ const ih=15, iw=img.naturalWidth*ih/img.naturalHeight; ctx.drawImage(img, x+11-iw/2, y+h/2-ih/2, iw, ih); }
   ctx.fillStyle='rgba(0,0,0,.5)'; roundRect(bx,y+3,bw,h-6,5); ctx.fill();
   const col=STONE_DEFS[equippedStone]||'#c8fb50';
-  const frac = powerActive ? Math.max(0,powerT/PDUR) : stoneCharge/PMETER;
+  const frac = powerActive ? Math.max(0,powerT/powerDur) : stoneCharge/PMETER;
   ctx.save(); roundRect(bx,y+3,bw,h-6,5); ctx.clip();
   ctx.fillStyle=col; ctx.fillRect(bx,y+3,Math.max(0,bw*frac),h-6);
   if(!powerActive && frac>=1){ ctx.fillStyle='rgba(255,255,255,'+(0.25+0.3*Math.sin(gt*8)).toFixed(2)+')'; ctx.fillRect(bx,y+3,bw,h-6); }
@@ -2259,10 +2260,12 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
     const gr=ctx.createRadialGradient(sx,cy,2,sx,cy,90*(1-k)+22);
     gr.addColorStop(0,col); gr.addColorStop(0.5,col+'66'); gr.addColorStop(1,col+'00');
     ctx.globalAlpha=0.45+0.5*(1-k); ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(sx,cy,90*(1-k)+22,0,7); ctx.fill(); ctx.globalAlpha=1;
-    for(let i=0;i<12;i++){ const a=i*0.5236+gt*4, R=24+k*150; ctx.globalAlpha=0.6*(1-k)+0.25; ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(sx+Math.cos(a)*R, cy+Math.sin(a)*R); ctx.lineTo(sx+Math.cos(a)*(R-24), cy+Math.sin(a)*(R-24)); ctx.stroke(); }
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<16;i++){ const ph=((gt*1.4+i*0.0625)%1), rr=(1-ph)*(120*(1-k)+50)+8, ang=i*2.39996+gt*1.1, px=sx+Math.cos(ang)*rr, py=cy+Math.sin(ang)*rr*0.92, pr=Math.max(2,4+3*Math.sin(gt*9+i));
+      ctx.globalAlpha=(0.12+0.5*ph)*(0.45+0.55*(1-k)); const pg=ctx.createRadialGradient(px,py,0.4,px,py,pr); pg.addColorStop(0,'rgba(255,250,235,0.95)'); pg.addColorStop(0.45,col); pg.addColorStop(1,col+'00'); ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(px,py,pr,0,7); ctx.fill(); }
+    ctx.globalAlpha=1; ctx.restore();
     ctx.globalAlpha=1;
     if(k<0.55 && Math.random()<0.7){ ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.globalAlpha=0.85; let ax=sx+(Math.random()-0.5)*64, ay=cy-46; ctx.beginPath(); ctx.moveTo(ax,ay); for(let j=0;j<3;j++){ ax+=(Math.random()-0.5)*30; ay+=28; ctx.lineTo(ax,ay);} ctx.stroke(); ctx.globalAlpha=1; }
-    drawPoweredFrame(sx);
     if(equippedStone){ const simg=STONE_IMGS[equippedStone]; if(simg&&simg.naturalWidth){ const kk=1-k; const ry=cy-12-kk*112, ssz=34+kk*36;
       const sg=ctx.createRadialGradient(sx,ry,2,sx,ry,ssz); sg.addColorStop(0,col); sg.addColorStop(0.5,col+'88'); sg.addColorStop(1,col+'00'); ctx.globalAlpha=0.85; ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sx,ry,ssz,0,7); ctx.fill(); ctx.globalAlpha=1;
       const sw=ssz*simg.naturalWidth/simg.naturalHeight; ctx.imageSmoothingEnabled=true; ctx.drawImage(simg, sx-sw/2, ry-ssz/2, sw, ssz); } }
@@ -2271,7 +2274,6 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
   if(powerBoom>0){ const tp=1-powerBoom/0.42, R=tp*230;
     ctx.globalAlpha=Math.max(0,1-tp); ctx.strokeStyle='#ffffff'; ctx.lineWidth=9*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R*0.62,0,7); ctx.stroke();
     ctx.strokeStyle=col; ctx.lineWidth=13*(1-tp); ctx.beginPath(); ctx.arc(sx,cy,R,0,7); ctx.stroke(); ctx.globalAlpha=1;
-    if(tp<0.45) drawPoweredFrame(sx);
   }
   // SUSTAINED — per-stone signature FX while active (no generic ring)
   if(powerActive && transformT<=0){
@@ -2611,7 +2613,11 @@ function drawPlayerLayer(){
       drawCharSprite(chosen,'dive',0,sx,p.y,p.facing,1,0);
       ctx.restore();
     }
-    else if ((powerActive && transformT>0)) {} 
+    else if (powerActive && transformT>0){ const k=transformT/0.95, fast=Math.floor(gt*24)%2;
+      ctx.save();
+      if(k<0.32 && fast){ ctx.filter='grayscale(1) sepia(1) saturate('+(3+(0.32-k)/0.32*5).toFixed(1)+') hue-rotate('+(STONE_HROT[equippedStone]||0)+'deg) brightness(1.2)'; }
+      else { ctx.filter = fast ? 'grayscale(1) invert(1) brightness(1.15)' : 'grayscale(1) brightness(1.7) contrast(1.25)'; }
+      drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, 0); ctx.filter='none'; ctx.restore(); } 
     else if (!(p.invHurt>0 && !powerActive && Math.floor(gt*16)%2===0)){ const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0); if(_spec){ ctx.save(); ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); } drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0); if(_spec) ctx.restore(); }
     if (p.muzzleT>0){
       const k=1-p.muzzleT/0.14, hx=sx+p.facing*42, hy=p.y-56;
