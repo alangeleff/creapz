@@ -35,6 +35,10 @@ const MEGA_LOOT_IMG={}, MEGA_LOOT_COL={};
 (function(){ const ig=new Image(); ig.src='./assets/mega_siphon.png?v='+ASSET_VER; MEGA_LOOT_IMG['mega_greed']=ig; MEGA_LOOT_COL['mega_greed']='#5fd8ff'; const id2=new Image(); id2.src='./assets/mega_discord.png?v='+ASSET_VER; MEGA_LOOT_IMG['mega_discord']=id2; MEGA_LOOT_COL['mega_discord']='#ffae57'; })();
 const CREAPER_POWER_IMG=new Image(); CREAPER_POWER_IMG.src='./assets/creaper_power.png?v='+ASSET_VER;
 const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_power.png?v='+ASSET_VER;
+const CREAPER_PRAY_IMG=new Image(); CREAPER_PRAY_IMG.src='./assets/creaper_pray.png?v='+ASSET_VER;
+const DINGBAT_PRAY_IMG=new Image(); DINGBAT_PRAY_IMG.src='./assets/dingbat_pray.png?v='+ASSET_VER;
+function prayImg(){ const im=isDing(chosen)?DINGBAT_PRAY_IMG:CREAPER_PRAY_IMG; return (im&&im.complete&&im.naturalWidth)?im:null; }
+function drawPrayFrame(sx,yy,fc){ const pimg=prayImg(); if(!pimg) return; const hh=isDing(chosen)?122:163, ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, yy-hh+16, ww, hh); ctx.restore(); }
 const POWER_IMGS={};
 function poweredImg(){ const ck=chosen; if(!POWER_IMGS[ck]){ const im=new Image(); im._ok=null; im.onload=()=>{im._ok=true;}; im.onerror=()=>{im._ok=false;}; im.src='./assets/power_'+ck+'.png?v='+ASSET_VER; POWER_IMGS[ck]=im; } const sk=POWER_IMGS[ck]; if(sk && sk._ok && sk.naturalWidth) return sk; return isDing(ck)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; }
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
@@ -2764,8 +2768,10 @@ function drawPlayerLayer(){
       if(_spec){ ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); }
       if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
       if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
-      if(_chaos){ _skip=true; const cf=curFrame(), gl=chaosGlitchT>0, jx=gl?(Math.random()-0.5)*9:0;
-        const spd=0.8, bandY=(p.y-94)+((gt*spd)%1)*100, bandH=24;
+      if(_chaos){ _skip=true; const cf=curFrame();
+        if(chaosSpawnN>0 && prayImg()){ const fast=Math.floor(gt*24)%2; ctx.save(); ctx.filter= fast ? 'grayscale(1) invert(1) brightness(1.15)' : 'grayscale(1) brightness(1.7) contrast(1.25)'; drawPrayFrame(sx,p.y,p.facing); ctx.filter='none'; ctx.restore(); }
+        else {
+        const gl=chaosGlitchT>0, jx=gl?(Math.random()-0.5)*9:0, spd=0.8, bandY=(p.y-94)+((gt*spd)%1)*100, bandH=24;
         // base inverted sprite with the ripple band CUT OUT (distorted slices replace those rows)
         ctx.save(); ctx.beginPath(); ctx.rect(-9999,-9999,19998,19998); ctx.rect(sx-56+jx, bandY, 112, bandH); ctx.clip('evenodd'); ctx.filter='invert(1)'; drawCharSprite(chosen,p.state,cf,sx+jx,p.y,p.facing,1,0); ctx.restore();
         // glitchy distortion ripple: thin slices shoved + stretched sideways along the wave (warps the body)
@@ -2777,7 +2783,7 @@ function drawPlayerLayer(){
           drawCharSprite(chosen,p.state,cf,sx+jx+dxs,p.y,p.facing,1,0); ctx.restore(); }
         // blast glitch burst on each launch
         if(gl){ for(let gI=0;gI<3;gI++){ const sy=p.y-92+Math.random()*86, sh=5+Math.random()*13, dx=(Math.random()-0.5)*18;
-          ctx.save(); ctx.beginPath(); ctx.rect(sx-56, sy, 112, sh); ctx.clip(); ctx.filter='invert(1) saturate(3) hue-rotate('+((Math.random()*300)|0)+'deg)'; ctx.globalAlpha=0.85; drawCharSprite(chosen,p.state,cf,sx+dx,p.y,p.facing,1,0); ctx.restore(); } } }
+          ctx.save(); ctx.beginPath(); ctx.rect(sx-56, sy, 112, sh); ctx.clip(); ctx.filter='invert(1) saturate(3) hue-rotate('+((Math.random()*300)|0)+'deg)'; ctx.globalAlpha=0.85; drawCharSprite(chosen,p.state,cf,sx+dx,p.y,p.facing,1,0); ctx.restore(); } } } }
       if(!_skip) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0);
       ctx.filter='none'; ctx.restore();
     }
