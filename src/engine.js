@@ -1071,7 +1071,7 @@ function update(dt){
   if (powerActive && transformT>0 && !p.dead){
     transformT-=dt; powerPulse+=dt; p.vx=0; p.vy=0; p.onGround=false; p.y-=16*dt; p.inv=Math.max(p.inv,0.5);
     if(p.state!=='jump'){ p.state='jump'; p.clock=0; } p.clock+=dt;
-    if(transformT<=0){ powerBoom=0.42; playSfx('sfx_wportal_rev2',0.55); playSfx('sfx_meleehit',0.7); }
+    if(transformT<=0){ powerBoom=0.42; playSfx('sfx_wportal_rev',0.55); playSfx('sfx_meleehit',0.7); }
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38)); const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62)); camY+=(_cty-camY)*Math.min(1,dt*7);
     return;
   }
