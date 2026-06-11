@@ -555,6 +555,7 @@ let slotSel=0, slotConfirm=-1, confSel=1, selMode='new', slotRects=[], delRects=
 let TIMG=null;
 const TITLEBG=new Image(); TITLEBG.src='./assets/title_keyart.png?v='+ASSET_VER;
 const FLAME_FX=new Image(); FLAME_FX.src='./assets/fx_flame.png?v='+ASSET_VER; const FLAME_N=6;
+const RUBY_ORB=new Image(); RUBY_ORB.src='./assets/fx_ruby_orb.png?v='+ASSET_VER;
 let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicReady={}, musicKey=null, musicReq=0;
 function audioInit(){
   if (AC) return;
@@ -2275,33 +2276,26 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
   // SUSTAINED — per-stone signature FX while active (no generic ring)
   if(powerActive && transformT<=0){
     if(equippedStone==='ruby'){
-      const cx=sx, cy=p.y-46, Rb=56, ORB=4;
+      const cx=sx, cy=p.y-46, Rb=58, ORB=4, haveOrb=(RUBY_ORB.complete&&RUBY_ORB.naturalWidth);
+      const flick=0.72+0.28*Math.sin(gt*12)+0.12*Math.sin(gt*27);
+      // back orbs (upper half = behind) — small, dim flame glow + tiny orb
+      for(let o=0;o<ORB;o++){ const ph=o/ORB*6.283, th=gt*2.2+ph; if(Math.sin(th)>=0) continue;
+        const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(5,12+4*Math.sin(gt*10+ph)), hue=14+30*(0.5+0.5*Math.sin(gt*6+ph));
+        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,r); g.addColorStop(0,'hsla('+hue+',100%,70%,0.45)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
+        if(haveOrb){ ctx.globalAlpha=0.6; ctx.drawImage(RUBY_ORB, ex-7, ey-7, 14, 14); ctx.globalAlpha=1; } }
+      // transparent glass barrier — the character shows through
+      if(haveOrb){ ctx.globalAlpha=0.42; ctx.drawImage(RUBY_ORB, cx-Rb, cy-Rb, Rb*2, Rb*2); ctx.globalAlpha=1; }
+      // fiery glowing rim along the border (flickering)
       ctx.save(); ctx.globalCompositeOperation='lighter';
-      // back orbs (upper half of the horizontal orbit) — dimmer/smaller = behind
-      for(let o=0;o<ORB;o++){ const ph=o/ORB*6.283, th=gt*2.3+ph; if(Math.sin(th)>=0) continue;
-        const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(2,4+2*Math.sin(gt*10+ph)), hue=14+30*(0.5+0.5*Math.sin(gt*6+ph));
-        const g=ctx.createRadialGradient(ex,ey,0.5,ex,ey,r*3); g.addColorStop(0,'rgba(255,235,170,0.4)'); g.addColorStop(0.45,'hsla('+hue+',100%,58%,0.5)'); g.addColorStop(1,'rgba(255,60,30,0)');
-        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r*3,0,7); ctx.fill(); }
-      // outer aura
-      const og=ctx.createRadialGradient(cx,cy,Rb*0.55,cx,cy,Rb+16); og.addColorStop(0,'rgba(255,90,30,0)'); og.addColorStop(0.7,'rgba(255,80,30,0.10)'); og.addColorStop(0.9,'rgba(255,150,40,0.28)'); og.addColorStop(1,'rgba(255,190,80,0)');
-      ctx.fillStyle=og; ctx.beginPath(); ctx.arc(cx,cy,Rb+16,0,7); ctx.fill();
-      // the dimensional sphere — 3D-shaded with an offset highlight
-      const sg=ctx.createRadialGradient(cx-Rb*0.34,cy-Rb*0.4,2,cx,cy,Rb); sg.addColorStop(0,'rgba(255,232,150,0.5)'); sg.addColorStop(0.4,'rgba(255,120,40,0.26)'); sg.addColorStop(0.82,'rgba(210,40,18,0.16)'); sg.addColorStop(1,'rgba(120,12,8,0.04)');
-      ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(cx,cy,Rb,0,7); ctx.fill();
-      // swirling flame bands inside the sphere (rotating wobbly arcs, clipped to the sphere)
-      ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,Rb,0,7); ctx.clip();
-      for(let s=0;s<5;s++){ const dir=(s%2?1:-1), a0=gt*1.7*dir+s*1.3, rr=Rb*(0.32+0.13*s);
-        ctx.strokeStyle='hsla('+(12+s*9+6*Math.sin(gt*4+s))+',100%,'+(58+6*Math.sin(gt*9+s))+'%,'+(0.26+0.12*Math.sin(gt*7+s)).toFixed(2)+')'; ctx.lineWidth=2.4; ctx.beginPath();
-        for(let q=0;q<=16;q++){ const aa=a0+q/16*2.6, R2=Math.max(1,rr+Math.sin(gt*8+s*2+q*0.7)*3.2), px2=cx+Math.cos(aa)*R2, py2=cy+Math.sin(aa)*R2*0.94; if(q===0)ctx.moveTo(px2,py2); else ctx.lineTo(px2,py2);} ctx.stroke(); }
+      const bg2=ctx.createRadialGradient(cx,cy,Rb*0.72,cx,cy,Rb+15); bg2.addColorStop(0,'rgba(255,80,20,0)'); bg2.addColorStop(0.8,'rgba(255,90,20,'+(0.14*flick).toFixed(2)+')'); bg2.addColorStop(0.93,'hsla('+(18+12*Math.sin(gt*5))+',100%,55%,'+(0.55*flick).toFixed(2)+')'); bg2.addColorStop(1,'rgba(255,170,60,0)');
+      ctx.fillStyle=bg2; ctx.beginPath(); ctx.arc(cx,cy,Rb+15,0,7); ctx.fill();
+      ctx.strokeStyle='hsla('+(20+15*Math.sin(gt*6))+',100%,62%,'+(0.5*flick).toFixed(2)+')'; ctx.lineWidth=Math.max(1,2.4+1.4*Math.sin(gt*10)); ctx.beginPath(); ctx.arc(cx,cy,Rb,0,7); ctx.stroke();
       ctx.restore();
-      // bright rim
-      ctx.strokeStyle='rgba(255,180,70,0.45)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy,Rb,0,7); ctx.stroke();
-      // front orbs (lower half) — bigger/brighter, drawn on top
-      for(let o=0;o<ORB;o++){ const ph=o/ORB*6.283, th=gt*2.3+ph; if(Math.sin(th)<0) continue;
-        const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(2.5,6+2.5*Math.sin(gt*10+ph)), hue=14+30*(0.5+0.5*Math.sin(gt*6+ph));
-        const g=ctx.createRadialGradient(ex,ey,0.6,ex,ey,r*3); g.addColorStop(0,'rgba(255,245,200,0.95)'); g.addColorStop(0.4,'hsla('+hue+',100%,60%,0.85)'); g.addColorStop(1,'rgba(255,60,30,0)');
-        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r*3,0,7); ctx.fill(); }
-      ctx.restore();
+      // front orbs (lower half) — bigger/brighter, on top
+      for(let o=0;o<ORB;o++){ const ph=o/ORB*6.283, th=gt*2.2+ph; if(Math.sin(th)<0) continue;
+        const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(7,17+5*Math.sin(gt*10+ph)), hue=14+30*(0.5+0.5*Math.sin(gt*6+ph));
+        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,r); g.addColorStop(0,'hsla('+hue+',100%,76%,0.9)'); g.addColorStop(0.5,'hsla('+hue+',100%,55%,0.5)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
+        if(haveOrb){ ctx.drawImage(RUBY_ORB, ex-9, ey-9, 18, 18); } }
       if(Math.random()<0.5) zbits.push({x:p.x+(Math.random()-0.5)*52, y:p.y-30-Math.random()*40, vx:(Math.random()-0.5)*36, vy:-50-Math.random()*70, sz:1.2+Math.random()*2, life:0.4+Math.random()*0.4, t:0, c:['#ffcf3c','#ff7a2c','#ff3d2c'][(Math.random()*3)|0]});
     }
     else if(equippedStone==='emerald'){
