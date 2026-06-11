@@ -2282,6 +2282,14 @@ function drawPoweredFrame(sx, yy, fc){
   ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
   ctx.drawImage(pimg, sx-ww/2, yy - hh + 16, ww, hh); ctx.restore();
 }
+function drawRubyBackOrbs(){
+  if(!(powerActive && transformT<=0 && equippedStone==='ruby')) return;
+  const sx=pxf(p.x,1), cx=sx, cy=p.y-50, Rb=78, ORB=4;
+  for(let o=0;o<ORB;o++){ const ph=o/ORB*6.283, th=gt*2.2+ph; if(Math.sin(th)>=0) continue;
+    const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(6,11+3*Math.sin(gt*10+ph)), hue=(14+30*(0.5+0.5*Math.sin(gt*6+ph)))|0;
+    ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,0.5,ex,ey,r); g.addColorStop(0,'rgba(255,240,190,0.45)'); g.addColorStop(0.4,'hsla('+hue+',100%,58%,0.40)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
+    if(Math.random()<0.25) zbits.push({x:ex+(Math.random()-0.5)*r*0.6, y:ey, vx:(Math.random()-0.5)*18, vy:-34-Math.random()*40, sz:1+Math.random()*1.4, life:0.4+Math.random()*0.35, t:0, c:'hsl('+hue+',100%,'+(58+((Math.random()*16)|0))+'%)'}); }
+}
 function drawFluoriteAura(layer){
   if(!(powerActive && transformT<=0 && equippedStone==='fluorite')) return;
   const sx=pxf(p.x,1), fcx=sx, fcy=p.y-50, Rb2=78, NC=5;
@@ -2350,11 +2358,7 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
     if(equippedStone==='ruby'){
       const cx=sx, cy=p.y-50, Rb=78, ORB=4, haveOrb=(RUBY_ORB.complete&&RUBY_ORB.naturalWidth);
       const flick=0.72+0.28*Math.sin(gt*12)+0.12*Math.sin(gt*27);
-      // back orbs (upper half = behind) — small, dim flame glow + tiny orb
-      for(let o=0;o<ORB;o++){ const ph=o/ORB*6.283, th=gt*2.2+ph; if(Math.sin(th)>=0) continue;
-        const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(6,11+3*Math.sin(gt*10+ph)), hue=(14+30*(0.5+0.5*Math.sin(gt*6+ph)))|0;
-        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,0.5,ex,ey,r); g.addColorStop(0,'rgba(255,240,190,0.45)'); g.addColorStop(0.4,'hsla('+hue+',100%,58%,0.40)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
-        if(Math.random()<0.25) zbits.push({x:ex+(Math.random()-0.5)*r*0.6, y:ey, vx:(Math.random()-0.5)*18, vy:-34-Math.random()*40, sz:1+Math.random()*1.4, life:0.4+Math.random()*0.35, t:0, c:'hsl('+hue+',100%,'+(58+((Math.random()*16)|0))+'%)'}); }
+      // back orbs now drawn in drawRubyBackOrbs() BEFORE the player so they pass behind the character
       // transparent glass barrier — the character shows through
       // procedural fiery protective core (no image) — translucent so the character shows through
       ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,Rb,0,7); ctx.clip();
@@ -2782,6 +2786,7 @@ function draw(){
     drawSoulFx(sx, s.y, 13*sc, alpha, s.ph*19, s.val);
   }
   drawFluoriteAura('back');
+  drawRubyBackOrbs();
   drawPlayerLayer();
   drawSlamFx();
   drawPower();
