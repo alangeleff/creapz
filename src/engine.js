@@ -553,6 +553,7 @@ function drawControls(){
 }
 let slotSel=0, slotConfirm=-1, confSel=1, selMode='new', slotRects=[], delRects=[], confRects=[];
 let TIMG=null;
+const TITLEBG=new Image(); TITLEBG.src='./assets/title_keyart.png?v='+ASSET_VER;
 let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicReady={}, musicKey=null, musicReq=0;
 function audioInit(){
   if (AC) return;
@@ -2752,19 +2753,24 @@ function draw(){
 }
 function drawTitle(){
   ctx.setTransform(RS,0,0,RS,0,0);
-  camX=0; skyBG(); drawFence();
-  ctx.fillStyle='#1d1730'; ctx.fillRect(0,GROUND,W,H-GROUND);
-  ctx.fillStyle='#5a4499'; ctx.fillRect(0,GROUND,W,8);
-  ctx.globalAlpha=titleFade;
-  if (TIMG && TIMG.complete && TIMG.naturalWidth){
-    const th=296, tw=TIMG.naturalWidth*th/TIMG.naturalHeight;
-    ctx.drawImage(TIMG, W/2-tw/2, 2, tw, th);
-  }
+  camX=0;
+  // full-screen key art (Vivid baked into the asset)
+  if (TITLEBG && TITLEBG.complete && TITLEBG.naturalWidth){ ctx.globalAlpha=titleFade; ctx.drawImage(TITLEBG,0,0,W,H); ctx.globalAlpha=1; }
+  else { skyBG(); drawFence(); ctx.fillStyle='#1d1730'; ctx.fillRect(0,GROUND,W,H-GROUND); }
   ctx.textAlign='center';
-  ctx.font="54px Frijole, Creepster, sans-serif";
-  ctx.fillStyle='#16102e'; ctx.fillText('cReapZ', W/2+3, 326);
-  ctx.fillStyle='#c8fb50'; ctx.fillText('cReapZ', W/2, 323);
-  ctx.globalAlpha=1;
+  if(!menuShown && !cryptOpen && !optionsOpen){
+    // ATTRACT: high logo + subtitle, above the heroes
+    ctx.globalAlpha=titleFade;
+    ctx.font="64px Frijole, Creepster, sans-serif";
+    ctx.fillStyle='rgba(8,5,16,.85)'; ctx.fillText('cReapZ', W/2+3, 86);
+    ctx.fillStyle='#c8fb50'; ctx.fillText('cReapZ', W/2, 83);
+    ctx.save(); ctx.shadowColor='#000'; ctx.shadowBlur=7; ctx.font="700 15px Inter, system-ui, sans-serif"; ctx.fillStyle='#e7d3a0'; ctx.fillText('The Myth of Ascension', W/2, 108); ctx.restore();
+    ctx.globalAlpha=1;
+  } else if(!cryptOpen && !optionsOpen){
+    // MENU: bottom scrim + mini corner logo
+    const grd=ctx.createLinearGradient(0,H*0.52,0,H); grd.addColorStop(0,'rgba(5,3,12,0)'); grd.addColorStop(1,'rgba(5,3,12,.92)'); ctx.fillStyle=grd; ctx.fillRect(0,H*0.5,W,H*0.5);
+    ctx.textAlign='left'; ctx.font="30px Frijole, Creepster, sans-serif"; ctx.fillStyle='rgba(8,5,16,.8)'; ctx.fillText('cReapZ', 24+2, 48+2); ctx.fillStyle='#c8fb50'; ctx.fillText('cReapZ', 24, 48); ctx.textAlign='center';
+  }
   menuRects=[];
   if (cryptOpen){
     menuPanel('THE CRYPT', [
@@ -2776,12 +2782,12 @@ function drawTitle(){
     const pu=0.5+0.5*Math.sin(gt*3.5);
     ctx.fillStyle='rgba(234,230,255,'+(0.35+0.6*pu).toFixed(2)+')';
     ctx.font='600 19px sans-serif';
-    ctx.fillText('PRESS ANY BUTTON', W/2, 386);
+    ctx.fillText('PRESS ANY BUTTON', W/2, 404);
   } else {
     const items=[['Play','play'],['Crypt','crypt'],['Options','options'],['Soul Box','soulbox']];
     const bw2=150, bh2=44, gap2=16, x0=W/2-(items.length*bw2+(items.length-1)*gap2)/2;
     items.forEach((it,k)=>{
-      const bx2=x0+k*(bw2+gap2), by2=352;
+      const bx2=x0+k*(bw2+gap2), by2=378;
       const hot=(k===menuSel);
       ctx.fillStyle=hot?'rgba(200,251,80,.14)':'rgba(20,16,40,.78)'; roundRect(bx2,by2,bw2,bh2,10); ctx.fill();
       ctx.strokeStyle = hot?'#c8fb50':'rgba(155,140,255,.45)'; ctx.lineWidth=hot?2:1.5; ctx.stroke();
