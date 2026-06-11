@@ -833,7 +833,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>(p.deathHurt?3.05:2.3)) || (p && p.won); }
-const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2'];
+const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low'];
 function bootIntoWorld(){ primeAudio(); SFXLIST.forEach(loadSfx); banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); enterWorld(false); }
 function startGame(ck){
   if (selMode==='skin'){ chosen=ck; saveProg(); }
@@ -1071,7 +1071,7 @@ function update(dt){
   if (powerActive && transformT>0 && !p.dead){
     transformT-=dt; powerPulse+=dt; p.vx=0; p.vy=0; p.onGround=false; p.y-=16*dt; p.inv=Math.max(p.inv,0.5);
     if(p.state!=='jump'){ p.state='jump'; p.clock=0; } p.clock+=dt;
-    if(transformT<=0){ powerBoom=0.42; playSfx('sfx_wportal_rev',0.55); playSfx('sfx_meleehit',0.7); }
+    if(transformT<=0){ powerBoom=0.42; playSfx('sfx_wportal_low',0.55); playSfx('sfx_meleehit',0.7); }
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38)); const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62)); camY+=(_cty-camY)*Math.min(1,dt*7);
     return;
   }
