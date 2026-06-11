@@ -2316,6 +2316,8 @@ function drawFluoriteAura(layer){
       const g=ctx.createRadialGradient(mx,my,0.2,mx,my,r*2.2); g.addColorStop(0,'hsla('+hue+',100%,86%,'+(0.34*pls).toFixed(2)+')'); g.addColorStop(0.5,'hsla('+hue+',100%,68%,'+(0.13*pls).toFixed(2)+')'); g.addColorStop(1,'hsla('+hue+',100%,60%,0)');
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(mx,my,r*2.2,0,7); ctx.fill(); }
     ctx.restore();
+    // rising rainbow power fountain at the feet — constant flow fueling upward
+    for(let k=0;k<5;k++){ const hue=(gt*150+Math.random()*90)%360; zbits.push({x:p.x+(Math.random()-0.5)*30, y:p.y-2-Math.random()*6, vx:(Math.random()-0.5)*26, vy:-72-Math.random()*95, sz:1.2+Math.random()*2, life:0.5+Math.random()*0.5, t:0, c:'hsl('+Math.round(hue)+',100%,'+(62+((Math.random()*18)|0))+'%)'}); }
   }
   // energy line: back segments (both ends behind) on the back pass, the rest on the front pass -> continuous loop
   { const lp=0.5+0.5*Math.sin(gt*2.0), lhue=(gt*120)%360;
