@@ -2284,7 +2284,24 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
         ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,r); g.addColorStop(0,'hsla('+hue+',100%,70%,0.45)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
         if(haveOrb){ ctx.globalAlpha=0.6; ctx.drawImage(RUBY_ORB, ex-7, ey-7, 14, 14); ctx.globalAlpha=1; } }
       // transparent glass barrier — the character shows through
-      if(haveOrb){ ctx.globalAlpha=0.46; ctx.drawImage(RUBY_ORB, cx-Rb, cy-Rb, Rb*2, Rb*2); ctx.globalAlpha=1; }
+      // procedural fiery protective core (no image) — translucent so the character shows through
+      ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,Rb,0,7); ctx.clip();
+      const rg=ctx.createRadialGradient(cx,cy-Rb*0.15,2,cx,cy,Rb);
+      rg.addColorStop(0,'rgba(255,205,95,0.30)'); rg.addColorStop(0.55,'rgba(255,110,40,0.22)'); rg.addColorStop(1,'rgba(190,28,16,0.12)');
+      ctx.fillStyle=rg; ctx.fillRect(cx-Rb,cy-Rb,Rb*2,Rb*2);
+      // sweeping diagonal color band (top-right -> bottom-left), hue cycling red/orange/yellow
+      ctx.globalCompositeOperation='lighter';
+      const sweep=(gt*0.45)%1, p1=Math.min(0.96,Math.max(0.04,sweep)), p0=Math.max(0,p1-0.28), p2=Math.min(1,p1+0.28);
+      const h1=10+8*Math.sin(gt*2), h2=42+10*Math.sin(gt*2.0+1), h3=24+8*Math.sin(gt*2.0+2);
+      const lg=ctx.createLinearGradient(cx+Rb,cy-Rb,cx-Rb,cy+Rb);
+      lg.addColorStop(0,'hsla('+h1+',100%,55%,0.10)'); lg.addColorStop(p0,'hsla('+h1+',100%,55%,0.10)');
+      lg.addColorStop(p1,'hsla('+h2+',100%,62%,0.5)'); lg.addColorStop(p2,'hsla('+h3+',100%,55%,0.12)'); lg.addColorStop(1,'hsla('+h3+',100%,55%,0.10)');
+      ctx.fillStyle=lg; ctx.fillRect(cx-Rb,cy-Rb,Rb*2,Rb*2);
+      // inner churning embers glow
+      const cg=ctx.createRadialGradient(cx+Rb*0.3*Math.sin(gt*1.6),cy+Rb*0.3*Math.cos(gt*1.9),2,cx,cy,Rb*0.8);
+      cg.addColorStop(0,'rgba(255,230,150,0.35)'); cg.addColorStop(1,'rgba(255,120,40,0)');
+      ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(cx,cy,Rb,0,7); ctx.fill();
+      ctx.restore();
       // fiery glowing rim along the border (flickering)
       ctx.save(); ctx.globalCompositeOperation='lighter';
       const bg2=ctx.createRadialGradient(cx,cy,Rb*0.72,cx,cy,Rb+15); bg2.addColorStop(0,'rgba(255,80,20,0)'); bg2.addColorStop(0.8,'rgba(255,90,20,'+(0.14*flick).toFixed(2)+')'); bg2.addColorStop(0.93,'hsla('+(18+12*Math.sin(gt*5))+',100%,55%,'+(0.55*flick).toFixed(2)+')'); bg2.addColorStop(1,'rgba(255,170,60,0)');
