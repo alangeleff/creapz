@@ -1,4 +1,4 @@
-const ASSET_VER='1781230000';
+const ASSET_VER='1781240000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -466,7 +466,7 @@ const FZ = { idle:24, walk:12, attack:16 };
 const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12}, golem:{idle:12, walk:12, attack:18} };
 const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15, golem:1.05 };
 const KRNG = { zombie:74, zgen:74, gob:76, bd:-1, golem:200 };  // gob spear reach ~78; bd never melee-attacks (contact only)
-const GOLEM_RNG=180, GOLEM_SHOCK=285, GOLEM_ATK_DUR=15/27+10/18;
+const GOLEM_RNG=205, GOLEM_SHOCK=300, GOLEM_ATK_DUR=15/27+10/18;
 function golemAtkFrame(el){ const t1=15/27; if(el<t1) return Math.min(14,Math.floor(el*27)); return Math.min(24,15+Math.floor((el-t1)*18)); }
 const ZSPEED = 1.7;
 const PMAXHP = 4, ZMAXHP = 2;
@@ -1006,7 +1006,7 @@ function drawSlamFx(){
   }
 }
 function zBodyBox(z){
-  if (z.kw==='golem') return {x:z.x-72, y:z.y-150, w:144, h:148};
+  if (z.kw==='golem') return {x:z.x-92, y:z.y-191, w:184, h:189};
   if (z.kw==='gob') return {x:z.x-19, y:z.y-78, w:38, h:74};
   if (z.kw==='bd')  return {x:z.x-18, y:z.y-100, w:36, h:96};
   return {x:z.x-24, y:z.y-112, w:48, h:104};
@@ -1384,7 +1384,7 @@ function update(dt){
         z.atkT-=dt*efr; z.state='attack'; z.atkElapsed=GOLEM_ATK_DUR-z.atkT;
         const gf=golemAtkFrame(z.atkElapsed);
         // raised-hands hitbox (jump ONTO the golem during wind-up = risky)
-        if (p.inv<=0 && !p.dead){ let hb=null; if(gf>=8&&gf<=15) hb={x:z.x-105, y:z.y-205, w:210, h:120}; else if(gf>=16&&gf<=23) hb={x:z.x-132, y:z.y-82, w:264, h:86}; if(hb && overlap(hb,pBodyBox())) hurtPlayer(z.x,2); }
+        if (p.inv<=0 && !p.dead){ let hb=null; if(gf>=8&&gf<=15) hb={x:z.x-134, y:z.y-262, w:268, h:153}; else if(gf>=16&&gf<=23) hb={x:z.x-169, y:z.y-105, w:337, h:110}; if(hb && overlap(hb,pBodyBox())) hurtPlayer(z.x,2); }
         // IMPACT: hands touch down -> shake + ground shockwave (grounded + near; jump to avoid)
         if (gf>=20 && !z.smashDone){ z.smashDone=true; addShake(14,0.5); playSfx('sfx_meleehit',0.95); playSfx('sfx_zswing',0.7);
           for(let i=0;i<28;i++){ const sd=(Math.random()<0.5?-1:1); zbits.push({x:z.x+sd*(18+Math.random()*GOLEM_SHOCK), y:z.y-2, vx:sd*(70+Math.random()*250), vy:-30-Math.random()*160, sz:2+Math.random()*3.6, life:0.4+Math.random()*0.45, t:0, c:['#7a6a4a','#5c8a3a','#9a8a5a','#4a5a2a','#caa'][(Math.random()*5)|0]}); }
