@@ -554,6 +554,7 @@ function drawControls(){
 let slotSel=0, slotConfirm=-1, confSel=1, selMode='new', slotRects=[], delRects=[], confRects=[];
 let TIMG=null;
 const TITLEBG=new Image(); TITLEBG.src='./assets/title_keyart.png?v='+ASSET_VER;
+const FLAME_FX=new Image(); FLAME_FX.src='./assets/fx_flame.png?v='+ASSET_VER; const FLAME_N=6;
 let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicReady={}, musicKey=null, musicReq=0;
 function audioInit(){
   if (AC) return;
@@ -2276,9 +2277,16 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
     if(equippedStone==='ruby'){
       ctx.save(); ctx.globalCompositeOperation='lighter';
       const gg=ctx.createRadialGradient(sx,p.y-34,4,sx,p.y-34,78); gg.addColorStop(0,'rgba(255,170,40,0.5)'); gg.addColorStop(0.5,'rgba(255,90,30,0.2)'); gg.addColorStop(1,'rgba(255,60,40,0)'); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(sx,p.y-40,80,0,7); ctx.fill();
-      for(let i=0;i<11;i++){ const a=(i/11)*6.283; const baseR=20+7*Math.sin(gt*5+i*1.3); const fx=sx+Math.cos(a)*baseR; const fb=p.y-16-Math.abs(Math.sin(a))*8; const hgt=30+20*Math.abs(Math.sin(gt*7+i*1.7)); const fl=Math.sin(gt*11+i)*4;
-        const fg=ctx.createLinearGradient(fx,fb,fx,fb-hgt); fg.addColorStop(0,'rgba(255,225,140,0.95)'); fg.addColorStop(0.45,'rgba(255,120,40,0.8)'); fg.addColorStop(1,'rgba(255,60,40,0)');
-        ctx.fillStyle=fg; ctx.beginPath(); ctx.moveTo(fx-5,fb); ctx.quadraticCurveTo(fx-3+fl,fb-hgt*0.55, fx+fl,fb-hgt); ctx.quadraticCurveTo(fx+3+fl,fb-hgt*0.55, fx+5,fb); ctx.closePath(); ctx.fill(); }
+      if(FLAME_FX.complete && FLAME_FX.naturalWidth){
+        const FLW=FLAME_FX.naturalWidth/FLAME_N, FLH=FLAME_FX.naturalHeight;
+        const f0=Math.floor(gt*15)%FLAME_N, f1=Math.floor(gt*15+2)%FLAME_N, f2=Math.floor(gt*15+4)%FLAME_N;
+        const mh=164, mw=mh*FLW/FLH, base=p.y+12;
+        const sh=108, sw=sh*FLW/FLH;
+        ctx.globalAlpha=0.72; ctx.drawImage(FLAME_FX, f1*FLW,0,FLW,FLH, sx-mw*0.40-sw/2, base-sh, sw, sh);
+        ctx.globalAlpha=0.72; ctx.drawImage(FLAME_FX, f2*FLW,0,FLW,FLH, sx+mw*0.40-sw/2, base-sh, sw, sh);
+        ctx.globalAlpha=0.95; ctx.drawImage(FLAME_FX, f0*FLW,0,FLW,FLH, sx-mw/2, base-mh, mw, mh);
+        ctx.globalAlpha=1;
+      }
       ctx.restore();
       if(Math.random()<0.85) zbits.push({x:p.x+(Math.random()-0.5)*42, y:p.y-26-Math.random()*46, vx:(Math.random()-0.5)*44, vy:-60-Math.random()*80, sz:1.4+Math.random()*2.4, life:0.4+Math.random()*0.4, t:0, c:['#ffcf3c','#ff7a2c','#ff3d2c'][(Math.random()*3)|0]});
     }
