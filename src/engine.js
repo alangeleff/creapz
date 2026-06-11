@@ -1126,7 +1126,7 @@ function update(dt){
   if (p.slamRec>0){ p.slamRec-=dt; p.vx=0; }
   if (p.slamT>0){ slamGhosts.push({x:p.x,y:p.y}); if(slamGhosts.length>9) slamGhosts.shift(); p.vx=0; }
   else if (slamGhosts.length) slamGhosts.shift();
-  if (powerActive && equippedStone==='sapphire' && transformT<=0){ if(Math.abs(p.vx)>20||!p.onGround){ sapTrail.push({x:p.x,y:p.y,st:p.state,fi:curFrame(),f:p.facing}); if(sapTrail.length>10) sapTrail.shift(); } else if(sapTrail.length) sapTrail.shift(); }
+  if (powerActive && equippedStone==='sapphire' && transformT<=0){ if(Math.abs(p.vx)>1.5||!p.onGround){ sapTrail.push({x:p.x,y:p.y,st:p.state,fi:curFrame(),f:p.facing}); if(sapTrail.length>10) sapTrail.shift(); } else if(sapTrail.length) sapTrail.shift(); }
   else if (sapTrail.length) sapTrail.length=0;
   const kneeling = p.onGround && (keys['ArrowDown']||keys['KeyS']) && p.attackT<=0 && p.castT<=0 && p.hurtT<=0;
   let dir=0;
@@ -1286,7 +1286,7 @@ function update(dt){
       p.inv=Math.max(p.inv,0.35);
     }
     else if (equippedStone==='topaz'){
-      if(Math.abs(p.vx)>40) p.inv=Math.max(p.inv,0.15);   // invincible ONLY during the supercharged dash
+      if(Math.abs(p.vx)>8) p.inv=Math.max(p.inv,0.2);   // invincible ONLY during the supercharged dash
       // Thunder Rush: electric strikes zap any enemy you run through
       for (const z of zombies){ if(z.dead) continue; if(z.hitCd<=0 && overlap(pBodyBox(), zBodyBox(z))){ z.hp-=2; z.hitCd=0.2; z.shown=3;
         for(let i=0;i<7;i++) zbits.push({x:z.x+(Math.random()-0.5)*24, y:z.y-44-Math.random()*30, vx:(Math.random()-0.5)*200, vy:-40-Math.random()*120, sz:1.5+Math.random()*2, life:0.2+Math.random()*0.25, t:0, c:['#fff2a0','#ffe04a','#ffffff'][(Math.random()*3)|0]});
@@ -2246,11 +2246,12 @@ function drawStoneMeter(){ if(!equippedStone) return;
   ctx.restore();
   if(!powerActive && frac>=1){ ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.textAlign='right'; ctx.fillText('JUMP\u00d72!', bx+bw-3, y+h-4); ctx.textAlign='left'; }
 }
-function drawPoweredFrame(sx){
+function drawPoweredFrame(sx, yy, fc){
+  if(yy===undefined) yy=p.y; if(fc===undefined) fc=p.facing;
   const pimg=poweredImg(); if(!pimg||!pimg.complete||!pimg.naturalWidth) return;
   const hh=isDing(chosen)?122:163, ww=hh*pimg.naturalWidth/pimg.naturalHeight;
-  ctx.save(); ctx.imageSmoothingEnabled=true; if(p.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
-  ctx.drawImage(pimg, sx-ww/2, p.y - hh + 16, ww, hh); ctx.restore();
+  ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
+  ctx.drawImage(pimg, sx-ww/2, yy - hh + 16, ww, hh); ctx.restore();
 }
 function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
   const col=STONE_DEFS[equippedStone]||'#ffcf3c', sx=pxf(p.x,1), cy=p.y-60;
@@ -2628,15 +2629,15 @@ function drawPlayerLayer(){
       ctx.save();
       if(k<0.32 && fast){ ctx.filter='grayscale(1) sepia(1) saturate('+(3+(0.32-k)/0.32*5).toFixed(1)+') hue-rotate('+(STONE_HROT[equippedStone]||0)+'deg) brightness(1.2)'; }
       else { ctx.filter = fast ? 'grayscale(1) invert(1) brightness(1.15)' : 'grayscale(1) brightness(1.7) contrast(1.25)'; }
-      drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, 0); ctx.filter='none'; ctx.restore(); } 
+      drawPoweredFrame(sx); ctx.filter='none'; ctx.restore(); } 
     else if (!(p.invHurt>0 && !powerActive && Math.floor(gt*16)%2===0)){
-      if(powerActive&&equippedStone==='sapphire'&&transformT<=0){ for(let gi=0;gi<sapTrail.length;gi++){ const g=sapTrail[gi]; ctx.save(); ctx.globalAlpha=0.08+0.26*(gi/Math.max(1,sapTrail.length)); drawCharSprite(chosen,g.st,g.fi,g.x-camX,g.y,g.f,1,0); ctx.restore(); } }
+      if(powerActive&&equippedStone==='sapphire'&&transformT<=0){ for(let gi=0;gi<sapTrail.length;gi++){ const g=sapTrail[gi]; ctx.save(); ctx.globalAlpha=0.08+0.26*(gi/Math.max(1,sapTrail.length)); drawPoweredFrame(g.x-camX,g.y,g.f); ctx.restore(); } }
       const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0), _obs=(powerActive&&equippedStone==='obsidian'&&transformT<=0), _top=(powerActive&&equippedStone==='topaz'&&transformT<=0);
       let _skip=false; ctx.save();
       if(_spec){ ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); }
       if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
       if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
-      if(!_skip) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0);
+      if(!_skip) drawPoweredFrame(sx);
       ctx.filter='none'; ctx.restore();
     }
     if (p.muzzleT>0){
@@ -2772,6 +2773,10 @@ function draw(){
       ctx.restore();
       // crisp glowing inner rim (blurred)
       ctx.save(); ctx.scale(1,ry/rx); ctx.strokeStyle='rgba(245,238,255,0.65)'; ctx.lineWidth=2.4; ctx.shadowColor='rgba(220,205,255,0.95)'; ctx.shadowBlur=9; ctx.beginPath(); ctx.arc(0,0,rx,0,7); ctx.stroke(); ctx.restore();
+      // pulsing purple glow rings around the maw
+      { const pl=0.5+0.5*Math.sin(gt*5); ctx.save(); ctx.scale(1,ry/rx); ctx.shadowColor='rgba(150,70,255,0.95)'; ctx.shadowBlur=8+12*pl; ctx.lineWidth=2+1.6*pl;
+        ctx.strokeStyle='rgba(176,107,255,'+(0.28+0.5*pl).toFixed(2)+')'; ctx.beginPath(); ctx.arc(0,0,Math.max(1,rx*1.12),0,7); ctx.stroke();
+        ctx.strokeStyle='rgba(150,80,255,'+(0.16+0.34*pl).toFixed(2)+')'; ctx.beginPath(); ctx.arc(0,0,Math.max(1,rx*1.32),0,7); ctx.stroke(); ctx.restore(); }
       ctx.restore();
       continue;
     }
