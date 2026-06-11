@@ -438,6 +438,7 @@ SPR.zombie={}; for (const k in SPRITES.zombie){ SPR.zombie[k]=L(SPRITES.zombie[k
 SPR.zgen={}; for (const k in SPRITES.zgen){ SPR.zgen[k]=L(SPRITES.zgen[k]); }
 SPR.gob={}; for (const k in SPRITES.gob){ SPR.gob[k]=L(SPRITES.gob[k]); }
 SPR.bd={}; for (const k in SPRITES.bd){ SPR.bd[k]=L(SPRITES.bd[k]); }
+SPR.golem={}; for (const k in SPRITES.golem||{}){ SPR.golem[k]=L(SPRITES.golem[k]); }
 SPR.bat={}; for (const k in SPRITES.bat){ const d=SPRITES.bat[k]; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src;
   SPR.bat[k]={img,sw:d.sw,sh:d.sh,w:d.w,h:d.h,frames:d.frames,cxs:d.cxs,cys:d.cys}; }
 { const d=SPRITES.dirt; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.dirt={img,w:d.w,h:d.h}; }
@@ -462,9 +463,11 @@ const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, c
 function isDing(ck){ return ck==='dingbat'||ck.slice(0,5)==='ding_'; }
 function pfps(st2){ const f=SPR.chars[chosen]&&SPR.chars[chosen].fps; return (f&&f[st2])||FPS[st2]; }
 const FZ = { idle:24, walk:12, attack:16 };
-const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12} };
-const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15 };
-const KRNG = { zombie:74, zgen:74, gob:76, bd:-1 };  // gob spear reach ~78; bd never melee-attacks (contact only)
+const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12}, golem:{idle:12, walk:12, attack:18} };
+const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15, golem:1.05 };
+const KRNG = { zombie:74, zgen:74, gob:76, bd:-1, golem:200 };  // gob spear reach ~78; bd never melee-attacks (contact only)
+const GOLEM_RNG=200, GOLEM_SHOCK=215, GOLEM_ATK_DUR=15/27+10/18;
+function golemAtkFrame(el){ const t1=15/27; if(el<t1) return Math.min(14,Math.floor(el*27)); return Math.min(24,15+Math.floor((el-t1)*18)); }
 const ZSPEED = 1.7;
 const PMAXHP = 4, ZMAXHP = 2;
 const DISCORD_BLOCK=0.22, DISCORD_KILL=0.12;
@@ -472,7 +475,7 @@ function curMaxHP(){ const m=artProg().megas||{}; return PMAXHP + Math.min(6,(m.
 function greedMult(){ return (artProg().megas||{}).greed?2:1; }
 function hasDiscord(){ return !!(artProg().megas||{}).discord; }
 const SOUL_PTS = 100;
-const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800 };
+const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800, golem:1500 };
 function timeBrackets(idx){
   const s=idx*30;   // each act shifts brackets by 30s
   return [[90+s,3000],[120+s,2000],[180+s,1000]];
@@ -890,10 +893,10 @@ function reset(keep){
     range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0,
     ct:0, falling:false, gone:false, dy:0, fv:0, rt:0}));
   const zspawn=ST.enemies;
-  zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=(kw==='zgen')?3:((kw==='gob'||kw==='bd')?1:ZMAXHP);
+  zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=(kw==='golem')?8:(kw==='zgen')?3:((kw==='gob'||kw==='bd')?1:ZMAXHP);
     return {x:z[0], y:(z[4]!==undefined?z[4]:GROUND), t:Math.random(), facing:(z[5]!==undefined?z[5]:-1), face:(z[5]!==undefined?z[5]:-1), state:'idle', atkT:0,
     dead:false, dieT:0, dframe:0, dstate:kw==='bd'?'walk':'idle', pdir:(z[5]!==undefined?z[5]:-1), min:z[1], max:z[2], kw,
-    hp:mh, maxhp:mh, hpShown:mh, hitCd:0, shown:0, aggro:false}; });
+    hp:mh, maxhp:mh, hpShown:mh, hitCd:0, shown:0, aggro:false, atkCd:0, smashDone:false, atkElapsed:0}; });
   const bspawn=ST.bats;
   bats = bspawn.map((b,i)=>({x:b[0], y:b[3], y0:b[3], t:Math.random()*3, ph:i*1.7, facing:(b[4]!==undefined?b[4]:-1), dir:(b[4]!==undefined?b[4]:(i%2?1:-1)),
     min:b[1], max:b[2], dead:false, dieT:0, yD:b[3], state:'idle', bt:0, biteCd:0}));
@@ -1003,6 +1006,7 @@ function drawSlamFx(){
   }
 }
 function zBodyBox(z){
+  if (z.kw==='golem') return {x:z.x-62, y:z.y-216, w:124, h:214};
   if (z.kw==='gob') return {x:z.x-19, y:z.y-78, w:38, h:74};
   if (z.kw==='bd')  return {x:z.x-18, y:z.y-100, w:36, h:96};
   return {x:z.x-24, y:z.y-112, w:48, h:104};
@@ -1372,6 +1376,27 @@ function update(dt){
       z.x=clamp(z.x + (z.x<p.x?-12:12), z.min, z.max);
       if(_dk){ for(let i=0;i<18;i++) zbits.push({x:z.x,y:z.y-44,vx:(Math.random()-0.5)*250,vy:-40-Math.random()*170,sz:2+Math.random()*3,life:0.3+Math.random()*0.35,t:0,c:['#ffae57','#ff6a2c','#ffffff'][(Math.random()*3)|0]}); }
       if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); continue; }
+    }
+    if (z.kw==='golem'){
+      if (z.atkCd>0) z.atkCd-=dt;
+      if (z.atkT>0){
+        z.atkT-=dt*efr; z.state='attack'; z.atkElapsed=GOLEM_ATK_DUR-z.atkT;
+        const gf=golemAtkFrame(z.atkElapsed);
+        // raised-hands hitbox (jump ONTO the golem during wind-up = risky)
+        if (gf>=8 && gf<=16 && p.inv<=0 && !p.dead){ const hb={x:z.x-104, y:z.y-330, w:208, h:150}; if(overlap(hb,pBodyBox())) hurtPlayer(z.x,2); }
+        // IMPACT: hands touch down -> shake + ground shockwave (grounded + near; jump to avoid)
+        if (gf>=20 && !z.smashDone){ z.smashDone=true; addShake(14,0.5); playSfx('sfx_meleehit',0.95); playSfx('sfx_zswing',0.7);
+          for(let i=0;i<28;i++){ const sd=(Math.random()<0.5?-1:1); zbits.push({x:z.x+sd*(18+Math.random()*GOLEM_SHOCK), y:z.y-2, vx:sd*(70+Math.random()*250), vy:-30-Math.random()*160, sz:2+Math.random()*3.6, life:0.4+Math.random()*0.45, t:0, c:['#7a6a4a','#5c8a3a','#9a8a5a','#4a5a2a','#caa'][(Math.random()*5)|0]}); }
+          if (p.onGround && !p.dead && p.inv<=0 && Math.abs(p.x-z.x)<GOLEM_SHOCK) hurtPlayer(z.x,2);
+        }
+        if (z.atkT<=0){ z.atkCd=1.4; z.state='idle'; }
+      }
+      else if (z.aggro && Math.abs(p.x-z.x)<GOLEM_RNG && z.atkCd<=0 && !p.dead){ z.atkT=GOLEM_ATK_DUR; z.atkElapsed=0; z.smashDone=false; z.state='attack'; }
+      else if (z.aggro && Math.abs(p.x-z.x)>GOLEM_RNG-40){ z.state='walk'; z.x=clamp(z.x+z.facing*KSPD.golem*efr, z.min, z.max); }
+      else z.state='idle';
+      z.x=terrWallX(z.x, zpx, z.y, 16);
+      if (p.inv<=0 && !p.dead && overlap(pBodyBox(), zBodyBox(z))) hurtPlayer(z.x,1);
+      continue;
     }
     // zombie behavior + its sword strikes player
     if (z.atkT>0){
@@ -2598,6 +2623,7 @@ function drawZombie(z){
   const a=SPR[z.kw][state]; const sx=z.x-camX; if(sx<-120||sx>W+120) return;
   let fi, alpha=1, dy=0;
   if (z.dead){ fi=z.dframe; const k=z.dieT/0.7; alpha=Math.max(0,1-k); dy=-34*k; if(z.dieT>0.75) return; }
+  else if (z.kw==='golem' && state==='attack') fi=golemAtkFrame(z.atkElapsed||0);
   else fi=Math.floor(z.t*FZK[z.kw][state])%a.frames;
   ctx.save(); ctx.globalAlpha=alpha;
   if (z.facing<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0); }

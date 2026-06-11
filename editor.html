@@ -187,7 +187,7 @@
 <div id="ghost"></div>
 <script>
 const GRID=20, TERRACE_DROP=130, DEF_TERR=600;
-const ENEMY_COLS={zombie:'#6b7d52',zgen:'#3ad07a',gob:'#c8a24a',bd:'#9a6cff'};
+const ENEMY_COLS={zombie:'#6b7d52',zgen:'#3ad07a',gob:'#c8a24a',bd:'#9a6cff',golem:'#6fae3a'};
 const HAZ_COLS={spike:'#d9d2c0',rock:'#7a7280',tar:'#2a1f30',spikeshot:'#cfc8b6'};
 const HAZ_LABEL={spike:'Bone Spike Pit',rock:'Rock Drop',tar:'Tar Pit',spikeshot:'Spike Cannon'};
 const OBST_COLS={grave:'#8a82a6',crate:'#b6884a',chest:'#caa05a'};
@@ -253,7 +253,7 @@ const EDSPR={};
 fetch('./assets/sprites.json').then(r=>r.json()).then(S=>{
   const ass=p=> p.startsWith('data:')?p:('./assets/'+p);
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
-    zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle};
+    zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
   draw();
 }).catch(()=>{});
@@ -284,6 +284,7 @@ const STAMPS=[
  {k:'zgen',label:'Zombie General',sw:ENEMY_COLS.zgen,cat:'Enemies'},
  {k:'gob',label:'Goblin',sw:ENEMY_COLS.gob,cat:'Enemies'},
  {k:'bd',label:'Brain Dead',sw:ENEMY_COLS.bd,cat:'Enemies'},
+ {k:'golem',label:'Earth Golem',sw:ENEMY_COLS.golem,cat:'Enemies'},
  {k:'bat',label:'Blood Ravager',sw:'#b07a5a',cat:'Enemies'},
  {k:'chk',label:'Checkpoint',sw:'#ff9a3c',cat:'Functions'},
  {k:'goal',label:'Goal (exit)',sw:'#e0506a',cat:'Functions'},
