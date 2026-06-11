@@ -3061,6 +3061,10 @@ function draw(){
   ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(W-168,77,8,0,7); ctx.fill();
   ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(W-168,77,4.5,0,7); ctx.fill();
   ctx.fillStyle='#eaf6ff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='right'; ctx.fillText(soulCount+' / '+totalOrbVal, W-40, 82); ctx.textAlign='left';
+  if (testMode){ const gm=greedMult(); ctx.font='bold 11px sans-serif'; ctx.textAlign='right';
+    ctx.fillStyle = gm>1 ? '#5fd8ff' : '#9a93b5';
+    ctx.fillText('TEST \u00b7 Greed '+(gm>1?'\u00d72 ON':'OFF')+' \u00b7 banking '+(soulCount*gm)+' soulz', W-40, 99);
+    ctx.textAlign='left'; }
   if (p.dead && p.deadT>(p.deathHurt?3.05:2.3)){
     menuPanel('YOU DIED', [
       {label: p.spawn>90?'Rise at Checkpoint':'Try Again', action:()=>{ paused=false; onReset(); }},
