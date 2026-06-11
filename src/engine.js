@@ -2280,9 +2280,9 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       const flick=0.72+0.28*Math.sin(gt*12)+0.12*Math.sin(gt*27);
       // back orbs (upper half = behind) — small, dim flame glow + tiny orb
       for(let o=0;o<ORB;o++){ const ph=o/ORB*6.283, th=gt*2.2+ph; if(Math.sin(th)>=0) continue;
-        const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(5,12+4*Math.sin(gt*10+ph)), hue=14+30*(0.5+0.5*Math.sin(gt*6+ph));
-        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,r); g.addColorStop(0,'hsla('+hue+',100%,70%,0.45)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
-        if(haveOrb){ ctx.globalAlpha=0.6; ctx.drawImage(RUBY_ORB, ex-7, ey-7, 14, 14); ctx.globalAlpha=1; } }
+        const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(6,11+3*Math.sin(gt*10+ph)), hue=(14+30*(0.5+0.5*Math.sin(gt*6+ph)))|0;
+        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,0.5,ex,ey,r); g.addColorStop(0,'rgba(255,240,190,0.45)'); g.addColorStop(0.4,'hsla('+hue+',100%,58%,0.40)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
+        if(Math.random()<0.25) zbits.push({x:ex+(Math.random()-0.5)*r*0.6, y:ey, vx:(Math.random()-0.5)*18, vy:-34-Math.random()*40, sz:1+Math.random()*1.4, life:0.4+Math.random()*0.35, t:0, c:'hsl('+hue+',100%,'+(58+((Math.random()*16)|0))+'%)'}); }
       // transparent glass barrier — the character shows through
       // procedural fiery protective core (no image) — translucent so the character shows through
       ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,Rb,0,7); ctx.clip();
@@ -2310,9 +2310,9 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       ctx.restore();
       // front orbs (lower half) — bigger/brighter, on top
       for(let o=0;o<ORB;o++){ const ph=o/ORB*6.283, th=gt*2.2+ph; if(Math.sin(th)<0) continue;
-        const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(7,17+5*Math.sin(gt*10+ph)), hue=14+30*(0.5+0.5*Math.sin(gt*6+ph));
-        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,r); g.addColorStop(0,'hsla('+hue+',100%,76%,0.9)'); g.addColorStop(0.5,'hsla('+hue+',100%,55%,0.5)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
-        if(haveOrb){ ctx.drawImage(RUBY_ORB, ex-9, ey-9, 18, 18); } }
+        const ex=cx+Math.cos(th)*(Rb+12), ey=cy+Math.sin(th)*20, r=Math.max(8,15+4*Math.sin(gt*10+ph)), hue=(14+30*(0.5+0.5*Math.sin(gt*6+ph)))|0;
+        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,0.6,ex,ey,r); g.addColorStop(0,'rgba(255,250,215,0.95)'); g.addColorStop(0.4,'hsla('+hue+',100%,62%,0.60)'); g.addColorStop(1,'rgba(255,60,30,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,r,0,7); ctx.fill(); ctx.restore();
+        if(Math.random()<0.5) zbits.push({x:ex+(Math.random()-0.5)*r*0.6, y:ey, vx:(Math.random()-0.5)*22, vy:-42-Math.random()*48, sz:1.1+Math.random()*1.6, life:0.45+Math.random()*0.4, t:0, c:'hsl('+hue+',100%,'+(60+((Math.random()*16)|0))+'%)'}); }
       if(Math.random()<0.5) zbits.push({x:p.x+(Math.random()-0.5)*52, y:p.y-30-Math.random()*40, vx:(Math.random()-0.5)*36, vy:-50-Math.random()*70, sz:1.2+Math.random()*2, life:0.4+Math.random()*0.4, t:0, c:['#ffcf3c','#ff7a2c','#ff3d2c'][(Math.random()*3)|0]});
     }
     else if(equippedStone==='emerald'){
