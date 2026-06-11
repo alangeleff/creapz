@@ -1390,16 +1390,16 @@ function update(dt){
     bo.t+=dt;
     if(bo.kind==='void'){
       bo.x+=bo.vx*dt*(bo.t<0.5?1:0.35); if(bo.pullCd>0) bo.pullCd-=dt;
-      const R=260, tick=(bo.pullCd<=0), killR=84;
+      const R=330, tick=(bo.pullCd<=0), killR=92;
       for(const z of zombies){ if(z.dead) continue; const dx=bo.x-z.x, dy=bo.y-(z.y-40), d=Math.hypot(dx,dy);
-        if(d<R && d>1){ const pull=Math.min(46, dt*(260+16000/d)); z.x+=Math.sign(dx)*Math.min(Math.abs(dx),pull);
+        if(d<R && d>1){ const pull=Math.min(54, dt*(330+20000/d)); z.x+=Math.sign(dx)*Math.min(Math.abs(dx),pull); z.y+=Math.sign(dy)*Math.min(Math.abs(dy),pull);
           if(d<killR && tick){ z.hp-=1; z.shown=3; if(z.hp<=0) voidErase(z,bo); } } }
       for(const b of bats){ if(b.dead) continue; const dx=bo.x-b.x, dy=bo.y-b.y, d=Math.hypot(dx,dy);
-        if(d<R && d>1){ const pull=Math.min(44, dt*(250+14000/d)); b.x+=Math.sign(dx)*Math.min(Math.abs(dx),pull); b.y+=Math.sign(dy)*Math.min(Math.abs(dy),pull);
+        if(d<R && d>1){ const pull=Math.min(52, dt*(320+18000/d)); b.x+=Math.sign(dx)*Math.min(Math.abs(dx),pull); b.y+=Math.sign(dy)*Math.min(Math.abs(dy),pull);
           if(d<killR && tick) voidEraseBat(b,bo); } }
       if(tick) bo.pullCd=0.22;
       if(Math.random()<0.8){ const ang=Math.random()*6.28, rr=50+Math.random()*120; zbits.push({x:bo.x+Math.cos(ang)*rr, y:bo.y+Math.sin(ang)*rr, vx:-Math.cos(ang)*(170+Math.random()*170), vy:-Math.sin(ang)*(170+Math.random()*170), sz:1.4+Math.random()*2, life:0.3+Math.random()*0.28, t:0, c:['#9a7fd0','#7b5cff','#c8a8ff'][(Math.random()*3)|0]}); }
-      if(bo.t>1.7){ bo.dead=true; stopLoop(bo.hum); bo.hum=null; impacts.push({x:bo.x,y:bo.y,t:0}); playSfx('sfx_wportal',0.7);
+      if(bo.t>1.7){ bo.dead=true; stopLoop(bo.hum); bo.hum=null; impacts.push({x:bo.x,y:bo.y,t:0});
         for(const z of zombies){ if(z.dead) continue; if(Math.hypot(bo.x-z.x,bo.y-(z.y-40))<130){ z.hp-=2; z.shown=3; if(z.hp<=0) voidErase(z,bo); } }
         for(const b of bats){ if(b.dead) continue; if(Math.hypot(bo.x-b.x,bo.y-b.y)<130) voidEraseBat(b,bo); }
         for(let i=0;i<22;i++) zbits.push({x:bo.x,y:bo.y,vx:(Math.random()-0.5)*340,vy:(Math.random()-0.5)*340,sz:2+Math.random()*3,life:0.3+Math.random()*0.3,t:0,c:['#9a7fd0','#7b5cff','#ffffff'][(Math.random()*3)|0]}); }
