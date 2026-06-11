@@ -461,6 +461,10 @@ const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15 };
 const KRNG = { zombie:74, zgen:74, gob:76, bd:-1 };  // gob spear reach ~78; bd never melee-attacks (contact only)
 const ZSPEED = 1.7;
 const PMAXHP = 4, ZMAXHP = 2;
+const DISCORD_BLOCK=0.22, DISCORD_KILL=0.12;
+function curMaxHP(){ const m=artProg().megas||{}; return PMAXHP + Math.min(6,(m.vigorShards||[]).length); }
+function greedMult(){ return (artProg().megas||{}).greed?2:1; }
+function hasDiscord(){ return !!(artProg().megas||{}).discord; }
 const SOUL_PTS = 100;
 const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800 };
 function timeBrackets(idx){
@@ -681,7 +685,7 @@ let countSrcs=[];
 let banked=0, actScore=0, actSoulPts=0, actKillPts=0, killCount=0, totalEnemies=0, gotHit=false, actTime=0;
 let tally=null, fading=0, fadeIn=0;
 function addScore(base, kind){
-  const m=Math.max(0.25, p.hp/PMAXHP);
+  const m=Math.max(0.25, p.hp/curMaxHP());
   const pts=Math.round(base*m);
   actScore+=pts;
   if (kind==='soul') actSoulPts+=pts; else actKillPts+=pts;
@@ -715,7 +719,7 @@ function computeTally(){
     r.souls=Math.max(r.souls||0, soulCount);
     r.maxSouls=totalOrbVal;
     if(r.secret===undefined) r.secret=null;   // reserved: cReapY stone / secret collectible
-    prog.soulz=(prog.soulz||0)+soulCount;
+    prog.soulz=(prog.soulz||0)+soulCount*greedMult();
     saveProg();
   }
 }
@@ -866,7 +870,7 @@ function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   const sy = keep && p && p.spawnY!==undefined ? p.spawnY : (segFloorsAt(sx)[0]!==undefined?segFloorsAt(sx)[0]:GROUND);
   p = { x:sx, y:sy, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
-        hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, invHurt:0, diveT:0, diveRec:0, slamT:0, slamRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
+        hp:curMaxHP(), hpShown:curMaxHP(), inv:0, flash:0, dead:false, hurtT:0, invHurt:0, diveT:0, diveRec:0, slamT:0, slamRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
   for(const bo of (bolts||[])){ if(bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
@@ -1082,6 +1086,7 @@ function update(dt){
   if (shakeT>0){ shakeT-=dt; if(shakeT<=0){ shakeT=0; shakeMag=0; } }
   if (p.flash>0) p.flash-=dt;
   if (chaosGlitchT>0) chaosGlitchT-=dt;
+  if (p.barrierT>0) p.barrierT-=dt;
   if (p.hurtT>0) p.hurtT-=dt;
   p.hpShown += (p.hp-p.hpShown)*Math.min(1,dt*8);
   if (powerActive && transformT>0 && !p.dead){
@@ -1273,7 +1278,7 @@ function update(dt){
   for (const s of souls){
     if (s.got){ if(s.pop<1) s.pop+=dt/0.28; continue; }
     const r=30, sb={x:s.x-r,y:s.y-r,w:2*r,h:2*r};
-    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount+=s.val; soulOrbGot++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+s.val); }
+    if (overlap(pb,sb)){ s.got=true; s.pop=0; soulCount+=s.val; soulOrbGot++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+s.val*greedMult()); }
   }
   // --- combat ---
   let pwb = (p.attackT>0) ? worldWeaponBox(SPR.chars[chosen].attack, curFrame(), p.x, p.y, p.facing) : null;
@@ -1306,7 +1311,7 @@ function update(dt){
     else if (equippedStone==='emerald'){
       // Verdant Renewal: pull loose souls in like a magnet + regenerate health
       for(const s of souls){ if(s.got) continue; const dx=p.x-s.x, dy=(p.y-50)-s.y, d=Math.hypot(dx,dy); if(d>2 && d<470){ const pull=Math.min(0.9, dt*(3.0+360/d)); s.x+=dx*pull; s.y+=dy*pull; } }
-      emHealAcc+=dt; if(emHealAcc>=1.2){ emHealAcc-=1.2; if(p.hp<PMAXHP){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup',0.6); for(let i=0;i<9;i++) zbits.push({x:p.x,y:p.y-50,vx:(Math.random()-0.5)*120,vy:-40-Math.random()*95,sz:2+Math.random()*2.5,life:0.5+Math.random()*0.4,t:0,c:'#3ddc84'}); } }
+      emHealAcc+=dt; if(emHealAcc>=1.2){ emHealAcc-=1.2; if(p.hp<curMaxHP()){ p.hp=Math.min(curMaxHP(),p.hp+1); playSfx('sfx_healthup',0.6); for(let i=0;i<9;i++) zbits.push({x:p.x,y:p.y-50,vx:(Math.random()-0.5)*120,vy:-40-Math.random()*95,sz:2+Math.random()*2.5,life:0.5+Math.random()*0.4,t:0,c:'#3ddc84'}); } }
     }
     else if (equippedStone==='amethyst'){
       // Phantom Veil: go spectral — invincible and phase clean through enemies & hazards
@@ -1350,8 +1355,10 @@ function update(dt){
       if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); continue; }
     }
     if (pwb && z.hitCd<=0 && overlap(pwb, zBodyBox(z))){
-      z.hp-=1; z.hitCd=0.45; z.shown=3; playSfx('sfx_meleehit',0.6);
+      const _dk=(hasDiscord() && z.kw!=='zgen' && Math.random()<DISCORD_KILL);
+      z.hp-=_dk?99:1; z.hitCd=0.45; z.shown=3; playSfx('sfx_meleehit',0.6);
       z.x=clamp(z.x + (z.x<p.x?-12:12), z.min, z.max);
+      if(_dk){ for(let i=0;i<18;i++) zbits.push({x:z.x,y:z.y-44,vx:(Math.random()-0.5)*250,vy:-40-Math.random()*170,sz:2+Math.random()*3,life:0.3+Math.random()*0.35,t:0,c:['#ffae57','#ff6a2c','#ffffff'][(Math.random()*3)|0]}); }
       if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); continue; }
     }
     // zombie behavior + its sword strikes player
@@ -1469,7 +1476,7 @@ function update(dt){
   slamFx=slamFx.filter(f=>f.t<0.42);
   for (const fx of chkFx){
     fx.t+=dt;
-    if (!fx.hit && fx.t>0.62){ fx.hit=true; p.hp=Math.min(PMAXHP, p.hp+1); playSfx('sfx_healthup'); }
+    if (!fx.hit && fx.t>0.62){ fx.hit=true; p.hp=Math.min(curMaxHP(), p.hp+1); playSfx('sfx_healthup'); }
   }
   chkFx=chkFx.filter(fx=>fx.t<1.1);
   for(const bo of bolts){ if(bo.kind==='void'&&bo.dead&&bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
@@ -1601,6 +1608,7 @@ function drawWorldProps(){
 function crushPlayer(dir){ if(p.dead||p.won||p.winning) return; gotHit=true; p.hp=0; p.dead=true; p.deadT=0; p.inv=0; p.flash=0; p.hurtT=0; p.vx=0; p.vy=0; p.deathHurt=true; p.tossDir=-p.facing; playSfx('sfx_hurt'); playSfx('sfx_pdie'); }
 function hurtPlayer(srcX,dmg){
   if (p.diveT>0||p.diveRec>0) return;   // Power Dive i-frames (until normal stance resumes)
+  if (hasDiscord() && Math.random()<DISCORD_BLOCK){ p.barrierT=0.4; p.inv=Math.max(p.inv,0.55); p.invHurt=Math.max(p.invHurt||0,0.3); playSfx('sfx_meleehit',0.5); for(let i=0;i<12;i++){ const a=i/12*6.283; zbits.push({x:p.x,y:p.y-50,vx:Math.cos(a)*130,vy:Math.sin(a)*130-20,sz:2+Math.random()*2,life:0.3+Math.random()*0.22,t:0,c:'#ffae57'}); } return; }
   gotHit=true; playSfx('sfx_hurt');
   p.hp-=(dmg||1); p.inv=1.0; p.invHurt=1.0; p.flash=0.35;
   p.hurtT=0.45;  // single retro hurt still + flicker, fixed hit-stun
@@ -1816,8 +1824,8 @@ function collectLoot(L){
     return; }
   if (/^vigorfrag[1-6]$/.test(L.type)){ const k=parseInt(L.type.slice(9)); const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas.vigorShards=_ps.megas.vigorShards||[]; if(_ps.megas.vigorShards.indexOf(k)<0){ _ps.megas.vigorShards.push(k); if(prog) saveProg(); } addScore(2500); playSfx('sfx_soul'); playSfx('sfx_healthup',0.85); const cy=L.restY!==undefined?L.restY:L.y; for(let i=0;i<14;i++) zbits.push({x:L.x, y:cy, vx:(Math.random()-0.5)*210, vy:-30-Math.random()*170, sz:2.5+Math.random()*3, life:0.5+Math.random()*0.5, t:0, c:'#ff3d5a'}); return; }
   if (L.type==='mega_greed' || L.type==='mega_discord'){ { const _ps=artProg(); _ps.megas=_ps.megas||{}; _ps.megas[L.type==='mega_greed'?'greed':'discord']=true; if(prog) saveProg(); } addScore(3000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.9); return; }
-  if (L.type==='heart'){ p.hp=Math.min(PMAXHP,p.hp+1); playSfx('sfx_healthup'); }
-  else if (L.type==='soul' || /^soul\d+$/.test(L.type)){ const v=L.type==='soul'?1:parseInt(L.type.slice(4)); soulCount+=v; if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+v); addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
+  if (L.type==='heart'){ p.hp=Math.min(curMaxHP(),p.hp+1); playSfx('sfx_healthup'); }
+  else if (L.type==='soul' || /^soul\d+$/.test(L.type)){ const v=L.type==='soul'?1:parseInt(L.type.slice(4)); soulCount+=v; if(equippedStone && !powerActive) stoneCharge=Math.min(PMETER, stoneCharge+v*greedMult()); addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); }
   else if (L.type==='stone'){ addScore(2000); playSfx('sfx_soul'); playSfx('sfx_healthup',0.7); }
   else { addScore(500); playSfx('sfx_soul',0.8); }
 }
@@ -2512,7 +2520,7 @@ function drawPlayerHP(){
   const hi=SPR.hpicon[chosen]||SPR.hpicon[isDing(chosen)?'dingbat':chosen];
   if (hi){ const ih=30, iw=hi.w*ih/hi.h; ctx.drawImage(hi.img, x+16-iw/2, y+h/2-ih/2, iw, ih); }
   ctx.fillStyle='rgba(0,0,0,.55)'; roundRect(bx,y+4,bw,h-8,6); ctx.fill();
-  const frac=Math.max(0,Math.min(1,p.hpShown/PMAXHP));
+  const frac=Math.max(0,Math.min(1,p.hpShown/curMaxHP()));
   const low = frac<0.34 ? (0.55+0.45*Math.sin(gt*9)) : 0;
   const c=hpColor(frac);
   ctx.save(); roundRect(bx,y+4,bw,h-8,6); ctx.clip();
@@ -2521,7 +2529,7 @@ function drawPlayerHP(){
   ctx.fillStyle='rgba(255,255,255,.18)'; ctx.fillRect(bx,y+5,bw*frac,3);
   ctx.restore();
   ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=2;
-  for(let i=1;i<PMAXHP;i++){ const sn=bx+bw*i/PMAXHP; ctx.beginPath(); ctx.moveTo(sn,y+5); ctx.lineTo(sn,y+h-5); ctx.stroke(); }
+  const _mx=curMaxHP(); for(let i=1;i<_mx;i++){ const sn=bx+bw*i/_mx; ctx.beginPath(); ctx.moveTo(sn,y+5); ctx.lineTo(sn,y+h-5); ctx.stroke(); }
   if(low>0){ ctx.strokeStyle='rgba(230,50,50,'+(0.25+0.5*low)+')'; ctx.lineWidth=2.5; roundRect(bx,y+4,bw,h-8,6); ctx.stroke(); }
 }
 function drawProgress(){
@@ -2982,6 +2990,11 @@ function draw(){
     ctx.save(); ctx.globalCompositeOperation='lighter';
     const fg=ctx.createRadialGradient(ix,zf.y,1,ix,zf.y,rr); fg.addColorStop(0,'rgba(255,255,255,'+(0.95*a).toFixed(2)+')'); fg.addColorStop(0.45,'rgba(255,252,215,'+(0.5*a).toFixed(2)+')'); fg.addColorStop(1,'rgba(255,238,120,0)'); ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(ix,zf.y,rr,0,7); ctx.fill();
     ctx.fillStyle='rgba(255,255,255,'+(0.92*a).toFixed(2)+')'; ctx.beginPath(); ctx.arc(ix,zf.y,Math.max(1,16*(1-k)),0,7); ctx.fill();
+    ctx.restore(); }
+  if(p.barrierT>0){ const bx2=p.x-camX, by2=p.y-48, k=Math.max(0,p.barrierT/0.4), rr=28+12*(1-k);
+    ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.strokeStyle='rgba(255,180,90,'+(0.75*k).toFixed(2)+')'; ctx.lineWidth=2.5; ctx.shadowColor='rgba(255,150,60,0.9)'; ctx.shadowBlur=10;
+    ctx.beginPath(); for(let a=0;a<=6;a++){ const an=a/6*6.283+gt*0.5, px=bx2+Math.cos(an)*rr, py=by2+Math.sin(an)*rr*1.18; if(a===0)ctx.moveTo(px,py); else ctx.lineTo(px,py); } ctx.stroke();
+    const fg=ctx.createRadialGradient(bx2,by2,rr*0.3,bx2,by2,rr*1.2); fg.addColorStop(0,'rgba(255,170,80,0)'); fg.addColorStop(0.7,'rgba(255,170,80,'+(0.12*k).toFixed(2)+')'); fg.addColorStop(1,'rgba(255,150,60,0)'); ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(bx2,by2,rr*1.2,0,7); ctx.fill();
     ctx.restore(); }
   for (const z of zombies) drawZHP(z);
   ctx.restore();
@@ -3657,7 +3670,7 @@ const ART_CSS=`
 @media(prefers-reduced-motion:reduce){#artifacts *{animation:none !important}}
 `;
 let artEl=null;
-function artProg(){ if(typeof prog!=='undefined'&&prog) return prog; if(!window.__artProg) window.__artProg={owned:[],megas:{}}; return window.__artProg; }
+function artProg(){ if(typeof prog!=='undefined'&&prog) return prog; if(!window.__artProg) window.__artProg={owned:[],megas:{greed:true,discord:true,vigorShards:[1,2,3,4,5,6]}}; return window.__artProg; }
 function artStoneImgHTML(id,lit){
   const g=ART_GLOWC[id]||'#fff';
   if(lit) return '<div class="art-simg"><div class="art-glow" style="background:'+g+'"></div><img class="lit" src="'+artStoneURL(id)+'"><div class="art-shine" style="-webkit-mask-image:url('+artStoneURL(id)+');mask-image:url('+artStoneURL(id)+')"></div></div>';
