@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cReapZ — PWA Icon Check</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0d0b16;color:#e8e6f5;font-family:Inter,system-ui,sans-serif;padding:18px;display:flex;flex-direction:column;align-items:center}
+h1{font-size:18px;color:#e7d3a0;margin:4px 0}
+.hint{font:600 11px Inter;color:#9a8fc0;text-align:center;max-width:540px;margin-bottom:18px;line-height:1.5}
+.cols{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;width:100%}
+.col{background:#15112a;border:1px solid #2a2150;border-radius:14px;padding:16px;flex:1;min-width:300px;max-width:440px}
+.col h2{font-size:13px;color:#c8fb50;margin:0 0 4px;text-align:center}
+.col p{font:600 10px Inter;color:#9a8fc0;text-align:center;margin:0 0 14px}
+.row{display:flex;gap:14px;align-items:flex-end;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.ic{display:flex;flex-direction:column;align-items:center;gap:5px}
+.ic span{font:700 9px Inter;color:#6f6790}
+.thumb{background-image:var(--src);background-size:cover;background-position:center;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.maskline{display:flex;gap:18px;justify-content:center;align-items:center;padding-top:8px;border-top:1px solid #2a2150}
+.sq{--src:url('./assets/icon_sq_preview.png?v=1')}
+.rd{--src:url('./assets/icon_rd_preview.png?v=1')}
+/* mask shapes on a phone-style wallpaper */
+.tray{display:flex;gap:16px;justify-content:center;align-items:center;background:linear-gradient(135deg,#3a2a5a,#1a2540);border-radius:14px;padding:18px}
+.m{width:84px;height:84px;background-image:var(--src);background-size:cover;background-position:center;box-shadow:0 6px 16px rgba(0,0,0,.55)}
+.m.ios{border-radius:22.5%}
+.m.circle{border-radius:50%}
+.m.squircle{border-radius:30%}
+.mlab{font:700 9px Inter;color:#cdbbe6;text-align:center;margin-top:5px}
+</style></head>
+<body>
+<h1>cReapZ — PWA Icon Legibility Check</h1>
+<div class="hint">The same art at real home-screen sizes (120 / 96 / 72 / 48 px) and under the actual OS masks (iOS rounded-rect, Android circle/squircle). This is how it'll really look on a device — judge "smushed" from the small sizes, not the big art.</div>
+<div class="cols">
+  <div class="col">
+    <h2>SQUARE version</h2><p>iPad / desktop / iOS</p>
+    <div class="row">
+      <div class="ic"><div class="thumb sq" style="width:120px;height:120px;border-radius:27px"></div><span>120</span></div>
+      <div class="ic"><div class="thumb sq" style="width:96px;height:96px;border-radius:21px"></div><span>96</span></div>
+      <div class="ic"><div class="thumb sq" style="width:72px;height:72px;border-radius:16px"></div><span>72</span></div>
+      <div class="ic"><div class="thumb sq" style="width:48px;height:48px;border-radius:11px"></div><span>48</span></div>
+    </div>
+    <div class="tray"><div><div class="m sq ios"></div><div class="mlab">iOS</div></div><div><div class="m sq squircle"></div><div class="mlab">Android squircle</div></div><div><div class="m sq circle"></div><div class="mlab">Android circle</div></div></div>
+  </div>
+  <div class="col">
+    <h2>ROUND version</h2><p>Android adaptive</p>
+    <div class="row">
+      <div class="ic"><div class="thumb rd" style="width:120px;height:120px;border-radius:50%"></div><span>120</span></div>
+      <div class="ic"><div class="thumb rd" style="width:96px;height:96px;border-radius:50%"></div><span>96</span></div>
+      <div class="ic"><div class="thumb rd" style="width:72px;height:72px;border-radius:50%"></div><span>72</span></div>
+      <div class="ic"><div class="thumb rd" style="width:48px;height:48px;border-radius:50%"></div><span>48</span></div>
+    </div>
+    <div class="tray"><div><div class="m rd ios"></div><div class="mlab">iOS (corners empty)</div></div><div><div class="m rd circle"></div><div class="mlab">Android circle</div></div></div>
+  </div>
+</div>
+</body></html>
