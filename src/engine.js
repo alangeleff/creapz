@@ -656,6 +656,15 @@ function sfxFire(key, vol, delay){
   return s;
 }
 let sfxLast={};
+function sfxLoop(key, vol){
+  if (!AC || !sfxBuf[key]) return null;
+  ensureSfxGain();
+  const sc=AC.createBufferSource(); sc.buffer=sfxBuf[key]; sc.loop=true;
+  const g=AC.createGain(); g.gain.value=(vol===undefined?1:vol); sc.connect(g); g.connect(sfxGain);
+  try{ sc.start(); }catch(e){ return null; }
+  return sc;
+}
+function stopLoop(sc){ if(sc){ try{ sc.stop(); }catch(e){} } }
 function playSfx(key, vol, delay){
   if (!AC) return;
   ensureSfxGain();
@@ -855,6 +864,7 @@ function reset(keep){
         hp:PMAXHP, hpShown:PMAXHP, inv:0, flash:0, dead:false, hurtT:0, invHurt:0, diveT:0, diveRec:0, slamT:0, slamRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
+  for(const bo of bolts){ if(bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
   zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; shakeT=0; shakeMag=0;
   if (!keep){
     soulCount=0; soulOrbGot=0; chkOn=CHK.map(()=>false);
@@ -1166,7 +1176,7 @@ function update(dt){
     if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
       if (powerActive && equippedStone==='obsidian'){
-        bolts.push({x:p.x+p.facing*40, y:p.y-58, vx:p.facing*210, t:0, dead:false, kind:'void', pullCd:0}); playSfx('sfx_portalblast',0.9); playSfx('sfx_portalhum',0.6);
+        const vb={x:p.x+p.facing*40, y:p.y-58, vx:p.facing*210, t:0, dead:false, kind:'void', pullCd:0}; bolts.push(vb); playSfx('sfx_portalblast',0.9); vb.hum=sfxLoop('sfx_portalhum',0.6);
       }
       else if (powerActive && equippedStone==='fluorite'){
         const dir=p.facing, oy=p.y-58;
@@ -1389,7 +1399,7 @@ function update(dt){
           if(d<killR && tick) voidEraseBat(b,bo); } }
       if(tick) bo.pullCd=0.22;
       if(Math.random()<0.8){ const ang=Math.random()*6.28, rr=50+Math.random()*120; zbits.push({x:bo.x+Math.cos(ang)*rr, y:bo.y+Math.sin(ang)*rr, vx:-Math.cos(ang)*(170+Math.random()*170), vy:-Math.sin(ang)*(170+Math.random()*170), sz:1.4+Math.random()*2, life:0.3+Math.random()*0.28, t:0, c:['#9a7fd0','#7b5cff','#c8a8ff'][(Math.random()*3)|0]}); }
-      if(bo.t>1.7){ bo.dead=true; impacts.push({x:bo.x,y:bo.y,t:0}); playSfx('sfx_wportal',0.7);
+      if(bo.t>1.7){ bo.dead=true; stopLoop(bo.hum); bo.hum=null; impacts.push({x:bo.x,y:bo.y,t:0}); playSfx('sfx_wportal',0.7);
         for(const z of zombies){ if(z.dead) continue; if(Math.hypot(bo.x-z.x,bo.y-(z.y-40))<130){ z.hp-=2; z.shown=3; if(z.hp<=0) voidErase(z,bo); } }
         for(const b of bats){ if(b.dead) continue; if(Math.hypot(bo.x-b.x,bo.y-b.y)<130) voidEraseBat(b,bo); }
         for(let i=0;i<22;i++) zbits.push({x:bo.x,y:bo.y,vx:(Math.random()-0.5)*340,vy:(Math.random()-0.5)*340,sz:2+Math.random()*3,life:0.3+Math.random()*0.3,t:0,c:['#9a7fd0','#7b5cff','#ffffff'][(Math.random()*3)|0]}); }
@@ -1440,6 +1450,7 @@ function update(dt){
     if (!fx.hit && fx.t>0.62){ fx.hit=true; p.hp=Math.min(PMAXHP, p.hp+1); playSfx('sfx_healthup'); }
   }
   chkFx=chkFx.filter(fx=>fx.t<1.1);
+  for(const bo of bolts){ if(bo.kind==='void'&&bo.dead&&bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
   bolts=bolts.filter(bo=>!bo.dead||bo.t<1.2);
   updateHazards(dt*efr);
   updateZbits(dt);
