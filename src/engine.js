@@ -42,7 +42,13 @@ const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidi
 const PMETER=20, PDUR=7;
 const STONE_HROT={ruby:-38,topaz:12,emerald:100,sapphire:180,amethyst:235,fluorite:130,obsidian:215,chaos:270,holy:12,master:-10};
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, emHealAcc=0, powerDur=7, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
-function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); if(equippedStone==='chaos'){ chaosPile=[]; chaosAmmo=7; const ax0=p.x-p.facing*30, ay0=p.y-100; for(let i=0;i<7;i++){ const ox=(Math.random()-0.5)*60-6, oy=-8+Math.random()*30, e={v:(Math.random()*9)|0, ox, oy, sp:Math.random()*6.28, rot:(Math.random()-0.5)*1.0}; e.wx=ax0+ox; e.wy=ay0+oy; chaosPile.push(e); } } playSfx('sfx_ignite',1.0); playSfx('sfx_screamchorus',1.05); }
+function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); if(equippedStone==='chaos'){ chaosPile=[]; chaosAmmo=7;
+    const ax0=p.x-p.facing*34, ay0=p.y-104, scales=[1.85,1.35,1.15,1.0,0.85,0.72,0.6];
+    for(let i=scales.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=scales[i]; scales[i]=scales[j]; scales[j]=t; }
+    for(let i=0;i<7;i++){ const ang=Math.PI*(0.12+0.78*(i/6))+(Math.random()-0.5)*0.45, rad=46+Math.random()*46;
+      const ox=-Math.cos(ang)*rad-6, oy=-Math.sin(ang)*rad*0.78-8;
+      const e={v:(Math.random()*9)|0, ox, oy, sp:Math.random()*6.28, rot:(Math.random()-0.5)*1.0, sc:scales[i], behind:Math.random()<0.5};
+      e.wx=ax0+ox; e.wy=ay0+oy; chaosPile.push(e); } } playSfx('sfx_ignite',1.0); playSfx('sfx_screamchorus',1.05); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
 function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Classic','ding_swamp':'Swamp','ding_azure':'Azure','ding_blood':'Blood','ding_magic':'Magic','ding_mystic':'Mystic','ding_wisp':'Wisp','ding_news':'Newspaper','ding_noir':'Noir'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
@@ -557,7 +563,7 @@ let TIMG=null;
 const TITLEBG=new Image(); TITLEBG.src='./assets/title_keyart.png?v='+ASSET_VER;
 const FLAME_FX=new Image(); FLAME_FX.src='./assets/fx_flame.png?v='+ASSET_VER; const FLAME_N=6;
 const RUBY_ORB=new Image(); RUBY_ORB.src='./assets/fx_ruby_orb_v2.png?v='+ASSET_VER;
-const CHAOS_FRAGS=[]; for(let i=1;i<=9;i++){ const im=new Image(); im.src='./assets/fx_chaosfrag'+i+'.png?v='+ASSET_VER; CHAOS_FRAGS.push(im); }
+const CHAOS_FRAGS=[]; for(let i=1;i<=9;i++){ const im=new Image(); im.src='./assets/fx_chaosfrag'+i+'_v2.png?v='+ASSET_VER; CHAOS_FRAGS.push(im); }
 let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicReady={}, musicKey=null, musicReq=0;
 function audioInit(){
   if (AC) return;
@@ -1187,7 +1193,7 @@ function update(dt){
       else if (powerActive && equippedStone==='chaos' && chaosAmmo>0){
         const e=chaosPile.shift(), dir=p.facing;
         const px=(e&&e.wx!==undefined)?e.wx:p.x-dir*20, py=(e&&e.wy!==undefined)?e.wy:p.y-92;
-        bolts.push({x:px, y:py, vx:dir*440, vy:-70, t:0, dead:false, kind:'chaosshard', homing:true, life:2.6, dmg:3, v:(e?e.v:0)});
+        bolts.push({x:px, y:py, vx:dir*680, vy:-55, t:0, dead:false, kind:'chaosshard', homing:true, life:2.6, dmg:3, v:(e?e.v:0), scl:(e?e.sc:1)});
         chaosAmmo--; stoneCharge=Math.round(PMETER*chaosAmmo/7);
         playSfx('sfx_bolt',0.85); playSfx('sfx_projhit',0.3);
       }
@@ -1317,7 +1323,7 @@ function update(dt){
     }
     else if (equippedStone==='chaos'){
       // Chaos Storm: the stored shard battery hovers above/behind you and follows you around
-      const ax0=p.x - p.facing*30, ay0=p.y-100;
+      const ax0=p.x - p.facing*34, ay0=p.y-104;
       for(const e of chaosPile){ e.wx=ax0+e.ox; e.wy=ay0+e.oy+Math.sin(gt*2+e.sp)*3; }
     }
     if (equippedStone==='chaos'){ if(chaosAmmo<=0){ powerActive=false; stoneCharge=0; chaosPile=[]; } }
@@ -2282,6 +2288,21 @@ function drawPoweredFrame(sx, yy, fc){
   ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
   ctx.drawImage(pimg, sx-ww/2, yy - hh + 16, ww, hh); ctx.restore();
 }
+function drawChaosPile(behind){
+  for(const e of chaosPile){ if(!!e.behind!==behind) continue; const img=CHAOS_FRAGS[e.v]; if(!img||!img.complete||!img.naturalWidth) continue;
+    const ex=e.wx-camX, ey=e.wy, h=24*(e.sc||1), w=h*img.naturalWidth/img.naturalHeight;
+    ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,h*0.75); g.addColorStop(0,'rgba(140,170,255,0.4)'); g.addColorStop(1,'rgba(90,120,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,h*0.75,0,7); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(ex,ey); ctx.rotate(e.rot+Math.sin(gt*1.5+e.sp)*0.16); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,-w/2,-h/2,w,h); ctx.restore();
+  }
+}
+function drawChaosBack(){
+  if(!(powerActive && transformT<=0 && equippedStone==='chaos')) return;
+  const sx=pxf(p.x,1), cy=p.y-54, pul=0.7+0.3*Math.sin(gt*3);
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(sx,cy,8,sx,cy,98); g.addColorStop(0,'rgba(150,90,255,'+(0.34*pul).toFixed(2)+')'); g.addColorStop(0.5,'rgba(95,85,235,'+(0.18*pul).toFixed(2)+')'); g.addColorStop(1,'rgba(60,40,160,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy,98,0,7); ctx.fill();
+  ctx.restore();
+  drawChaosPile(true);
+}
 function drawRubyBackOrbs(){
   if(!(powerActive && transformT<=0 && equippedStone==='ruby')) return;
   const sx=pxf(p.x,1), cx=sx, cy=p.y-50, Rb=78, ORB=4;
@@ -2425,10 +2446,12 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       if(Math.random()<0.5) zbits.push({x:p.x+(Math.random()-0.5)*64, y:p.y-36-Math.random()*44, vx:(Math.random()-0.5)*28, vy:-8-Math.random()*26, sz:1.2+Math.random()*1.8, life:0.6+Math.random()*0.5, t:0, c:['#bfe4ff','#7fc8ff','#ffffff'][(Math.random()*3)|0]});
     }
     else if(equippedStone==='chaos'){
-      for(const e of chaosPile){ const img=CHAOS_FRAGS[e.v]; if(!img||!img.complete||!img.naturalWidth) continue;
-        const ex=e.wx-camX, ey=e.wy, h=24, w=h*img.naturalWidth/img.naturalHeight;
-        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,15); g.addColorStop(0,'rgba(140,170,255,0.42)'); g.addColorStop(1,'rgba(90,120,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,15,0,7); ctx.fill(); ctx.restore();
-        ctx.save(); ctx.translate(ex,ey); ctx.rotate(e.rot+Math.sin(gt*1.5+e.sp)*0.16); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,-w/2,-h/2,w,h); ctx.restore(); }
+      drawChaosPile(false);
+      // glowing red eyes (approx head position, faces forward)
+      const exB=sx+p.facing*4, eyY=p.y-70, gap=6;
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      for(const dx of [-gap*0.5, gap*0.5]){ const exx=exB+dx; const eg=ctx.createRadialGradient(exx,eyY,0.3,exx,eyY,7); eg.addColorStop(0,'rgba(255,95,75,0.95)'); eg.addColorStop(0.4,'rgba(255,30,20,0.6)'); eg.addColorStop(1,'rgba(255,0,0,0)'); ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(exx,eyY,7,0,7); ctx.fill(); ctx.fillStyle='rgba(255,200,190,0.95)'; ctx.beginPath(); ctx.arc(exx,eyY,1.5,0,7); ctx.fill(); }
+      ctx.restore();
     }
     else if(equippedStone!=='fluorite'){
       const pr=48+6*Math.sin(gt*6); const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.7,col+'44'); g.addColorStop(1,col+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
@@ -2710,11 +2733,12 @@ function drawPlayerLayer(){
       drawPoweredFrame(sx); ctx.filter='none'; ctx.restore(); } 
     else if (!(p.invHurt>0 && !powerActive && Math.floor(gt*16)%2===0)){
       if(powerActive&&equippedStone==='sapphire'&&transformT<=0){ for(let gi=0;gi<sapTrail.length;gi++){ const g=sapTrail[gi]; ctx.save(); ctx.globalAlpha=0.08+0.26*(gi/Math.max(1,sapTrail.length)); drawCharSprite(chosen,g.st,g.fi,g.x-camX,g.y,g.f,1,0); ctx.restore(); } }
-      const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0), _obs=(powerActive&&equippedStone==='obsidian'&&transformT<=0), _top=(powerActive&&equippedStone==='topaz'&&transformT<=0);
+      const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0), _obs=(powerActive&&equippedStone==='obsidian'&&transformT<=0), _top=(powerActive&&equippedStone==='topaz'&&transformT<=0), _chaos=(powerActive&&equippedStone==='chaos'&&transformT<=0);
       let _skip=false; ctx.save();
       if(_spec){ ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); }
       if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
       if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
+      if(_chaos){ ctx.filter='brightness(0.16) saturate(0.45) contrast(1.4) drop-shadow(0 0 5px rgba(150,90,255,0.6))'; }
       if(!_skip) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0);
       ctx.filter='none'; ctx.restore();
     }
@@ -2789,6 +2813,7 @@ function draw(){
   }
   drawFluoriteAura('back');
   drawRubyBackOrbs();
+  drawChaosBack();
   drawPlayerLayer();
   drawSlamFx();
   drawPower();
@@ -2891,7 +2916,7 @@ function draw(){
       ctx.save(); ctx.globalCompositeOperation='lighter';
       const tg=ctx.createRadialGradient(bx,bo.y,1,bx,bo.y,18); tg.addColorStop(0,'rgba(150,180,255,0.55)'); tg.addColorStop(0.5,'rgba(110,90,255,0.28)'); tg.addColorStop(1,'rgba(90,120,255,0)'); ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(bx,bo.y,18,0,7); ctx.fill();
       ctx.restore();
-      if(img&&img.complete&&img.naturalWidth){ const h=28, w=h*img.naturalWidth/img.naturalHeight;
+      if(img&&img.complete&&img.naturalWidth){ const h=28*(bo.scl||1), w=h*img.naturalWidth/img.naturalHeight;
         ctx.save(); ctx.translate(bx,bo.y); ctx.rotate(ang); if(bo.vx<0) ctx.scale(1,-1); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,-w/2,-h/2,w,h); ctx.restore(); }
       if(Math.random()<0.6) zbits.push({x:bo.x,y:bo.y,vx:(Math.random()-0.5)*46,vy:(Math.random()-0.5)*46,sz:1+Math.random()*1.7,life:0.2+Math.random()*0.26,t:0,c:['#9fb6ff','#7b5cff','#bfe0ff','#ffffff'][(Math.random()*4)|0]});
       continue;
