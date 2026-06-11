@@ -43,7 +43,7 @@ const PMETER=20, PDUR=7;
 const STONE_HROT={ruby:-38,topaz:12,emerald:100,sapphire:180,amethyst:235,fluorite:130,obsidian:215,chaos:270,holy:12,master:-10};
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, emHealAcc=0, powerDur=7, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
 function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); if(equippedStone==='chaos'){ chaosPile=[]; chaosAmmo=7;
-    const ax0=p.x-p.facing*34, ay0=p.y-104, scales=[1.85,1.35,1.15,1.0,0.85,0.72,0.6];
+    const ax0=p.x-p.facing*34, ay0=p.y-104, scales=[1.5,1.25,1.1,0.95,0.82,0.7,0.58];
     for(let i=scales.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=scales[i]; scales[i]=scales[j]; scales[j]=t; }
     for(let i=0;i<7;i++){ const ang=Math.PI*(0.12+0.78*(i/6))+(Math.random()-0.5)*0.45, rad=46+Math.random()*46;
       const ox=-Math.cos(ang)*rad-6, oy=-Math.sin(ang)*rad*0.78-8;
@@ -225,7 +225,7 @@ const keys = {};
 const DOUBLE_TAP = 350;
 const lastRelease = { ArrowLeft:-1e9, ArrowRight:-1e9 };
 const runHeld = { ArrowLeft:false, ArrowRight:false };
-let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0;   // Power Dive trail + Sapphire after-image trail
+let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0, chaosGlitchT=0;   // Power Dive trail + Sapphire after-image trail
 let slamReq=null, slamGhosts=[], slamFx=[];   // Crush Drop: down-slam request + afterimage trail + shock fx
 let shakeT=0, shakeMag=0;
 function press(code){
@@ -563,7 +563,7 @@ let TIMG=null;
 const TITLEBG=new Image(); TITLEBG.src='./assets/title_keyart.png?v='+ASSET_VER;
 const FLAME_FX=new Image(); FLAME_FX.src='./assets/fx_flame.png?v='+ASSET_VER; const FLAME_N=6;
 const RUBY_ORB=new Image(); RUBY_ORB.src='./assets/fx_ruby_orb_v2.png?v='+ASSET_VER;
-const CHAOS_FRAGS=[]; for(let i=1;i<=9;i++){ const im=new Image(); im.src='./assets/fx_chaosfrag'+i+'_v2.png?v='+ASSET_VER; CHAOS_FRAGS.push(im); }
+const CHAOS_FRAGS=[]; for(let i=1;i<=9;i++){ const im=new Image(); im.src='./assets/fx_chaosfrag'+i+'_v3.png?v='+ASSET_VER; CHAOS_FRAGS.push(im); }
 let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicReady={}, musicKey=null, musicReq=0;
 function audioInit(){
   if (AC) return;
@@ -1083,6 +1083,7 @@ function update(dt){
   if (p.invHurt>0) p.invHurt-=dt;
   if (shakeT>0){ shakeT-=dt; if(shakeT<=0){ shakeT=0; shakeMag=0; } }
   if (p.flash>0) p.flash-=dt;
+  if (chaosGlitchT>0) chaosGlitchT-=dt;
   if (p.hurtT>0) p.hurtT-=dt;
   p.hpShown += (p.hp-p.hpShown)*Math.min(1,dt*8);
   if (powerActive && transformT>0 && !p.dead){
@@ -1194,7 +1195,7 @@ function update(dt){
         const e=chaosPile.shift(), dir=p.facing;
         const px=(e&&e.wx!==undefined)?e.wx:p.x-dir*20, py=(e&&e.wy!==undefined)?e.wy:p.y-92;
         bolts.push({x:px, y:py, vx:dir*680, vy:-55, t:0, dead:false, kind:'chaosshard', homing:true, life:2.6, dmg:3, v:(e?e.v:0), scl:(e?e.sc:1)});
-        chaosAmmo--; stoneCharge=Math.round(PMETER*chaosAmmo/7);
+        chaosAmmo--; stoneCharge=Math.round(PMETER*chaosAmmo/7); chaosGlitchT=0.18;
         playSfx('sfx_bolt',0.85); playSfx('sfx_projhit',0.3);
       }
       else if (isDing(chosen)){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
@@ -2447,11 +2448,6 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
     }
     else if(equippedStone==='chaos'){
       drawChaosPile(false);
-      // glowing red eyes (approx head position, faces forward)
-      const exB=sx+p.facing*4, eyY=p.y-70, gap=6;
-      ctx.save(); ctx.globalCompositeOperation='lighter';
-      for(const dx of [-gap*0.5, gap*0.5]){ const exx=exB+dx; const eg=ctx.createRadialGradient(exx,eyY,0.3,exx,eyY,7); eg.addColorStop(0,'rgba(255,95,75,0.95)'); eg.addColorStop(0.4,'rgba(255,30,20,0.6)'); eg.addColorStop(1,'rgba(255,0,0,0)'); ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(exx,eyY,7,0,7); ctx.fill(); ctx.fillStyle='rgba(255,200,190,0.95)'; ctx.beginPath(); ctx.arc(exx,eyY,1.5,0,7); ctx.fill(); }
-      ctx.restore();
     }
     else if(equippedStone!=='fluorite'){
       const pr=48+6*Math.sin(gt*6); const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.7,col+'44'); g.addColorStop(1,col+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
@@ -2738,7 +2734,16 @@ function drawPlayerLayer(){
       if(_spec){ ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); }
       if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
       if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
-      if(_chaos){ ctx.filter='brightness(0.16) saturate(0.45) contrast(1.4) drop-shadow(0 0 5px rgba(150,90,255,0.6))'; }
+      if(_chaos){ _skip=true; const cf=curFrame(), gl=chaosGlitchT>0, jx=gl?(Math.random()-0.5)*9:0;
+        // base: negative-inverted sprite
+        ctx.save(); ctx.filter='invert(1)'; drawCharSprite(chosen, p.state, cf, sx+jx, p.y, p.facing, 1, 0); ctx.restore();
+        // sweeping color ripple band (dark red -> purple -> grey)
+        { const spd=0.85, bandPhase=(gt*spd)%1, bodyTop=p.y-94, bodyH=94, bandY=bodyTop+bandPhase*bodyH,
+            ci=Math.floor(gt*spd)%3, filt=['invert(1) sepia(1) saturate(7) hue-rotate(-22deg) brightness(0.7)','invert(1) sepia(1) saturate(6) hue-rotate(248deg) brightness(0.85)','invert(1) saturate(0) brightness(1.15)'][ci];
+          ctx.save(); ctx.beginPath(); ctx.rect(sx-46+jx, bandY, 92, 26); ctx.clip(); ctx.filter=filt; ctx.globalAlpha=0.9; drawCharSprite(chosen,p.state,cf,sx+jx,p.y,p.facing,1,0); ctx.restore(); }
+        // blast glitch: sliced, offset, hue-shifted copies
+        if(gl){ for(let gI=0;gI<3;gI++){ const sy=p.y-92+Math.random()*86, sh=5+Math.random()*13, dx=(Math.random()-0.5)*16;
+          ctx.save(); ctx.beginPath(); ctx.rect(sx-46, sy, 92, sh); ctx.clip(); ctx.filter='invert(1) saturate(3) hue-rotate('+((Math.random()*300)|0)+'deg)'; ctx.globalAlpha=0.85; drawCharSprite(chosen,p.state,cf,sx+dx,p.y,p.facing,1,0); ctx.restore(); } } }
       if(!_skip) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0);
       ctx.filter='none'; ctx.restore();
     }
