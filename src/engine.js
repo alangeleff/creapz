@@ -2637,7 +2637,7 @@ function drawPlayerLayer(){
       if(_spec){ ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); }
       if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
       if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
-      if(!_skip) drawPoweredFrame(sx);
+      if(!_skip){ if(powerActive&&transformT<=0) drawPoweredFrame(sx); else drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0); }
       ctx.filter='none'; ctx.restore();
     }
     if (p.muzzleT>0){
