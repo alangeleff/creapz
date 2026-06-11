@@ -270,6 +270,13 @@
    "theme": "castle",
    "act": "II",
    "ts": 1781019341769
+  },
+  {
+   "id": "stmq9i2ich",
+   "name": "Test Stage I",
+   "theme": "crypt",
+   "act": "I",
+   "ts": 1781182496609
   }
  ],
  "worldMap": {
