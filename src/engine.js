@@ -42,7 +42,7 @@ const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidi
 const PMETER=20, PDUR=7;
 const STONE_HROT={ruby:-38,topaz:12,emerald:100,sapphire:180,amethyst:235,fluorite:130,obsidian:215,chaos:270,holy:12,master:-10};
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, emHealAcc=0, powerDur=7, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
-function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; chaosCd=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); playSfx('sfx_ignite',1.0); playSfx('sfx_screamchorus',1.05); }
+function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); if(equippedStone==='chaos'){ chaosPile=[]; chaosAmmo=7; const ax0=p.x-p.facing*30, ay0=p.y-100; for(let i=0;i<7;i++){ const ox=(Math.random()-0.5)*60-6, oy=-8+Math.random()*30, e={v:(Math.random()*9)|0, ox, oy, sp:Math.random()*6.28, rot:(Math.random()-0.5)*1.0}; e.wx=ax0+ox; e.wy=ay0+oy; chaosPile.push(e); } } playSfx('sfx_ignite',1.0); playSfx('sfx_screamchorus',1.05); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
 function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Classic','ding_swamp':'Swamp','ding_azure':'Azure','ding_blood':'Blood','ding_magic':'Magic','ding_mystic':'Mystic','ding_wisp':'Wisp','ding_news':'Newspaper','ding_noir':'Noir'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
@@ -219,7 +219,7 @@ const keys = {};
 const DOUBLE_TAP = 350;
 const lastRelease = { ArrowLeft:-1e9, ArrowRight:-1e9 };
 const runHeld = { ArrowLeft:false, ArrowRight:false };
-let diveReq=null, diveGhosts=[], sapTrail=[], chaosCd=0;   // Power Dive trail + Sapphire after-image trail
+let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0;   // Power Dive trail + Sapphire after-image trail
 let slamReq=null, slamGhosts=[], slamFx=[];   // Crush Drop: down-slam request + afterimage trail + shock fx
 let shakeT=0, shakeMag=0;
 function press(code){
@@ -557,6 +557,7 @@ let TIMG=null;
 const TITLEBG=new Image(); TITLEBG.src='./assets/title_keyart.png?v='+ASSET_VER;
 const FLAME_FX=new Image(); FLAME_FX.src='./assets/fx_flame.png?v='+ASSET_VER; const FLAME_N=6;
 const RUBY_ORB=new Image(); RUBY_ORB.src='./assets/fx_ruby_orb_v2.png?v='+ASSET_VER;
+const CHAOS_FRAGS=[]; for(let i=1;i<=9;i++){ const im=new Image(); im.src='./assets/fx_chaosfrag'+i+'.png?v='+ASSET_VER; CHAOS_FRAGS.push(im); }
 let AC=null, musicGain=null, musicSrc=null, musicBuf={}, musicReady={}, musicKey=null, musicReq=0;
 function audioInit(){
   if (AC) return;
@@ -1183,6 +1184,13 @@ function update(dt){
         for(let k=-1;k<=1;k++){ bolts.push({x:p.x+dir*36, y:oy, vx:dir*560, vy:k*160, t:0, dead:false, kind:'prism', homing:true, ph:Math.random()*6.28}); }
         playSfx('sfx_bolt'); playSfx('sfx_bolt',0.45,0.07);
       }
+      else if (powerActive && equippedStone==='chaos' && chaosAmmo>0){
+        const e=chaosPile.shift(), dir=p.facing;
+        const px=(e&&e.wx!==undefined)?e.wx:p.x-dir*20, py=(e&&e.wy!==undefined)?e.wy:p.y-92;
+        bolts.push({x:px, y:py, vx:dir*440, vy:-70, t:0, dead:false, kind:'chaosshard', homing:true, life:2.6, dmg:3, v:(e?e.v:0)});
+        chaosAmmo--; stoneCharge=Math.round(PMETER*chaosAmmo/7);
+        playSfx('sfx_bolt',0.85); playSfx('sfx_projhit',0.3);
+      }
       else if (isDing(chosen)){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
       else { bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'}); playSfx('sfx_bolt'); }
     }
@@ -1281,7 +1289,7 @@ function update(dt){
   }
   loots=loots.filter(L=>!L.collected || (L.fade||0)<1);
   if (powerActive){
-    powerT-=dt; if(powerBoom>0)powerBoom-=dt; powerPulse+=dt;
+    if(equippedStone!=='chaos') powerT-=dt; if(powerBoom>0)powerBoom-=dt; powerPulse+=dt;
     if (equippedStone==='ruby'){
       const aura={x:p.x-58,y:p.y-118,w:116,h:120};
       for (const z of zombies){ if(z.dead) continue; if(overlap(aura,zBodyBox(z))){
@@ -1308,11 +1316,12 @@ function update(dt){
         if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.55); } } }
     }
     else if (equippedStone==='chaos'){
-      // Chaos Storm: periodic detonations that blast nearby enemies + hurl black-hole fragments outward
-      if(chaosCd>0) chaosCd-=dt;
-      if(chaosCd<=0){ chaosCd=1.25; chaosBlast(p.x, p.y-40); }
+      // Chaos Storm: the stored shard battery hovers above/behind you and follows you around
+      const ax0=p.x - p.facing*30, ay0=p.y-100;
+      for(const e of chaosPile){ e.wx=ax0+e.ox; e.wy=ay0+e.oy+Math.sin(gt*2+e.sp)*3; }
     }
-    if (powerT<=0){ powerActive=false; stoneCharge=0; }
+    if (equippedStone==='chaos'){ if(chaosAmmo<=0){ powerActive=false; stoneCharge=0; chaosPile=[]; } }
+    else if (powerT<=0){ powerActive=false; stoneCharge=0; }
   }
   const FROST=(powerActive&&equippedStone==='sapphire'), efr=FROST?0.32:1;
   for (const z of zombies){
@@ -1410,15 +1419,6 @@ function update(dt){
         for(let i=0;i<22;i++) zbits.push({x:bo.x,y:bo.y,vx:(Math.random()-0.5)*340,vy:(Math.random()-0.5)*340,sz:2+Math.random()*3,life:0.3+Math.random()*0.3,t:0,c:['#9a7fd0','#7b5cff','#ffffff'][(Math.random()*3)|0]}); }
       continue;
     }
-    if(bo.kind==='chaosfrag'){
-      bo.vx-=bo.vx*2.0*dt; bo.vy-=bo.vy*2.0*dt;
-      bo.x+=bo.vx*dt; bo.y+=bo.vy*dt;
-      for(const z of zombies){ if(z.dead||z.hitCd>0) continue; const zb=zBodyBox(z); if(bo.x>zb.x-8&&bo.x<zb.x+zb.w+8&&bo.y>zb.y&&bo.y<zb.y+zb.h){ z.hp-=2; z.hitCd=0.18; z.shown=3; for(let i=0;i<6;i++) zbits.push({x:z.x,y:z.y-44,vx:(Math.random()-0.5)*180,vy:-30-Math.random()*120,sz:1.6+Math.random()*2.4,life:0.25+Math.random()*0.3,t:0,c:['#ff5ad9','#7b5cff','#ffffff'][(Math.random()*3)|0]}); if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.5);} } }
-      for(const b of bats){ if(b.dead) continue; const bb3=batBox(b); if(bo.x>bb3.x-8&&bo.x<bb3.x+bb3.w+8&&bo.y>bb3.y&&bo.y<bb3.y+bb3.h){ b.dead=true; b.dieT=0; batBits(b,12); killCount++; addScore(KPTS.bat); playSfx('sfx_projhit',0.5);} }
-      if(Math.random()<0.7) zbits.push({x:bo.x,y:bo.y,vx:(Math.random()-0.5)*40,vy:(Math.random()-0.5)*40,sz:1+Math.random()*1.8,life:0.2+Math.random()*0.22,t:0,c:['#ff5ad9','#7b5cff','#5fe0ff','#ffffff'][(Math.random()*4)|0]});
-      if(bo.t>0.85) bo.dead=true;
-      continue;
-    }
     if(bo.homing){ let best=null,bd=1e9;
       for(const z of zombies){ if(z.dead) continue; const d=Math.hypot(z.x-bo.x,(z.y-40)-bo.y); if(d<bd){bd=d;best={x:z.x,y:z.y-40};} }
       for(const b of bats){ if(b.dead) continue; const d=Math.hypot(b.x-bo.x,b.y-bo.y); if(d<bd){bd=d;best={x:b.x,y:b.y};} }
@@ -1426,14 +1426,14 @@ function update(dt){
         let dd=((want-cur+Math.PI*3)%(Math.PI*2))-Math.PI; dd=Math.max(-0.13,Math.min(0.13,dd));
         const sp=Math.hypot(bo.vx,bo.vy||0)||560, na=cur+dd; bo.vx=Math.cos(na)*sp; bo.vy=Math.sin(na)*sp; } }
     bo.x+=bo.vx*dt; bo.y+=(bo.vy||0)*dt;
-    if (bo.t>1.1){ bo.dead=true; continue; }
+    if (bo.t>(bo.life||1.1)){ bo.dead=true; continue; }
     let hit=false;
     // projectiles pass through terrain/platforms/decor — only enemies stop them (Alan 2026-06-09)
     if (!hit) for (const z of zombies){
       if (z.dead) continue;
       const zb=zBodyBox(z);
       if (bo.x>zb.x-6&&bo.x<zb.x+zb.w+6&&bo.y>zb.y&&bo.y<zb.y+zb.h){
-        z.hp-=1; z.shown=3; playSfx('sfx_projhit');
+        z.hp-=(bo.dmg||1); z.shown=3; playSfx('sfx_projhit');
         z.x=clamp(z.x+(bo.vx>0?9:-9), z.min, z.max);
         if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); }
         hit=true; break;
@@ -2268,7 +2268,7 @@ function drawStoneMeter(){ if(!equippedStone) return;
   if(img&&img.naturalWidth){ const ih=15, iw=img.naturalWidth*ih/img.naturalHeight; ctx.drawImage(img, x+11-iw/2, y+h/2-ih/2, iw, ih); }
   ctx.fillStyle='rgba(0,0,0,.5)'; roundRect(bx,y+3,bw,h-6,5); ctx.fill();
   const col=STONE_DEFS[equippedStone]||'#c8fb50';
-  const frac = powerActive ? Math.max(0,powerT/powerDur) : stoneCharge/PMETER;
+  const frac = powerActive ? (equippedStone==='chaos' ? chaosAmmo/7 : Math.max(0,powerT/powerDur)) : stoneCharge/PMETER;
   ctx.save(); roundRect(bx,y+3,bw,h-6,5); ctx.clip();
   ctx.fillStyle=col; ctx.fillRect(bx,y+3,Math.max(0,bw*frac),h-6);
   if(!powerActive && frac>=1){ ctx.fillStyle='rgba(255,255,255,'+(0.25+0.3*Math.sin(gt*8)).toFixed(2)+')'; ctx.fillRect(bx,y+3,bw,h-6); }
@@ -2418,6 +2418,12 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       ctx.restore();
       if(Math.random()<0.5) zbits.push({x:p.x+(Math.random()-0.5)*64, y:p.y-36-Math.random()*44, vx:(Math.random()-0.5)*28, vy:-8-Math.random()*26, sz:1.2+Math.random()*1.8, life:0.6+Math.random()*0.5, t:0, c:['#bfe4ff','#7fc8ff','#ffffff'][(Math.random()*3)|0]});
     }
+    else if(equippedStone==='chaos'){
+      for(const e of chaosPile){ const img=CHAOS_FRAGS[e.v]; if(!img||!img.complete||!img.naturalWidth) continue;
+        const ex=e.wx-camX, ey=e.wy, h=24, w=h*img.naturalWidth/img.naturalHeight;
+        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(ex,ey,1,ex,ey,15); g.addColorStop(0,'rgba(140,170,255,0.42)'); g.addColorStop(1,'rgba(90,120,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ex,ey,15,0,7); ctx.fill(); ctx.restore();
+        ctx.save(); ctx.translate(ex,ey); ctx.rotate(e.rot+Math.sin(gt*1.5+e.sp)*0.16); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,-w/2,-h/2,w,h); ctx.restore(); }
+    }
     else if(equippedStone!=='fluorite'){
       const pr=48+6*Math.sin(gt*6); const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.7,col+'44'); g.addColorStop(1,col+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
     }
@@ -2517,18 +2523,6 @@ function drawZHP(z){
 
 function voidErase(z,bo){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; z.erase={x:bo.x,y:bo.y}; killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_dportal',0.6); }
 function voidEraseBat(b,bo){ b.dead=true; b.dieT=0; b.erase={x:bo.x,y:bo.y}; killCount++; addScore(KPTS.bat); playSfx('sfx_dportal',0.6); }
-function chaosBlast(cx,cy){
-  shakeT=Math.max(shakeT,0.32); shakeMag=Math.max(shakeMag,8);
-  playSfx('sfx_wportal',0.4); playSfx('sfx_meleehit',0.6);
-  const R=200;
-  for(const z of zombies){ if(z.dead) continue; const d=Math.hypot(cx-z.x,cy-(z.y-40)); if(d<R){ z.hp-=3; z.shown=3; z.x=clamp(z.x+Math.sign((z.x-cx)||1)*16, z.min, z.max);
-    if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.5); } } }
-  for(const b of bats){ if(b.dead) continue; if(Math.hypot(cx-b.x,cy-b.y)<R){ b.dead=true; b.dieT=0; batBits(b,12); killCount++; addScore(KPTS.bat); } }
-  for(let i=0;i<11;i++){ const ang=(i/11)*6.2832 + Math.random()*0.5, sp=300+Math.random()*260;
-    bolts.push({x:cx,y:cy,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,t:0,dead:false,kind:'chaosfrag',ph:Math.random()*6.28}); }
-  for(let k=0;k<28;k++){ const a=Math.random()*6.28,s2=130+Math.random()*320; zbits.push({x:cx,y:cy,vx:Math.cos(a)*s2,vy:Math.sin(a)*s2,sz:1.6+Math.random()*3,life:0.3+Math.random()*0.4,t:0,c:['#ff5ad9','#7b5cff','#5fe0ff','#ffd24a','#ffffff'][(Math.random()*5)|0]}); }
-  impacts.push({x:cx,y:cy,t:0});
-}
 function drawZombie(z){
   if(z.dead && z.erase){ const a=SPR[z.kw][z.dstate], k=Math.min(1,z.dieT/0.55); if(k>=1) return; const sx2=z.x-camX, ex=z.erase.x-camX, ey=z.erase.y, lx=sx2+(ex-sx2)*k, ly=z.y+(ey-z.y)*k, sc=Math.max(0.02,1-k);
     ctx.save(); ctx.globalAlpha=Math.max(0,1-k*0.9); ctx.translate(lx,ly); ctx.rotate(k*7*(z.facing<0?-1:1)); ctx.scale(sc*(z.facing<0?-1:1),sc); ctx.imageSmoothingEnabled=true; ctx.drawImage(a.img, z.dframe*a.sw,0,a.sw,a.sh, -a.w/2,-a.h/2, a.w,a.h); ctx.restore(); return; }
@@ -2885,10 +2879,14 @@ function draw(){
       ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(bx,bo.y,9,0,7); ctx.fill();
       continue;
     }
-    if (bo.kind==='chaosfrag'){
-      const hue=((gt*320 + (bo.ph||0)*57)%360);
-      for(let g2=2;g2>=0;g2--){ const r=[10,7,4][g2], ga=[0.5,0.7,0.95][g2]; ctx.fillStyle='hsla('+((hue+g2*40)%360)+',100%,'+(64-g2*4)+'%,'+ga+')'; ctx.beginPath(); ctx.arc(bx-bo.vx*0.012*g2,bo.y-bo.vy*0.012*g2,Math.max(1,r),0,7); ctx.fill(); }
-      ctx.fillStyle='rgba(10,4,20,0.92)'; ctx.beginPath(); ctx.arc(bx,bo.y,2.6,0,7); ctx.fill();
+    if (bo.kind==='chaosshard'){
+      const img=CHAOS_FRAGS[bo.v||0], ang=Math.atan2(bo.vy||0,bo.vx);
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const tg=ctx.createRadialGradient(bx,bo.y,1,bx,bo.y,18); tg.addColorStop(0,'rgba(150,180,255,0.55)'); tg.addColorStop(0.5,'rgba(110,90,255,0.28)'); tg.addColorStop(1,'rgba(90,120,255,0)'); ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(bx,bo.y,18,0,7); ctx.fill();
+      ctx.restore();
+      if(img&&img.complete&&img.naturalWidth){ const h=28, w=h*img.naturalWidth/img.naturalHeight;
+        ctx.save(); ctx.translate(bx,bo.y); ctx.rotate(ang); if(bo.vx<0) ctx.scale(1,-1); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,-w/2,-h/2,w,h); ctx.restore(); }
+      if(Math.random()<0.6) zbits.push({x:bo.x,y:bo.y,vx:(Math.random()-0.5)*46,vy:(Math.random()-0.5)*46,sz:1+Math.random()*1.7,life:0.2+Math.random()*0.26,t:0,c:['#9fb6ff','#7b5cff','#bfe0ff','#ffffff'][(Math.random()*4)|0]});
       continue;
     }
     for (let g2=2; g2>=0; g2--){
