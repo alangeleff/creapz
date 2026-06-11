@@ -42,7 +42,7 @@ const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidi
 const PMETER=20, PDUR=7;
 const STONE_HROT={ruby:-38,topaz:12,emerald:100,sapphire:180,amethyst:235,fluorite:130,obsidian:215,chaos:270,holy:12,master:-10};
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, emHealAcc=0, powerDur=7, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
-function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); if(equippedStone==='chaos'){ chaosPile=[]; chaosSpawnQ=[]; chaosAmmo=0; chaosSpawnN=7; chaosSpawnT=0.12;
+function activatePower(){ powerActive=true; powerDur=10; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); if(equippedStone==='chaos'){ chaosPile=[]; chaosSpawnQ=[]; chaosAmmo=0; chaosSpawnN=7; chaosSpawnT=0.12;
     const scales=[1.5,1.25,1.1,0.95,0.82,0.7,0.58];
     for(let i=scales.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=scales[i]; scales[i]=scales[j]; scales[j]=t; }
     for(let i=0;i<7;i++){ const ang=Math.PI*(0.12+0.78*(i/6))+(Math.random()-0.5)*0.45, rad=46+Math.random()*46;
@@ -224,7 +224,7 @@ const DOUBLE_TAP = 350;
 const lastRelease = { ArrowLeft:-1e9, ArrowRight:-1e9 };
 const runHeld = { ArrowLeft:false, ArrowRight:false };
 let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0, chaosGlitchT=0, chaosSpawnQ=[], chaosSpawnN=0, chaosSpawnT=0;   // Power Dive trail + Sapphire after-image trail
-let slamReq=null, slamGhosts=[], slamFx=[];   // Crush Drop: down-slam request + afterimage trail + shock fx
+let slamReq=null, slamGhosts=[], slamFx=[], zapFx=[];   // Crush Drop + Topaz dash-impact white flashes
 let shakeT=0, shakeMag=0;
 function press(code){
   if (code==='ArrowLeft'||code==='ArrowRight'){
@@ -870,7 +870,7 @@ function reset(keep){
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
   for(const bo of (bolts||[])){ if(bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
-  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; shakeT=0; shakeMag=0;
+  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; shakeT=0; shakeMag=0;
   if (!keep){
     soulCount=0; soulOrbGot=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],val:(s[2]||1),got:false,pop:0,ph:i*0.31}));
@@ -1317,7 +1317,7 @@ function update(dt){
       // Thunder Rush: electric strikes zap any enemy you run through
       for (const z of zombies){ if(z.dead) continue; if(z.hitCd<=0 && overlap(pBodyBox(), zBodyBox(z))){ z.hp-=2; z.hitCd=0.2; z.shown=3;
         for(let i=0;i<7;i++) zbits.push({x:z.x+(Math.random()-0.5)*24, y:z.y-44-Math.random()*30, vx:(Math.random()-0.5)*200, vy:-40-Math.random()*120, sz:1.5+Math.random()*2, life:0.2+Math.random()*0.25, t:0, c:['#fff2a0','#ffe04a','#ffffff'][(Math.random()*3)|0]});
-        playSfx('sfx_bolt',0.5);
+        playSfx('sfx_bolt',0.5); zapFx.push({x:z.x, y:z.y-44, t:0}); addShake(3,0.08);
         if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.55); } } }
     }
     else if (equippedStone==='chaos'){
@@ -1463,6 +1463,8 @@ function update(dt){
   }
   for (const im of impacts) im.t+=dt;
   impacts=impacts.filter(im=>im.t<0.32);
+  for (const zf of zapFx) zf.t+=dt;
+  zapFx=zapFx.filter(zf=>zf.t<0.16);
   for (const f of slamFx) f.t+=dt;
   slamFx=slamFx.filter(f=>f.t<0.42);
   for (const fx of chkFx){
@@ -2427,8 +2429,13 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       const pulse=0.5+0.5*Math.sin(gt*4);
       ctx.save(); ctx.globalCompositeOperation='lighter';
       const bg=ctx.createRadialGradient(sx,cy,6,sx,cy,86+12*pulse); bg.addColorStop(0,'rgba(61,220,132,'+(0.34+0.16*pulse).toFixed(2)+')'); bg.addColorStop(0.5,'rgba(47,224,106,0.16)'); bg.addColorStop(1,'rgba(47,224,106,0)'); ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(sx,cy,90,0,7); ctx.fill();
+      // rising health stream: sparkly green pixels spiral up from the feet and wrap around the body (front pass)
+      for(let i=0;i<16;i++){ const t2=((gt*0.55+i/16)%1), ry=p.y-2-t2*100, swing=Math.sin(t2*6.283*1.4+i*1.3+gt*2)*(22*(0.35+0.65*t2)), rx=sx+swing, fade=Math.sin(t2*Math.PI), ps=(i%4===0?2.2:1.2);
+        ctx.fillStyle='rgba('+(90+((Math.random()*40)|0))+',255,'+(150+((Math.random()*60)|0))+','+(0.35+0.5*fade).toFixed(2)+')'; ctx.fillRect(rx-ps/2,ry-ps/2,ps,ps);
+        if(Math.random()<0.25){ ctx.fillStyle='rgba(210,255,220,'+(0.6*fade).toFixed(2)+')'; ctx.fillRect(rx-0.8,ry-0.8,1.7,1.7); } }
       ctx.restore();
-      if(Math.random()<0.45) zbits.push({x:p.x+(Math.random()-0.5)*46, y:p.y-8, vx:(Math.random()-0.5)*30, vy:-44-Math.random()*54, sz:1.4+Math.random()*2, life:0.6+Math.random()*0.5, t:0, c:'#3ddc84'});
+      // feet emission rising behind the body (constant green flow)
+      for(let k=0;k<3;k++) zbits.push({x:p.x+(Math.random()-0.5)*32, y:p.y-2-Math.random()*5, vx:(Math.random()-0.5)*24, vy:-58-Math.random()*72, sz:1.2+Math.random()*1.8, life:0.6+Math.random()*0.5, t:0, c:['#3ddc84','#7fffa0','#aaffc0'][(Math.random()*3)|0]});
     }
     else if(equippedStone==='amethyst'){
       ctx.save(); ctx.globalCompositeOperation='lighter';
@@ -2971,6 +2978,11 @@ function draw(){
     ctx.lineWidth=Math.max(0.5,2*(1-k));
     ctx.beginPath(); ctx.arc(ix,im.y,r*0.72,0,7); ctx.stroke();
   }
+  for (const zf of zapFx){ const ix=zf.x-camX; if(ix<-100||ix>W+100) continue; const k=zf.t/0.16, rr=20+96*k, a=1-k;
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    const fg=ctx.createRadialGradient(ix,zf.y,1,ix,zf.y,rr); fg.addColorStop(0,'rgba(255,255,255,'+(0.95*a).toFixed(2)+')'); fg.addColorStop(0.45,'rgba(255,252,215,'+(0.5*a).toFixed(2)+')'); fg.addColorStop(1,'rgba(255,238,120,0)'); ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(ix,zf.y,rr,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,'+(0.92*a).toFixed(2)+')'; ctx.beginPath(); ctx.arc(ix,zf.y,Math.max(1,16*(1-k)),0,7); ctx.fill();
+    ctx.restore(); }
   for (const z of zombies) drawZHP(z);
   ctx.restore();
   if (WORLDH>H){ // light dies as you descend
