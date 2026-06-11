@@ -466,7 +466,7 @@ const FZ = { idle:24, walk:12, attack:16 };
 const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12}, golem:{idle:12, walk:12, attack:18} };
 const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15, golem:1.05 };
 const KRNG = { zombie:74, zgen:74, gob:76, bd:-1, golem:200 };  // gob spear reach ~78; bd never melee-attacks (contact only)
-const GOLEM_RNG=200, GOLEM_SHOCK=215, GOLEM_ATK_DUR=15/27+10/18;
+const GOLEM_RNG=185, GOLEM_SHOCK=180, GOLEM_ATK_DUR=15/27+10/18;
 function golemAtkFrame(el){ const t1=15/27; if(el<t1) return Math.min(14,Math.floor(el*27)); return Math.min(24,15+Math.floor((el-t1)*18)); }
 const ZSPEED = 1.7;
 const PMAXHP = 4, ZMAXHP = 2;
@@ -860,7 +860,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>(p.deathHurt?3.05:2.3)) || (p && p.won); }
-const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum','sfx_chaosspawn','sfx_chaoslaunch','sfx_vigorboost'];
+const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum','sfx_chaosspawn','sfx_chaoslaunch','sfx_vigorboost','sfx_golemsee','sfx_golemsmash'];
 function bootIntoWorld(){ primeAudio(); SFXLIST.forEach(loadSfx); banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); enterWorld(false); }
 function startGame(ck){
   if (selMode==='skin'){ chosen=ck; saveProg(); }
@@ -1006,7 +1006,7 @@ function drawSlamFx(){
   }
 }
 function zBodyBox(z){
-  if (z.kw==='golem') return {x:z.x-62, y:z.y-216, w:124, h:214};
+  if (z.kw==='golem') return {x:z.x-46, y:z.y-160, w:92, h:158};
   if (z.kw==='gob') return {x:z.x-19, y:z.y-78, w:38, h:74};
   if (z.kw==='bd')  return {x:z.x-18, y:z.y-100, w:36, h:96};
   return {x:z.x-24, y:z.y-112, w:48, h:104};
@@ -1364,6 +1364,7 @@ function update(dt){
       if (z.kw==='bd') playSfx('sfx_zsee',0.7);
       else if (z.kw==='gob') playSfx('sfx_gsee',0.7);
       else if (z.kw==='zombie'||z.kw==='zgen') playSfx('sfx_ksee',0.7);
+      else if (z.kw==='golem') playSfx('sfx_golemsee',0.95);
     } else if (z.aggro && (ad>440 || dy>260)) z.aggro=false;
     // player weapon strikes zombie body
     if ((p.diveT>0||p.slamT>0) && z.hitCd<=0 && overlap(pBodyBox(), zBodyBox(z))){
@@ -1383,7 +1384,7 @@ function update(dt){
         z.atkT-=dt*efr; z.state='attack'; z.atkElapsed=GOLEM_ATK_DUR-z.atkT;
         const gf=golemAtkFrame(z.atkElapsed);
         // raised-hands hitbox (jump ONTO the golem during wind-up = risky)
-        if (gf>=8 && gf<=16 && p.inv<=0 && !p.dead){ const hb={x:z.x-104, y:z.y-330, w:208, h:150}; if(overlap(hb,pBodyBox())) hurtPlayer(z.x,2); }
+        if (gf>=8 && gf<=16 && p.inv<=0 && !p.dead){ const hb={x:z.x-100, y:z.y-225, w:200, h:120}; if(overlap(hb,pBodyBox())) hurtPlayer(z.x,2); }
         // IMPACT: hands touch down -> shake + ground shockwave (grounded + near; jump to avoid)
         if (gf>=20 && !z.smashDone){ z.smashDone=true; addShake(14,0.5); playSfx('sfx_meleehit',0.95); playSfx('sfx_zswing',0.7);
           for(let i=0;i<28;i++){ const sd=(Math.random()<0.5?-1:1); zbits.push({x:z.x+sd*(18+Math.random()*GOLEM_SHOCK), y:z.y-2, vx:sd*(70+Math.random()*250), vy:-30-Math.random()*160, sz:2+Math.random()*3.6, life:0.4+Math.random()*0.45, t:0, c:['#7a6a4a','#5c8a3a','#9a8a5a','#4a5a2a','#caa'][(Math.random()*5)|0]}); }
@@ -1391,7 +1392,7 @@ function update(dt){
         }
         if (z.atkT<=0){ z.atkCd=1.4; z.state='idle'; }
       }
-      else if (z.aggro && Math.abs(p.x-z.x)<GOLEM_RNG && z.atkCd<=0 && !p.dead){ z.atkT=GOLEM_ATK_DUR; z.atkElapsed=0; z.smashDone=false; z.state='attack'; }
+      else if (z.aggro && Math.abs(p.x-z.x)<GOLEM_RNG && z.atkCd<=0 && !p.dead){ z.atkT=GOLEM_ATK_DUR; z.atkElapsed=0; z.smashDone=false; z.state='attack'; playSfx('sfx_golemsmash',0.95); }
       else if (z.aggro && Math.abs(p.x-z.x)>GOLEM_RNG-40){ z.state='walk'; z.x=clamp(z.x+z.facing*KSPD.golem*efr, z.min, z.max); }
       else z.state='idle';
       z.x=terrWallX(z.x, zpx, z.y, 16);
