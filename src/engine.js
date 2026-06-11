@@ -2282,6 +2282,43 @@ function drawPoweredFrame(sx, yy, fc){
   ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} 
   ctx.drawImage(pimg, sx-ww/2, yy - hh + 16, ww, hh); ctx.restore();
 }
+function drawFluoriteAura(layer){
+  if(!(powerActive && transformT<=0 && equippedStone==='fluorite')) return;
+  const sx=pxf(p.x,1), fcx=sx, fcy=p.y-50, Rb2=78, NC=5;
+  // shared orbit (ruby fire-soul path): backside lower + slight bob -> identical both layers, so motion is continuous
+  const cp=[];
+  for(let i=0;i<NC;i++){ const ph=i/NC*6.283, th=gt*2.2+ph, depth=(Math.sin(th)+1)/2,
+    ex=fcx+Math.cos(th)*(Rb2+12), ey=fcy+Math.sin(th)*20+(1-depth)*10+Math.sin(gt*3+ph)*3;
+    cp.push({ex,ey,th,ph,depth}); }
+  const shard=(q,i)=>{ const hue=(gt*150+i*72)%360, dsc=0.72+0.28*q.depth, sz=7*dsc;
+    ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.translate(q.ex,q.ey);
+    const gg=ctx.createRadialGradient(0,0,0.5,0,0,sz*2.2); gg.addColorStop(0,'hsla('+hue+',100%,82%,'+(0.25+0.45*q.depth).toFixed(2)+')'); gg.addColorStop(1,'hsla('+hue+',100%,60%,0)'); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(0,0,sz*2.2,0,7); ctx.fill();
+    ctx.fillStyle='hsla('+hue+',100%,74%,'+(0.5+0.4*q.depth).toFixed(2)+')'; ctx.beginPath(); ctx.moveTo(0,-sz); ctx.lineTo(sz*0.55,0); ctx.lineTo(0,sz); ctx.lineTo(-sz*0.55,0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,'+(0.55+0.4*q.depth).toFixed(2)+')'; ctx.beginPath(); ctx.moveTo(0,-sz*0.46); ctx.lineTo(sz*0.24,0); ctx.lineTo(0,sz*0.46); ctx.lineTo(-sz*0.24,0); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    if(Math.random()<0.4) zbits.push({x:p.x+Math.cos(q.th)*(Rb2+12), y:q.ey, vx:(Math.random()-0.5)*22, vy:(Math.random()-0.5)*22, sz:1+Math.random()*1.3, life:0.3+Math.random()*0.3, t:0, c:'hsl('+Math.round(hue)+',100%,72%)'}); };
+  if(layer==='front'){
+    // white prism core + faint rainbow mote coat (only on the front pass, over the body)
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    const cg=ctx.createRadialGradient(fcx,fcy,3,fcx,fcy,72); cg.addColorStop(0,'rgba(255,255,255,0.30)'); cg.addColorStop(0.5,'rgba(220,235,255,0.11)'); cg.addColorStop(1,'rgba(220,235,255,0)'); ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(fcx,fcy,72,0,7); ctx.fill();
+    for(let m=0;m<12;m++){ const a=gt*(1.2+(m%3)*0.5)+m*0.84,
+      mx=fcx+Math.cos(a)*(13+(m%4)*6)*Math.cos(m*1.3)+Math.sin(gt*1.2+m)*6,
+      my=(p.y-48)+Math.sin(a*1.1+m)*(16+(m%5)*5)+Math.cos(gt*1.5+m)*5,
+      hue=(gt*150+m*40)%360, pls=0.45+0.55*Math.abs(Math.sin(gt*4+m*1.7)), r=0.9+0.5*pls;
+      const g=ctx.createRadialGradient(mx,my,0.2,mx,my,r*2.2); g.addColorStop(0,'hsla('+hue+',100%,86%,'+(0.34*pls).toFixed(2)+')'); g.addColorStop(0.5,'hsla('+hue+',100%,68%,'+(0.13*pls).toFixed(2)+')'); g.addColorStop(1,'hsla('+hue+',100%,60%,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(mx,my,r*2.2,0,7); ctx.fill(); }
+    ctx.restore();
+  }
+  // energy line: back segments (both ends behind) on the back pass, the rest on the front pass -> continuous loop
+  { const lp=0.5+0.5*Math.sin(gt*2.0), lhue=(gt*120)%360;
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.strokeStyle='hsla('+lhue+',100%,74%,'+(0.10+0.72*lp).toFixed(2)+')'; ctx.lineWidth=1.2; ctx.shadowColor='hsla('+lhue+',100%,62%,0.95)'; ctx.shadowBlur=4+9*lp;
+    for(let i=0;i<NC;i++){ const q0=cp[i], q1=cp[(i+1)%NC], backSeg=(Math.sin(q0.th)<0 && Math.sin(q1.th)<0);
+      if((layer==='back')===backSeg){ ctx.beginPath(); ctx.moveTo(q0.ex,q0.ey); ctx.lineTo(q1.ex,q1.ey); ctx.stroke(); } }
+    ctx.restore(); }
+  // crystals: back half on the back pass, front half on the front pass
+  for(let i=0;i<NC;i++){ const q=cp[i], isBack=Math.sin(q.th)<0; if((layer==='back')===isBack) shard(q,i); }
+}
 function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
   const col=STONE_DEFS[equippedStone]||'#ffcf3c', sx=pxf(p.x,1), cy=p.y-60;
   // VIGNETTE: spotlight the hero, dark the rest (ramps in on charge, lifts on boom)
@@ -2381,51 +2418,7 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       ctx.restore();
       if(Math.random()<0.5) zbits.push({x:p.x+(Math.random()-0.5)*64, y:p.y-36-Math.random()*44, vx:(Math.random()-0.5)*28, vy:-8-Math.random()*26, sz:1.2+Math.random()*1.8, life:0.6+Math.random()*0.5, t:0, c:['#bfe4ff','#7fc8ff','#ffffff'][(Math.random()*3)|0]});
     }
-    else if(equippedStone==='fluorite'){
-      // Prism aura: white core + faint rainbow mote coat + crystals on the ruby orbit path that pass BEHIND the live sprite
-      const fcx=sx, fcy=p.y-50, Rb2=78, NC=5;
-      // occlusion box tracks the CURRENT animation frame (centre follows the sprite), shrunk a touch so the orbit
-      // cuts a hair LATE -> tiny overlap, no gap
-      const ca=SPR.chars[chosen][p.state]||SPR.chars[chosen].idle; let cfi=curFrame(); if(ca&&ca.frames) cfi=Math.max(0,Math.min(cfi,ca.frames-1));
-      const fcenterW = ca ? (p.x - ca.cxs[cfi] + ca.w/2) : p.x;
-      const owd=34, ohd=92, ox=(fcenterW-owd/2)-camX, oy=p.y-96;
-      const clipBody=()=>{ ctx.beginPath(); ctx.rect(-9999,-9999,19998,19998); ctx.rect(ox,oy,owd,ohd); ctx.clip('evenodd'); };
-      // white prism core
-      ctx.save(); ctx.globalCompositeOperation='lighter';
-      const cg=ctx.createRadialGradient(fcx,fcy,3,fcx,fcy,72); cg.addColorStop(0,'rgba(255,255,255,0.30)'); cg.addColorStop(0.5,'rgba(220,235,255,0.11)'); cg.addColorStop(1,'rgba(220,235,255,0)'); ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(fcx,fcy,72,0,7); ctx.fill();
-      ctx.restore();
-      // faint, tiny rainbow soul-mote coat swarming over the body (~25% crystal size, very transparent)
-      ctx.save(); ctx.globalCompositeOperation='lighter';
-      for(let m=0;m<12;m++){ const a=gt*(1.2+(m%3)*0.5)+m*0.84,
-        mx=fcx+Math.cos(a)*(13+(m%4)*6)*Math.cos(m*1.3)+Math.sin(gt*1.2+m)*6,
-        my=(p.y-48)+Math.sin(a*1.1+m)*(16+(m%5)*5)+Math.cos(gt*1.5+m)*5,
-        hue=(gt*150+m*40)%360, pls=0.45+0.55*Math.abs(Math.sin(gt*4+m*1.7)), r=0.9+0.5*pls;
-        const g=ctx.createRadialGradient(mx,my,0.2,mx,my,r*2.2); g.addColorStop(0,'hsla('+hue+',100%,86%,'+(0.34*pls).toFixed(2)+')'); g.addColorStop(0.5,'hsla('+hue+',100%,68%,'+(0.13*pls).toFixed(2)+')'); g.addColorStop(1,'hsla('+hue+',100%,60%,0)');
-        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(mx,my,r*2.2,0,7); ctx.fill(); }
-      ctx.restore();
-      // orbit positions: ruby fire-soul path; backside dropped slightly lower + slight bob
-      const cp=[];
-      for(let i=0;i<NC;i++){ const ph=i/NC*6.283, th=gt*2.2+ph, depth=(Math.sin(th)+1)/2,
-        ex=fcx+Math.cos(th)*(Rb2+12), ey=fcy+Math.sin(th)*20+(1-depth)*10+Math.sin(gt*3+ph)*3;
-        cp.push({ex,ey,th,ph,depth}); }
-      const shard=(q,i)=>{ const hue=(gt*150+i*72)%360, dsc=0.72+0.28*q.depth, sz=7*dsc;
-        ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.translate(q.ex,q.ey);
-        const gg=ctx.createRadialGradient(0,0,0.5,0,0,sz*2.2); gg.addColorStop(0,'hsla('+hue+',100%,82%,'+(0.25+0.45*q.depth).toFixed(2)+')'); gg.addColorStop(1,'hsla('+hue+',100%,60%,0)'); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(0,0,sz*2.2,0,7); ctx.fill();
-        ctx.fillStyle='hsla('+hue+',100%,74%,'+(0.5+0.4*q.depth).toFixed(2)+')'; ctx.beginPath(); ctx.moveTo(0,-sz); ctx.lineTo(sz*0.55,0); ctx.lineTo(0,sz); ctx.lineTo(-sz*0.55,0); ctx.closePath(); ctx.fill();
-        ctx.fillStyle='rgba(255,255,255,'+(0.55+0.4*q.depth).toFixed(2)+')'; ctx.beginPath(); ctx.moveTo(0,-sz*0.46); ctx.lineTo(sz*0.24,0); ctx.lineTo(0,sz*0.46); ctx.lineTo(-sz*0.24,0); ctx.closePath(); ctx.fill();
-        ctx.restore();
-        if(Math.random()<0.5) zbits.push({x:p.x+Math.cos(q.th)*(Rb2+12), y:q.ey, vx:(Math.random()-0.5)*22, vy:(Math.random()-0.5)*22, sz:1+Math.random()*1.3, life:0.3+Math.random()*0.3, t:0, c:'hsl('+Math.round(hue)+',100%,72%)'}); };
-      // energy line: only BACK segments (both ends behind) are clipped by the body; front/side segments draw fully
-      { const lp=0.5+0.5*Math.sin(gt*2.0), lhue=(gt*120)%360;
-        for(let i=0;i<NC;i++){ const q0=cp[i], q1=cp[(i+1)%NC], back=(Math.sin(q0.th)<0 && Math.sin(q1.th)<0);
-          ctx.save(); ctx.globalCompositeOperation='lighter'; if(back) clipBody();
-          ctx.strokeStyle='hsla('+lhue+',100%,74%,'+(0.10+0.72*lp).toFixed(2)+')'; ctx.lineWidth=1.2; ctx.shadowColor='hsla('+lhue+',100%,62%,0.95)'; ctx.shadowBlur=4+9*lp;
-          ctx.beginPath(); ctx.moveTo(q0.ex,q0.ey); ctx.lineTo(q1.ex,q1.ey); ctx.stroke(); ctx.restore(); } }
-      // back crystals clipped behind the body, front crystals on top
-      ctx.save(); clipBody(); for(let i=0;i<NC;i++){ const q=cp[i]; if(Math.sin(q.th)<0) shard(q,i); } ctx.restore();
-      for(let i=0;i<NC;i++){ const q=cp[i]; if(Math.sin(q.th)>=0) shard(q,i); }
-    }
-    else {
+    else if(equippedStone!=='fluorite'){
       const pr=48+6*Math.sin(gt*6); const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.7,col+'44'); g.addColorStop(1,col+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
     }
   }
@@ -2794,9 +2787,11 @@ function draw(){
     let alpha=1,sc=1; if(s.got){ alpha=Math.max(0,1-s.pop); sc=1+0.7*s.pop; }
     drawSoulFx(sx, s.y, 13*sc, alpha, s.ph*19, s.val);
   }
+  drawFluoriteAura('back');
   drawPlayerLayer();
   drawSlamFx();
   drawPower();
+  drawFluoriteAura('front');
   for (const fx of chkFx){
     const st=SPR.chkst; if(!st) break;
     const sx=fx.cx-camX, gy=(fx.cgy!==undefined?fx.cgy:GROUND)+8-st.h;
