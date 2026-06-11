@@ -1027,7 +1027,7 @@ function loop(now){
   else if (mode==='stonepick') drawStonePick();
   else if (mode==='controls') drawControls();
   else if (mode==='soulbox'){}
-  else { update(dt); draw(); }
+  else { try{ update(dt); draw(); }catch(err){ if(!window.__loopErr){ window.__loopErr=1; console.error('loop error:',err); } } }
   requestAnimationFrame(loop);
 }
 
@@ -2702,11 +2702,11 @@ function draw(){
     if (bo.dead) continue;
     const bx=bo.x-camX; if(bx<-60||bx>W+60) continue;
     if (bo.kind==='void'){
-      const k=Math.min(1,bo.t*4), R=22*k+3*Math.sin(gt*8);
+      const k=Math.min(1,bo.t*4), R=Math.max(3, 22*k+3*Math.sin(gt*8));
       ctx.save();
       const g=ctx.createRadialGradient(bx,bo.y,2,bx,bo.y,R+20); g.addColorStop(0,'rgba(15,0,26,0.96)'); g.addColorStop(0.5,'rgba(70,30,130,0.5)'); g.addColorStop(1,'rgba(123,92,255,0)');
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(bx,bo.y,R+20,0,7); ctx.fill();
-      ctx.fillStyle='#0a0414'; ctx.beginPath(); ctx.arc(bx,bo.y,R*0.62,0,7); ctx.fill();
+      ctx.fillStyle='#0a0414'; ctx.beginPath(); ctx.arc(bx,bo.y,Math.max(1,R*0.62),0,7); ctx.fill();
       ctx.strokeStyle='rgba(170,120,255,0.85)'; ctx.lineWidth=2.2;
       for(let s=0;s<3;s++){ const a0=gt*4.5+s*2.1; ctx.beginPath(); ctx.arc(bx,bo.y,R+2+s*3,a0,a0+2.3); ctx.stroke(); }
       ctx.restore();
