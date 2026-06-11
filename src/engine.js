@@ -42,13 +42,11 @@ const PICK_STONES=['ruby','sapphire','emerald','amethyst','topaz','holy','obsidi
 const PMETER=20, PDUR=7;
 const STONE_HROT={ruby:-38,topaz:12,emerald:100,sapphire:180,amethyst:235,fluorite:130,obsidian:215,chaos:270,holy:12,master:-10};
 let equippedStone=null, stoneCharge=0, powerActive=false, powerT=0, transformT=0, powerBoom=0, powerPulse=0, emHealAcc=0, powerDur=7, pendingStage=-1, stonePickSel=0, stonePickRects=[], charToggleRect=null, skinPrevRect=null, skinNextRect=null;
-function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); if(equippedStone==='chaos'){ chaosPile=[]; chaosAmmo=7;
-    const ax0=p.x-p.facing*34, ay0=p.y-104, scales=[1.5,1.25,1.1,0.95,0.82,0.7,0.58];
+function activatePower(){ powerActive=true; powerDur=(equippedStone==='ruby'||equippedStone==='fluorite')?10:PDUR; powerT=powerDur; transformT=0.95; powerBoom=0; powerPulse=0; emHealAcc=0; p.vx=0; p.vy=0; p.inv=Math.max(p.inv,0.6); if(equippedStone==='chaos'){ chaosPile=[]; chaosSpawnQ=[]; chaosAmmo=0; chaosSpawnN=7; chaosSpawnT=0.12;
+    const scales=[1.5,1.25,1.1,0.95,0.82,0.7,0.58];
     for(let i=scales.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=scales[i]; scales[i]=scales[j]; scales[j]=t; }
     for(let i=0;i<7;i++){ const ang=Math.PI*(0.12+0.78*(i/6))+(Math.random()-0.5)*0.45, rad=46+Math.random()*46;
-      const ox=-Math.cos(ang)*rad-6, oy=-Math.sin(ang)*rad*0.78-8;
-      const e={v:(Math.random()*9)|0, ox, oy, sp:Math.random()*6.28, rot:(Math.random()-0.5)*1.0, sc:scales[i], behind:Math.random()<0.5};
-      e.wx=ax0+ox; e.wy=ay0+oy; chaosPile.push(e); } } playSfx('sfx_ignite',1.0); playSfx('sfx_screamchorus',1.05); }
+      chaosSpawnQ.push({v:(Math.random()*9)|0, ox:-Math.cos(ang)*rad-6, oy:-Math.sin(ang)*rad*0.78-8, sp:Math.random()*6.28, rot:(Math.random()-0.5)*1.0, sc:scales[i], behind:Math.random()<0.5}); } } playSfx('sfx_ignite',1.0); playSfx('sfx_screamchorus',1.05); }
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
 function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Classic','ding_swamp':'Swamp','ding_azure':'Azure','ding_blood':'Blood','ding_magic':'Magic','ding_mystic':'Mystic','ding_wisp':'Wisp','ding_news':'Newspaper','ding_noir':'Noir'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
@@ -225,7 +223,7 @@ const keys = {};
 const DOUBLE_TAP = 350;
 const lastRelease = { ArrowLeft:-1e9, ArrowRight:-1e9 };
 const runHeld = { ArrowLeft:false, ArrowRight:false };
-let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0, chaosGlitchT=0;   // Power Dive trail + Sapphire after-image trail
+let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0, chaosGlitchT=0, chaosSpawnQ=[], chaosSpawnN=0, chaosSpawnT=0;   // Power Dive trail + Sapphire after-image trail
 let slamReq=null, slamGhosts=[], slamFx=[];   // Crush Drop: down-slam request + afterimage trail + shock fx
 let shakeT=0, shakeMag=0;
 function press(code){
@@ -849,7 +847,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>(p.deathHurt?3.05:2.3)) || (p && p.won); }
-const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum'];
+const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum','sfx_chaosspawn','sfx_chaoslaunch'];
 function bootIntoWorld(){ primeAudio(); SFXLIST.forEach(loadSfx); banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); enterWorld(false); }
 function startGame(ck){
   if (selMode==='skin'){ chosen=ck; saveProg(); }
@@ -1196,7 +1194,7 @@ function update(dt){
         const px=(e&&e.wx!==undefined)?e.wx:p.x-dir*20, py=(e&&e.wy!==undefined)?e.wy:p.y-92;
         bolts.push({x:px, y:py, vx:dir*680, vy:-55, t:0, dead:false, kind:'chaosshard', homing:true, life:2.6, dmg:3, v:(e?e.v:0), scl:(e?e.sc:1)});
         chaosAmmo--; stoneCharge=Math.round(PMETER*chaosAmmo/7); chaosGlitchT=0.18;
-        playSfx('sfx_bolt',0.85); playSfx('sfx_projhit',0.3);
+        playSfx('sfx_chaoslaunch',0.9);
       }
       else if (isDing(chosen)){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
       else { bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'}); playSfx('sfx_bolt'); }
@@ -1323,11 +1321,12 @@ function update(dt){
         if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.55); } } }
     }
     else if (equippedStone==='chaos'){
-      // Chaos Storm: the stored shard battery hovers above/behind you and follows you around
+      // Chaos Storm: shards spawn in staggered (sound each), then the battery hovers above/behind + follows you
       const ax0=p.x - p.facing*34, ay0=p.y-104;
+      if(chaosSpawnN>0){ chaosSpawnT-=dt; if(chaosSpawnT<=0){ chaosSpawnT=0.11; const e=chaosSpawnQ.shift(); if(e){ e.wx=ax0+e.ox; e.wy=ay0+e.oy; chaosPile.push(e); chaosAmmo++; playSfx('sfx_chaosspawn',0.6); } chaosSpawnN--; } }
       for(const e of chaosPile){ e.wx=ax0+e.ox; e.wy=ay0+e.oy+Math.sin(gt*2+e.sp)*3; }
     }
-    if (equippedStone==='chaos'){ if(chaosAmmo<=0){ powerActive=false; stoneCharge=0; chaosPile=[]; } }
+    if (equippedStone==='chaos'){ if(chaosAmmo<=0 && chaosSpawnN<=0){ powerActive=false; stoneCharge=0; chaosPile=[]; } }
     else if (powerT<=0){ powerActive=false; stoneCharge=0; }
   }
   const FROST=(powerActive&&equippedStone==='sapphire'), efr=FROST?0.32:1;
