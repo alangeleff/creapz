@@ -1168,7 +1168,7 @@ function update(dt){
   if(p.inv<=0){ for(const z of GHURT){ if(p.x+26>z.l && p.x-26<z.r && p.y>z.top && (p.y-PH)<z.bot){ hurtPlayer((z.l+z.r)/2,1); break; } } }
   const speed=(running?RUN:WALK)*(inTar?0.4:1)*((powerActive&&equippedStone==='topaz')?1.7:1);
   if (p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
-  if (!kneeling && p.diveRec<=0 && p.slamRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
+  if (!kneeling && p.diveRec<=0 && p.slamRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround && !(keys['ArrowUp']&&keys['KeyX'])){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
   if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamRec<=0&&p.onGround&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
     playSfx(isDing(chosen)?'sfx_wing':'sfx_slash');
@@ -1183,7 +1183,7 @@ function update(dt){
   if (p.castCd>0) p.castCd-=dt;
   if (p.muzzleT>0) p.muzzleT-=dt;
   if (keys['KeyX']&&p.castT<=0&&p.castCd<=0&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamT<=0&&p.slamRec<=0){
-    p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false;
+    p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false; p.castUp = !!keys['ArrowUp'] && !(powerActive && (equippedStone==='obsidian'||equippedStone==='fluorite'||equippedStone==='chaos'));
   }
   if (p.castT>0){
     p.castT-=dt;
@@ -1206,6 +1206,11 @@ function update(dt){
         bolts.push({x:px, y:py, vx:dir*680, vy:-55, t:0, dead:false, kind:'chaosshard', homing:true, life:2.6, dmg:3, v:(e?e.v:0), scl:(e?e.sc:1)});
         chaosAmmo--; stoneCharge=Math.round(PMETER*chaosAmmo/7); chaosGlitchT=0.18;
         playSfx('sfx_chaoslaunch',0.9);
+      }
+      else if (p.castUp){
+        const N=5, sp=560, base=-Math.PI/2;
+        for(let i=0;i<N;i++){ const ang=base+(i-(N-1)/2)*0.42; bolts.push({x:p.x, y:p.y-64, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, t:0, dead:false, kind:'bolt'}); }
+        playSfx('sfx_bolt',0.85); playSfx('sfx_bolt',0.5,0.06);
       }
       else if (isDing(chosen)){ bolts.push({x:p.x+p.facing*30, y:p.y-66, vx:p.facing*470, t:0, dead:false, kind:'wave'}); playSfx('sfx_shriek'); }
       else { bolts.push({x:p.x+p.facing*40, y:p.y-56, vx:p.facing*560, t:0, dead:false, kind:'bolt'}); playSfx('sfx_bolt'); }
@@ -2766,8 +2771,9 @@ function drawPlayerLayer(){
       drawPoweredFrame(sx); ctx.filter='none'; ctx.restore(); } 
     else if (!(p.invHurt>0 && !powerActive && Math.floor(gt*16)%2===0)){
       if(powerActive&&equippedStone==='sapphire'&&transformT<=0){ for(let gi=0;gi<sapTrail.length;gi++){ const g=sapTrail[gi]; ctx.save(); ctx.globalAlpha=0.08+0.26*(gi/Math.max(1,sapTrail.length)); drawCharSprite(chosen,g.st,g.fi,g.x-camX,g.y,g.f,1,0); ctx.restore(); } }
-      const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0), _obs=(powerActive&&equippedStone==='obsidian'&&transformT<=0), _top=(powerActive&&equippedStone==='topaz'&&transformT<=0), _chaos=(powerActive&&equippedStone==='chaos'&&transformT<=0);
+      const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0), _obs=(powerActive&&equippedStone==='obsidian'&&transformT<=0), _top=(powerActive&&equippedStone==='topaz'&&transformT<=0), _chaos=(powerActive&&equippedStone==='chaos'&&transformT<=0), _upcast=(p.castT>0 && p.castUp && !!prayImg());
       let _skip=false; ctx.save();
+      if(_upcast){ _skip=true; const fast=Math.floor(gt*24)%2; ctx.filter= fast ? 'grayscale(1) invert(1) brightness(1.15)' : 'grayscale(1) brightness(1.7) contrast(1.25)'; drawPrayFrame(sx,p.y,p.facing); ctx.filter='none'; }
       if(_spec){ ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); }
       if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
       if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
