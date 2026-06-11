@@ -2382,18 +2382,28 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       if(Math.random()<0.5) zbits.push({x:p.x+(Math.random()-0.5)*64, y:p.y-36-Math.random()*44, vx:(Math.random()-0.5)*28, vy:-8-Math.random()*26, sz:1.2+Math.random()*1.8, life:0.6+Math.random()*0.5, t:0, c:['#bfe4ff','#7fc8ff','#ffffff'][(Math.random()*3)|0]});
     }
     else if(equippedStone==='fluorite'){
-      // Prism aura: bright white core + caustic rainbow light + orbiting crystal shards
+      // Prism aura: white core + a single pulsing rainbow line linking crystals that orbit on the ruby fire-soul path
+      const fcx=sx, fcy=p.y-50, Rb2=78, NC=5;
       ctx.save(); ctx.globalCompositeOperation='lighter';
-      const cg=ctx.createRadialGradient(sx,cy,3,sx,cy,72); cg.addColorStop(0,'rgba(255,255,255,0.32)'); cg.addColorStop(0.5,'rgba(220,235,255,0.12)'); cg.addColorStop(1,'rgba(220,235,255,0)'); ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(sx,cy,72,0,7); ctx.fill();
-      for(let i=0;i<6;i++){ const hue=(gt*120+i*60)%360, a=gt*1.3+i*1.05, rr=Math.max(6,28+16*Math.sin(gt*2+i)+i*4);
-        ctx.strokeStyle='hsla('+hue+',100%,70%,0.20)'; ctx.lineWidth=2.4; ctx.beginPath(); ctx.arc(sx,cy,rr,a,a+1.15); ctx.stroke(); }
-      for(let i=0;i<5;i++){ const a=gt*1.7+i*(6.2832/5), rad=46+8*Math.sin(gt*2.2+i*1.3), px=sx+Math.cos(a)*rad, py=cy+Math.sin(a)*rad*0.78, hue=(gt*150+i*72)%360;
-        ctx.save(); ctx.translate(px,py); ctx.rotate(a*1.5);
-        ctx.fillStyle='hsla('+hue+',100%,74%,0.55)'; ctx.beginPath(); ctx.moveTo(0,-7); ctx.lineTo(4,0); ctx.lineTo(0,7); ctx.lineTo(-4,0); ctx.closePath(); ctx.fill();
-        ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.moveTo(0,-3); ctx.lineTo(1.6,0); ctx.lineTo(0,3); ctx.lineTo(-1.6,0); ctx.closePath(); ctx.fill();
-        ctx.restore();
-        if(Math.random()<0.5) zbits.push({x:p.x+Math.cos(a)*rad, y:(p.y-60)+Math.sin(a)*rad*0.78, vx:(Math.random()-0.5)*34, vy:(Math.random()-0.5)*34, sz:1+Math.random()*1.5, life:0.3+Math.random()*0.3, t:0, c:'hsl('+Math.round(hue)+',100%,72%)'}); }
+      const cg=ctx.createRadialGradient(fcx,fcy,3,fcx,fcy,72); cg.addColorStop(0,'rgba(255,255,255,0.30)'); cg.addColorStop(0.5,'rgba(220,235,255,0.11)'); cg.addColorStop(1,'rgba(220,235,255,0)'); ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(fcx,fcy,72,0,7); ctx.fill();
       ctx.restore();
+      // orbit positions: SAME elliptical path as the ruby fire-souls, plus a slight bob
+      const cp=[];
+      for(let i=0;i<NC;i++){ const ph=i/NC*6.283, th=gt*2.2+ph, ex=fcx+Math.cos(th)*(Rb2+12), ey=fcy+Math.sin(th)*20+Math.sin(gt*3+ph)*3, depth=(Math.sin(th)+1)/2; cp.push({ex,ey,th,ph,depth}); }
+      // single thin rainbow energy line linking all crystals — fades translucent<->opaque with a glow pulse
+      { const lp=0.5+0.5*Math.sin(gt*2.0), lhue=(gt*120)%360;
+        ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.beginPath();
+        for(let i=0;i<=NC;i++){ const q=cp[i%NC]; if(i===0) ctx.moveTo(q.ex,q.ey); else ctx.lineTo(q.ex,q.ey); }
+        ctx.strokeStyle='hsla('+lhue+',100%,74%,'+(0.10+0.72*lp).toFixed(2)+')'; ctx.lineWidth=1.2; ctx.shadowColor='hsla('+lhue+',100%,62%,0.95)'; ctx.shadowBlur=4+9*lp; ctx.stroke();
+        ctx.restore(); }
+      // crystals: tips UP (no rotation), depth-scaled, each shedding flowing sparkles
+      for(let i=0;i<NC;i++){ const q=cp[i], hue=(gt*150+i*72)%360, dsc=0.72+0.28*q.depth, sz=7*dsc;
+        ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.translate(q.ex,q.ey);
+        const gg=ctx.createRadialGradient(0,0,0.5,0,0,sz*2.2); gg.addColorStop(0,'hsla('+hue+',100%,82%,'+(0.25+0.45*q.depth).toFixed(2)+')'); gg.addColorStop(1,'hsla('+hue+',100%,60%,0)'); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(0,0,sz*2.2,0,7); ctx.fill();
+        ctx.fillStyle='hsla('+hue+',100%,74%,'+(0.5+0.4*q.depth).toFixed(2)+')'; ctx.beginPath(); ctx.moveTo(0,-sz); ctx.lineTo(sz*0.55,0); ctx.lineTo(0,sz); ctx.lineTo(-sz*0.55,0); ctx.closePath(); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,'+(0.55+0.4*q.depth).toFixed(2)+')'; ctx.beginPath(); ctx.moveTo(0,-sz*0.46); ctx.lineTo(sz*0.24,0); ctx.lineTo(0,sz*0.46); ctx.lineTo(-sz*0.24,0); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        if(Math.random()<0.5) zbits.push({x:p.x+Math.cos(q.th)*(Rb2+12), y:q.ey, vx:(Math.random()-0.5)*22, vy:(Math.random()-0.5)*22, sz:1+Math.random()*1.3, life:0.3+Math.random()*0.3, t:0, c:'hsl('+Math.round(hue)+',100%,72%)'}); }
     }
     else {
       const pr=48+6*Math.sin(gt*6); const g=ctx.createRadialGradient(sx,cy+14,4,sx,cy+14,pr+22); g.addColorStop(0,col+'00'); g.addColorStop(0.7,col+'44'); g.addColorStop(1,col+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy+14,pr+22,0,7); ctx.fill();
