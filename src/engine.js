@@ -1126,7 +1126,7 @@ function update(dt){
   if (p.slamRec>0){ p.slamRec-=dt; p.vx=0; }
   if (p.slamT>0){ slamGhosts.push({x:p.x,y:p.y}); if(slamGhosts.length>9) slamGhosts.shift(); p.vx=0; }
   else if (slamGhosts.length) slamGhosts.shift();
-  if (powerActive && equippedStone==='sapphire' && transformT<=0){ if(Math.abs(p.vx)>20||!p.onGround){ sapTrail.push({x:p.x,y:p.y,st:p.state,fi:curFrame(),f:p.facing}); if(sapTrail.length>7) sapTrail.shift(); } else if(sapTrail.length) sapTrail.shift(); }
+  if (powerActive && equippedStone==='sapphire' && transformT<=0){ if(Math.abs(p.vx)>20||!p.onGround){ sapTrail.push({x:p.x,y:p.y,st:p.state,fi:curFrame(),f:p.facing}); if(sapTrail.length>10) sapTrail.shift(); } else if(sapTrail.length) sapTrail.shift(); }
   else if (sapTrail.length) sapTrail.length=0;
   const kneeling = p.onGround && (keys['ArrowDown']||keys['KeyS']) && p.attackT<=0 && p.castT<=0 && p.hurtT<=0;
   let dir=0;
@@ -1286,6 +1286,7 @@ function update(dt){
       p.inv=Math.max(p.inv,0.35);
     }
     else if (equippedStone==='topaz'){
+      if(Math.abs(p.vx)>40) p.inv=Math.max(p.inv,0.15);   // invincible ONLY during the supercharged dash
       // Thunder Rush: electric strikes zap any enemy you run through
       for (const z of zombies){ if(z.dead) continue; if(z.hitCd<=0 && overlap(pBodyBox(), zBodyBox(z))){ z.hp-=2; z.hitCd=0.2; z.shown=3;
         for(let i=0;i<7;i++) zbits.push({x:z.x+(Math.random()-0.5)*24, y:z.y-44-Math.random()*30, vx:(Math.random()-0.5)*200, vy:-40-Math.random()*120, sz:1.5+Math.random()*2, life:0.2+Math.random()*0.25, t:0, c:['#fff2a0','#ffe04a','#ffffff'][(Math.random()*3)|0]});
@@ -2336,11 +2337,11 @@ function drawPower(){ if(!powerActive && transformT<=0 && powerBoom<=0) return;
       ctx.save(); ctx.globalCompositeOperation='lighter';
       const pul=0.55+0.45*Math.abs(Math.sin(gt*15));
       const g=ctx.createRadialGradient(sx,cy,4,sx,cy,74); g.addColorStop(0,'rgba(255,255,215,'+(0.22*pul).toFixed(2)+')'); g.addColorStop(0.45,'rgba(255,224,74,'+(0.16*pul).toFixed(2)+')'); g.addColorStop(1,'rgba(255,194,60,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,cy,74,0,7); ctx.fill();
-      for(let i=0;i<8;i++){ const a=gt*(3.2+i*0.6)+i*1.3, rr=18+20*Math.abs(Math.sin(gt*4.5+i*1.7)), px=sx+Math.cos(a)*rr, py=cy+Math.sin(a*1.4)*rr*0.9, s=Math.max(0.8,1.5+1.3*Math.sin(gt*20+i*2)), wt=Math.sin(gt*26+i*3)>0;
+      for(let i=0;i<12;i++){ const a=gt*(3.2+i*0.6)+i*1.3, rr=18+22*Math.abs(Math.sin(gt*4.5+i*1.7)), px=sx+Math.cos(a)*rr, py=cy+Math.sin(a*1.4)*rr*0.9, s=Math.max(0.8,1.5+1.3*Math.sin(gt*20+i*2)), wt=Math.sin(gt*26+i*3)>0;
         ctx.fillStyle=wt?'rgba(255,255,200,0.18)':'rgba(255,210,60,0.16)'; ctx.beginPath(); ctx.arc(px,py,s*2.4,0,7); ctx.fill();
         ctx.fillStyle=wt?'rgba(255,255,255,0.95)':'rgba(255,224,74,0.92)'; ctx.beginPath(); ctx.arc(px,py,s,0,7); ctx.fill(); }
       ctx.restore();
-      if(Math.random()<0.5) zbits.push({x:p.x+(Math.random()-0.5)*44, y:p.y-50+(Math.random()-0.5)*64, vx:(Math.random()-0.5)*150, vy:(Math.random()-0.5)*150, sz:1+Math.random()*1.5, life:0.14+Math.random()*0.18, t:0, c:(Math.random()<0.5?'#ffffff':'#ffe04a')});
+      if(Math.random()<0.75) zbits.push({x:p.x+(Math.random()-0.5)*48, y:p.y-50+(Math.random()-0.5)*68, vx:(Math.random()-0.5)*160, vy:(Math.random()-0.5)*160, sz:1+Math.random()*1.6, life:0.14+Math.random()*0.18, t:0, c:(Math.random()<0.5?'#ffffff':'#ffe04a')});
     }
     else if(equippedStone==='sapphire'){
       // Time Frost: icy world tint + frost aura + drifting crystals
@@ -2629,12 +2630,13 @@ function drawPlayerLayer(){
       else { ctx.filter = fast ? 'grayscale(1) invert(1) brightness(1.15)' : 'grayscale(1) brightness(1.7) contrast(1.25)'; }
       drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, 0); ctx.filter='none'; ctx.restore(); } 
     else if (!(p.invHurt>0 && !powerActive && Math.floor(gt*16)%2===0)){
-      if(powerActive&&equippedStone==='sapphire'&&transformT<=0){ for(let gi=0;gi<sapTrail.length;gi++){ const g=sapTrail[gi]; ctx.save(); ctx.globalAlpha=0.05+0.16*(gi/Math.max(1,sapTrail.length)); drawCharSprite(chosen,g.st,g.fi,g.x-camX,g.y,g.f,1,0); ctx.restore(); } }
-      const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0), _obs=(powerActive&&equippedStone==='obsidian'&&transformT<=0);
-      ctx.save();
+      if(powerActive&&equippedStone==='sapphire'&&transformT<=0){ for(let gi=0;gi<sapTrail.length;gi++){ const g=sapTrail[gi]; ctx.save(); ctx.globalAlpha=0.08+0.26*(gi/Math.max(1,sapTrail.length)); drawCharSprite(chosen,g.st,g.fi,g.x-camX,g.y,g.f,1,0); ctx.restore(); } }
+      const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0), _obs=(powerActive&&equippedStone==='obsidian'&&transformT<=0), _top=(powerActive&&equippedStone==='topaz'&&transformT<=0);
+      let _skip=false; ctx.save();
       if(_spec){ ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); }
-      if(_obs){ ctx.filter='invert(1) blur(1.1px) brightness(1.15) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; }
-      drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0);
+      if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
+      if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
+      if(!_skip) drawCharSprite(chosen, p.state, curFrame(), sx, p.y, p.facing, 1, (p.invHurt>0 && !powerActive)?0.45:0);
       ctx.filter='none'; ctx.restore();
     }
     if (p.muzzleT>0){
@@ -2759,15 +2761,17 @@ function draw(){
     if (bo.dead) continue;
     const bx=bo.x-camX; if(bx<-60||bx>W+60) continue;
     if (bo.kind==='void'){
-      const k=Math.min(1,bo.t*4), R=Math.max(6, 30*k);
-      ctx.save();
-      const g=ctx.createRadialGradient(bx,bo.y,2,bx,bo.y,R+26); g.addColorStop(0,'rgba(28,0,48,0.9)'); g.addColorStop(0.5,'rgba(95,42,175,0.5)'); g.addColorStop(1,'rgba(140,90,255,0)');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(bx,bo.y,R+26,0,7); ctx.fill();
-      const gg=SPR.goal;
-      if(gg && gg.vimg && gg.vimg.complete && gg.vimg.naturalWidth){ ctx.save(); ctx.translate(bx,bo.y); ctx.rotate(gt*3.2); const vs=R*2.5; ctx.imageSmoothingEnabled=true; ctx.drawImage(gg.vimg, -vs/2,-vs/2, vs, vs); ctx.restore(); }
-      else { ctx.fillStyle='#0a0414'; ctx.beginPath(); ctx.arc(bx,bo.y,Math.max(1,R*0.6),0,7); ctx.fill(); }
-      ctx.strokeStyle='rgba(200,150,255,0.9)'; ctx.lineWidth=2.4;
-      for(let s=0;s<3;s++){ const a0=gt*5+s*2.1; ctx.beginPath(); ctx.arc(bx,bo.y,R+3+s*4,a0,a0+2.2); ctx.stroke(); }
+      const k=Math.min(1,bo.t*4), rx=Math.max(7,34*k), ry=rx*0.72;
+      ctx.save(); ctx.translate(bx,bo.y);
+      // blurry white-purple glowing border (outer)
+      ctx.save(); ctx.scale(1,ry/rx); const og=ctx.createRadialGradient(0,0,rx*0.55,0,0,rx*1.5); og.addColorStop(0,'rgba(235,225,255,0)'); og.addColorStop(0.78,'rgba(235,225,255,0)'); og.addColorStop(0.9,'rgba(240,232,255,0.5)'); og.addColorStop(1,'rgba(190,160,255,0)'); ctx.fillStyle=og; ctx.beginPath(); ctx.arc(0,0,rx*1.5,0,7); ctx.fill(); ctx.restore();
+      // deep portal interior (clipped to the oval) with swarming star speckles
+      ctx.save(); ctx.scale(1,ry/rx); ctx.beginPath(); ctx.arc(0,0,rx,0,7); ctx.clip();
+      const ig=ctx.createRadialGradient(0,0,1,0,0,rx); ig.addColorStop(0,'#06000e'); ig.addColorStop(0.62,'#140026'); ig.addColorStop(1,'#23103a'); ctx.fillStyle=ig; ctx.fillRect(-rx,-rx,rx*2,rx*2);
+      for(let s=0;s<26;s++){ const ang=s*2.39996+Math.sin(gt*3.0+s*1.7)*1.8+gt*2.4, rad=(0.12+0.86*((s*0.043+gt*0.55)%1))*rx, px=Math.cos(ang)*rad, py=Math.sin(ang)*rad, tw=0.35+0.65*Math.abs(Math.sin(gt*11+s*2.1)); ctx.fillStyle='rgba(232,214,255,'+tw.toFixed(2)+')'; ctx.beginPath(); ctx.arc(px,py,Math.max(0.5,0.7+0.9*tw),0,7); ctx.fill(); }
+      ctx.restore();
+      // crisp glowing inner rim (blurred)
+      ctx.save(); ctx.scale(1,ry/rx); ctx.strokeStyle='rgba(245,238,255,0.65)'; ctx.lineWidth=2.4; ctx.shadowColor='rgba(220,205,255,0.95)'; ctx.shadowBlur=9; ctx.beginPath(); ctx.arc(0,0,rx,0,7); ctx.stroke(); ctx.restore();
       ctx.restore();
       continue;
     }
