@@ -3717,7 +3717,7 @@ const ART_CSS=`
 @media(prefers-reduced-motion:reduce){#artifacts *{animation:none !important}}
 `;
 let artEl=null;
-function artProg(){ if(typeof prog!=='undefined'&&prog) return prog; if(!window.__artProg) window.__artProg={owned:[],megas:{greed:true,discord:true}}; return window.__artProg; }
+function artProg(){ if(typeof prog!=='undefined'&&prog) return prog; if(!window.__artProg) window.__artProg={owned:[],megas:(typeof testMode!=='undefined'&&testMode)?{greed:true,discord:true}:{}}; return window.__artProg; }
 function artStoneImgHTML(id,lit){
   const g=ART_GLOWC[id]||'#fff';
   if(lit) return '<div class="art-simg"><div class="art-glow" style="background:'+g+'"></div><img class="lit" src="'+artStoneURL(id)+'"><div class="art-shine" style="-webkit-mask-image:url('+artStoneURL(id)+');mask-image:url('+artStoneURL(id)+')"></div></div>';
