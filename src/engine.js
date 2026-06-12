@@ -1,4 +1,4 @@
-const ASSET_VER='1781460000';
+const ASSET_VER='1781470000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -2761,7 +2761,7 @@ function chaserFire(z,C){
 }
 function angelLaunchOrb(z){
   const wx=z.x+z.facing*50, wy=z.y-60, dx=p.x-wx, dy=(p.y-44)-wy, d=Math.hypot(dx,dy)||1, sp=430;
-  curses.push({x:wx,y:wy,vx:dx/d*sp,vy:dy/d*sp,t:0,dead:false,col:'dark',r:38}); playSfx('sfx_portalblast',0.55);
+  curses.push({x:wx,y:wy,vx:dx/d*sp,vy:dy/d*sp,t:0,dead:false,col:'dark',r:26}); playSfx('sfx_portalblast',0.55);
   for(let i=0;i<16;i++) zbits.push({x:wx,y:wy,vx:(Math.random()-0.5)*155,vy:(Math.random()-0.5)*155,sz:1.6+Math.random()*2.4,life:0.3+Math.random()*0.3,t:0,c:['#c79bff','#8a4ad8','#f0d8ff'][(Math.random()*3)|0]});
 }
 function angelBlast(z){
@@ -2790,10 +2790,10 @@ function drawCurses(){
   for(const c of curses){ if(c.dead) continue; const sx=c.x-camX; if(sx<-30||sx>W+30) continue; const sy=c.y, fl=0.7+0.3*Math.sin(gt*30+c.t*40), R=c.r||14, dark=c.col==='dark';
     ctx.save(); ctx.globalCompositeOperation='lighter';
     const g=ctx.createRadialGradient(sx,sy,1,sx,sy,R);
-    if(dark){ g.addColorStop(0,'rgba(225,190,255,'+(0.9*fl).toFixed(2)+')'); g.addColorStop(0.45,'rgba(150,80,230,'+(0.6*fl).toFixed(2)+')'); g.addColorStop(1,'rgba(90,30,170,0)'); }
+    if(dark){ g.addColorStop(0,'rgba(245,225,255,'+(0.96*fl).toFixed(2)+')'); g.addColorStop(0.4,'rgba(168,98,242,'+(0.72*fl).toFixed(2)+')'); g.addColorStop(1,'rgba(95,35,180,0)'); }
     else { g.addColorStop(0,'rgba(205,255,150,'+(0.9*fl).toFixed(2)+')'); g.addColorStop(0.45,'rgba(120,230,60,'+(0.55*fl).toFixed(2)+')'); g.addColorStop(1,'rgba(70,180,30,0)'); }
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,sy,R,0,7); ctx.fill();
-    ctx.fillStyle='rgba(245,240,255,'+fl.toFixed(2)+')'; ctx.beginPath(); ctx.arc(sx,sy,3,0,7); ctx.fill(); ctx.restore();
+    ctx.fillStyle='rgba(252,248,255,'+fl.toFixed(2)+')'; ctx.beginPath(); ctx.arc(sx,sy,dark?Math.max(4,R*0.34):3,0,7); ctx.fill(); ctx.restore();
   }
 }
 function skelFlameWave(z){
