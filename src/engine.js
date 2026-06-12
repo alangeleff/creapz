@@ -1,4 +1,4 @@
-const ASSET_VER='1781530000';
+const ASSET_VER='1781540000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -905,7 +905,7 @@ function reset(keep){
     totalOrbVal = souls.reduce((a,s)=>a+s.val,0);
   }
   plats = PLAT_DEF.map(q=>({x:q.x!==undefined?q.x:q.x0, x0:q.x0, y:q.y, w:q.w, t:q.t, skin:q.skin, z:q.z,
-    range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0,
+    range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0, dyf:0,
     ct:0, falling:false, gone:false, dy:0, fv:0, rt:0}));
   const zspawn=ST.enemies;
   zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=(kw==='golem')?8:(kw==='knight')?4:(kw==='witch'||kw==='skel'||kw==='angel')?3:(kw==='zgen')?3:((kw==='gob'||kw==='bd')?1:ZMAXHP);
@@ -1150,9 +1150,11 @@ function update(dt){
   }
   // platforms tick
   for (const q of plats){
-    q.dxf=0;
+    q.dxf=0; q.dyf=0;
     if (q.t==='m'){ const ox=q.x; q.ph+=dt*q.spd*q.dir; if(q.ph>=1){q.ph=1;q.dir=-1;} else if(q.ph<=0){q.ph=0;q.dir=1;}
       q.x=q.x0+q.range*q.ph; q.dxf=q.x-ox; }
+    else if (q.t==='v'){ const ody=q.dy; q.ph+=dt*q.spd*q.dir; if(q.ph>=1){q.ph=1;q.dir=-1;} else if(q.ph<=0){q.ph=0;q.dir=1;}
+      q.dy=q.range*q.ph; q.dyf=q.dy-ody; }
     else if (q.t==='c'){
       if (q.falling){ q.fv+=900*dt; q.dy+=q.fv*dt; q.rt+=dt;
         if (q.dy>30) q.gone=true;
@@ -1163,6 +1165,7 @@ function update(dt){
   updateSlam(dt);
   // mover carries the player
   if (p.onGround && p.standPlat && p.standPlat.t==='m') p.x+=p.standPlat.dxf;
+  if (p.onGround && p.standPlat && p.standPlat.t==='v') p.y+=p.standPlat.dyf;
   // --- Aerial attack (Power Dive / Scythe Bash): melee button while midair ---
   if (diveReq){
     if (performance.now()-diveReq.t<150 && !p.onGround && p.diveT<=0 && p.diveRec<=0
