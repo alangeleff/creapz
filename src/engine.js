@@ -1,4 +1,4 @@
-const ASSET_VER='1781370000';
+const ASSET_VER='1781380000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1020,7 +1020,7 @@ function drawSlamFx(){
 }
 function zBodyBox(z){
   if (z.kw==='witch') return {x:z.x-26, y:z.y-120, w:52, h:120};
-  if (z.kw==='skel') return {x:z.x-36, y:z.y-124, w:72, h:124};
+  if (z.kw==='skel') return {x:z.x-38, y:z.y-130, w:76, h:130};
   if (z.kw==='knight') return {x:z.x-50, y:z.y-186, w:100, h:186};
   if (z.kw==='angel') return {x:z.x-30, y:z.y-130, w:60, h:130};
   if (z.kw==='golem') return {x:z.x-92, y:z.y-191, w:184, h:189};
@@ -1453,7 +1453,7 @@ function update(dt){
         if(C.ranged){ if(af>=C.atkFire && !z.fired){ z.fired=true; chaserFire(z,C); } }
         else if(af>=C.atkHit[0] && af<=C.atkHit[1] && z.hitCd<=0 && p.inv<=0 && !p.dead){ const aw=C.atkW||C.atkRange, ah=C.atkH||96, ay=C.atkY||96; const wb={x:z.facing>0?z.x-14:z.x-aw+14, y:z.y-ay, w:aw, h:ah}; if(overlap(wb,pBodyBox())){ hurtPlayer(z.x,C.atkDmg); z.hitCd=0.45; } }
         if(z.atkT<=0){ z.atkCd=(C.atkCdMin||0.7)+Math.random()*0.6; }
-        if(C.fly){ z.y=z.yhover+Math.sin(gt*1.8+z.t)*5; } else z.x=terrWallX(z.x,zpx,z.y,16); continue;
+        if(C.fly){ z.y=z.yhover+Math.sin(gt*1.8+z.t)*5; } else z.x=terrWallX(z.x,zpx,z.y,16); if(p.inv<=0 && !p.dead && overlap(pBodyBox(), zBodyBox(z))) hurtPlayer(z.x,1); continue;
       }
       if(z.aggro && !p.dead){
         if(C.stomp && ad>(C.stompRange||240) && (z.stompCd||0)<=0 && !(z.atkT>0)){ z.stompPhase='leap'; z.stompT=C.stompLeapDur; z.sx0=z.x; z.sy0=z.y; z.stompTx=clamp(p.x,z.min,z.max); z.stompPeak=C.stompPeak||190; z.state='jump'; z.facing=(z.stompTx<z.x)?-1:1; playSfx('sfx_jump',0.6); }
