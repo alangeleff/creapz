@@ -1,4 +1,4 @@
-const ASSET_VER='1781510000';
+const ASSET_VER='1781520000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1812,7 +1812,7 @@ function drawCaveTopper(x0,x1,sgy){
 }
 function drawWitchTopper(x0,x1,sgy){
   const img=WITCHTOP_IMG; if(!img.complete||!img.naturalWidth) return;
-  const TH=54, tw=TH*img.naturalWidth/img.naturalHeight, topY=sgy-0.60*TH;
+  const TH=36, tw=TH*img.naturalWidth/img.naturalHeight, topY=sgy-0.42*TH;
   ctx.save(); ctx.beginPath(); ctx.rect(x0,topY,x1-x0,TH); ctx.clip(); ctx.imageSmoothingEnabled=true;
   const off=((camX%tw)+tw)%tw;
   for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(img,x,topY,tw,TH);
