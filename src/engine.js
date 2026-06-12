@@ -1,4 +1,4 @@
-const ASSET_VER='1781490000';
+const ASSET_VER='1781500000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -2742,10 +2742,10 @@ function witchFloorAt(x){
   return null;
 }
 function witchRelocate(z){
-  const L=camX+60, R=camX+W-60; let lo,hi;
-  if(p.x < camX+W/2){ lo=camX+W*0.74; hi=R; } else { lo=L; hi=camX+W*0.26; }
+  const pmin=z.min, pmax=z.max, mid=(pmin+pmax)/2; let lo,hi;
+  if(p.x < mid){ lo=mid; hi=pmax; } else { lo=pmin; hi=mid; }
   for(let t=0;t<12;t++){ const tx=lo+Math.random()*(hi-lo), fy=witchFloorAt(tx); if(fy!==null){ z.x=tx; z.y=fy; return; } }
-  z.x=Math.max(L,Math.min(R,2*(camX+W/2)-z.x)); const fy=witchFloorAt(z.x); if(fy!==null) z.y=fy;
+  z.x=Math.max(pmin,Math.min(pmax, pmin+pmax-z.x)); const fy=witchFloorAt(z.x); if(fy!==null) z.y=fy;
 }
 function witchFireCurse(z){
   const wx=z.x+z.facing*20, wy=z.y-92, dx=p.x-wx, dy=(p.y-44)-wy, d=Math.hypot(dx,dy)||1, sp=330;
@@ -2772,8 +2772,8 @@ function angelBlast(z){
 function witchStartHop(z){
   let target=null;
   for(const q of plats){ if(q.gone) continue; const cx=q.x+q.w/2, top=q.y+(q.dy||0);
-    if(top<z.y-30 && Math.abs(cx-z.x)<300 && Math.abs(cx-z.x)>30){ if(!target||Math.abs(cx-z.x)<Math.abs(target.x-z.x)) target={x:cx,y:top}; } }
-  if(!target){ const dir=(p.x<z.x)?1:-1; let tx=Math.max(camX+40,Math.min(camX+W-40,z.x+dir*150)); const fy=witchFloorAt(tx); target={x:tx,y:(fy!==null?fy:z.y)}; }
+    if(top<z.y-30 && cx>=z.min && cx<=z.max && Math.abs(cx-z.x)<300 && Math.abs(cx-z.x)>30){ if(!target||Math.abs(cx-z.x)<Math.abs(target.x-z.x)) target={x:cx,y:top}; } }
+  if(!target){ const dir=(p.x<z.x)?1:-1; let tx=Math.max(z.min,Math.min(z.max,z.x+dir*150)); const fy=witchFloorAt(tx); target={x:tx,y:(fy!==null?fy:z.y)}; }
   z.hx0=z.x; z.hy0=z.y; z.hx1=target.x; z.hy1=target.y; z.hopT=z.hopDur; z.wmode='hop'; z.state='jump'; playSfx('sfx_witchjump',0.85);
 }
 function witchStartTele(z){ z.teleT=z.teleDur; z.teleDone=false; z.wmode='tele'; z.teleCd=3.5+Math.random()*2.5; playSfx('sfx_wportal',0.5); playSfx('sfx_witchtele',0.95);
