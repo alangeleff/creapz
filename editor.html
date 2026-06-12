@@ -252,8 +252,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1781520000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781520000');
+fetch('./assets/sprites.json?v=1781530000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781530000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -279,6 +279,9 @@ const STAMPS=[
  {k:'plat_cave_s',label:'Cave Platform · static',sw:'#7a5836',cat:'Ground'},
  {k:'plat_cave_m',label:'Cave Platform · moving',sw:'#6ad0ff',cat:'Ground'},
  {k:'plat_cave_c',label:'Cave Platform · crumble',sw:'#e0843c',cat:'Ground'},
+ {k:'plat_witch_s',label:'Witchwood Platform · static',sw:'#5a4a36',cat:'Ground'},
+ {k:'plat_witch_m',label:'Witchwood Platform · moving',sw:'#6ad0ff',cat:'Ground'},
+ {k:'plat_witch_c',label:'Witchwood Platform · crumble',sw:'#e0843c',cat:'Ground'},
  {k:'haz_spike',label:'Bone Spike Pit',sw:'#d9d2c0',cat:'Hazards'},
  {k:'haz_rock',label:'Rock Drop',sw:'#7a7280',cat:'Hazards'},
  {k:'haz_tar',label:'Tar Pit',sw:'#2a1f30',cat:'Hazards'},
@@ -335,23 +338,23 @@ const STAMPS=[
 const LABELOF={}; STAMPS.forEach(s=>LABELOF[s.k]=s.label);
 function assetKey(s){ const r=s.raw, ty=s.type||s.kind;
   if(ty==='terrace') return (Array.isArray(r)&&r[6]==='cave')?'terrace_cave':(Array.isArray(r)&&r[6]==='witchwood')?'terrace_witch':'terrace';
-  if(ty==='plat') return 'plat_'+(r.skin==='cave'?'cave_':'')+r.t;
+  if(ty==='plat') return 'plat_'+(r.skin==='cave'?'cave_':r.skin==='witch'?'witch_':'')+r.t;
   if(ty==='haz') return 'haz_'+r.t;
   if(ty==='tex') return 'tex_'+r.t;
   if(ty==='obst') return r.type;
   return ty; }
 const SWAP_GROUPS=[
   {label:'Ground', members:[['terrace','Cemetery Ground'],['terrace_cave','Cave Ground'],['terrace_witch','Witchwood Ground']]},
-  {label:'Static Platform', members:[['plat_s','Cemetery'],['plat_cave_s','Cave']]},
-  {label:'Moving Platform', members:[['plat_m','Cemetery'],['plat_cave_m','Cave']]},
-  {label:'Crumble Platform', members:[['plat_c','Cemetery'],['plat_cave_c','Cave']]},
+  {label:'Static Platform', members:[['plat_s','Cemetery'],['plat_cave_s','Cave'],['plat_witch_s','Witchwood']]},
+  {label:'Moving Platform', members:[['plat_m','Cemetery'],['plat_cave_m','Cave'],['plat_witch_m','Witchwood']]},
+  {label:'Crumble Platform', members:[['plat_c','Cemetery'],['plat_cave_c','Cave'],['plat_witch_c','Witchwood']]},
 ];
 function swapGroupOf(key){ return SWAP_GROUPS.find(g=>g.members.some(m=>m[0]===key)); }
 function applySwap(raw, targetKey){
   if(targetKey==='terrace'){ if(Array.isArray(raw)&&raw.length>6) raw[6]=null; }
   else if(targetKey==='terrace_cave'){ if(raw[5]===undefined)raw[5]=null; raw[6]='cave'; }
   else if(targetKey==='terrace_witch'){ if(raw[5]===undefined)raw[5]=null; raw[6]='witchwood'; }
-  else if(targetKey.indexOf('plat_')===0){ const parts=targetKey.split('_'); let skin,t; if(parts[1]==='cave'){skin='cave';t=parts[2];}else{t=parts[1];} raw.t=t; if(skin)raw.skin=skin; else delete raw.skin; if(t==='m'){ if(raw.x0===undefined)raw.x0=(raw.x!==undefined?raw.x:raw.x0); if(!raw.range)raw.range=180; if(!raw.spd)raw.spd=0.3; } }
+  else if(targetKey.indexOf('plat_')===0){ const parts=targetKey.split('_'); let skin,t; if(parts[1]==='cave'||parts[1]==='witch'){skin=parts[1];t=parts[2];}else{t=parts[1];} raw.t=t; if(skin)raw.skin=skin; else delete raw.skin; if(t==='m'){ if(raw.x0===undefined)raw.x0=(raw.x!==undefined?raw.x:raw.x0); if(!raw.range)raw.range=180; if(!raw.spd)raw.spd=0.3; } }
   else if(targetKey.indexOf('haz_')===0){ raw.t=targetKey.split('_')[1]; }
   else if(targetKey.indexOf('tex_')===0){ raw.t=targetKey.split('_')[1]; }
 }
@@ -746,7 +749,7 @@ function placeAt(kind,gx,gy){
  else if(kind==='terrace'){ const s=[gx,gx+DEF_TERR,gy,TERRACE_DROP,topZ()+10]; M.seg.push(s); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
  else if(kind==='terrace_cave'){ const s=[gx,gx+DEF_TERR,gy,TERRACE_DROP,topZ()+10,null,'cave']; M.seg.push(s); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
  else if(kind==='terrace_witch'){ const s=[gx,gx+DEF_TERR,gy,TERRACE_DROP,topZ()+10,null,'witchwood']; M.seg.push(s); sel=wrap('terrace',s,['x0','x1','gy','depth'],[0,1,2,3]); }
- else if(kind.startsWith('plat_')){ const parts=kind.split('_'); let skin,t; if(parts[1]==='cave'){skin='cave';t=parts[2];}else{t=parts[1];} const p={x:gx,y:gy,w:120,t,z:topZ()+10}; if(skin)p.skin=skin; if(t==='m'){p.x0=gx;p.range=180;p.spd=0.3;} M.plats.push(p); sel={type:'plat',kind,obj:p,raw:p,sync(){}}; }
+ else if(kind.startsWith('plat_')){ const parts=kind.split('_'); let skin,t; if(parts[1]==='cave'||parts[1]==='witch'){skin=parts[1];t=parts[2];}else{t=parts[1];} const p={x:gx,y:gy,w:120,t,z:topZ()+10}; if(skin)p.skin=skin; if(t==='m'){p.x0=gx;p.range=180;p.spd=0.3;} M.plats.push(p); sel={type:'plat',kind,obj:p,raw:p,sync(){}}; }
  else if(kind==='chk'){ const c=[gx,gy]; M.chk.push(c); sel=wrap('chk',c,['x','gy'],[0,1]); }
  else if(kind==='goal'){ M.goal=gx; M.goalY=gy; sel=null; }
  else if(kind==='soul'||kind==='soul5'||kind==='soul25'||kind==='soul50'||kind==='soul100'){ const v=kind==='soul'?1:parseInt(kind.slice(4)); M.souls.push(v===1?[gx,gy]:[gx,gy,v]); sel=null; }
@@ -873,6 +876,14 @@ function dPlat(p){ const x=p.x??p.x0;
    if(CAVEGND_IMG.naturalWidth){ const T=84*zoom; ctx.save(); ctx.beginPath(); ctx.rect(X,Y,p.w*zoom,PHv); ctx.clip(); for(let yy=Y;yy<Y+PHv;yy+=T) for(let xx=X;xx<X+p.w*zoom+T;xx+=T) ctx.drawImage(CAVEGND_IMG,xx,yy,T,T); ctx.restore(); }
    else { ctx.fillStyle='#3a2a1a'; ctx.fillRect(X,Y,p.w*zoom,PHv); }
    if(CAVETOP_IMG.naturalWidth){ const TT=48*zoom, tw=TT*CAVETOP_IMG.naturalWidth/CAVETOP_IMG.naturalHeight, ty=Y-0.40*TT; ctx.save(); ctx.beginPath(); ctx.rect(X,ty,p.w*zoom,TT); ctx.clip(); ctx.imageSmoothingEnabled=true; for(let xx=X;xx<X+p.w*zoom+tw;xx+=tw) ctx.drawImage(CAVETOP_IMG,xx,ty,tw,TT); ctx.restore(); }
+   if(p.t==='c'){ ctx.strokeStyle='rgba(10,6,16,.55)'; ctx.lineWidth=1; for(let cx2=x+14;cx2<x+p.w-6;cx2+=26){ ctx.beginPath(); ctx.moveTo(sx(cx2),Y+3*zoom); ctx.lineTo(sx(cx2)-4,Y+10*zoom); ctx.stroke(); } }
+   if(p.t==='m'){ const x0=p.x0??x, r=p.range||0, py=sy(p.y-26); ctx.strokeStyle='#6ad0ffaa'; ctx.lineWidth=2; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.moveTo(sx(x0),py); ctx.lineTo(sx(x0+r),py); ctx.stroke(); ctx.setLineDash([]); }
+   if(sel&&sel.obj===p){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-2,p.w*zoom+4,22*zoom+4); }
+   return; }
+ if(p.skin==='witch'){ const PHv=22*zoom, X=sx(x), Y=sy(p.y);
+   if(WITCHGND_IMG.naturalWidth){ const T=84*zoom; ctx.save(); ctx.beginPath(); ctx.rect(X,Y,p.w*zoom,PHv); ctx.clip(); for(let yy=Y;yy<Y+PHv;yy+=T) for(let xx=X;xx<X+p.w*zoom+T;xx+=T) ctx.drawImage(WITCHGND_IMG,xx,yy,T,T); ctx.restore(); }
+   else { ctx.fillStyle='#3a2e24'; ctx.fillRect(X,Y,p.w*zoom,PHv); }
+   if(WITCHTOP_IMG.naturalWidth){ const TT=32*zoom, tw=TT*WITCHTOP_IMG.naturalWidth/WITCHTOP_IMG.naturalHeight, ty=Y-0.42*TT; ctx.save(); ctx.beginPath(); ctx.rect(X,ty,p.w*zoom,TT); ctx.clip(); ctx.imageSmoothingEnabled=true; for(let xx=X;xx<X+p.w*zoom+tw;xx+=tw) ctx.drawImage(WITCHTOP_IMG,xx,ty,tw,TT); ctx.restore(); }
    if(p.t==='c'){ ctx.strokeStyle='rgba(10,6,16,.55)'; ctx.lineWidth=1; for(let cx2=x+14;cx2<x+p.w-6;cx2+=26){ ctx.beginPath(); ctx.moveTo(sx(cx2),Y+3*zoom); ctx.lineTo(sx(cx2)-4,Y+10*zoom); ctx.stroke(); } }
    if(p.t==='m'){ const x0=p.x0??x, r=p.range||0, py=sy(p.y-26); ctx.strokeStyle='#6ad0ffaa'; ctx.lineWidth=2; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.moveTo(sx(x0),py); ctx.lineTo(sx(x0+r),py); ctx.stroke(); ctx.setLineDash([]); }
    if(sel&&sel.obj===p){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-2,Y-2,p.w*zoom+4,22*zoom+4); }
