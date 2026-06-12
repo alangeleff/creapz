@@ -1,4 +1,4 @@
-const ASSET_VER='1781360000';
+const ASSET_VER='1781370000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -488,7 +488,7 @@ function greedMult(){ return (artProg().megas||{}).greed?2:1; }
 function hasDiscord(){ return !!(artProg().megas||{}).discord; }
 const SOUL_PTS = 100;
 const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800, golem:1500, witch:600, skel:500, knight:700, angel:700 };
-const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1, wave:true, waveMin:135, waveMax:430, waveCdMin:2.3, castFrames:22, castFps:24, castFire:12}, knight:{walkSpd:1.7, atkRange:120, atkFrames:16, atkFps:17, atkHit:[3,15], atkDmg:2, atkCdMin:0.25, atkW:182, atkH:195, atkY:195, stomp:true, senseRange:660, stompRange:235, stompPeak:205, stompLeapDur:0.62, chargeDur:0.62, slamDur:0.22, recoverDur:0.72, stompDmg:2, stompR:108, stompCdMin:3.4} };
+const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1, wave:true, waveMin:140, waveMax:540, waveCdMin:2.5, castFrames:22, castFps:24, castFire:12}, knight:{walkSpd:1.7, atkRange:120, atkFrames:16, atkFps:17, atkHit:[3,15], atkDmg:2, atkCdMin:0.25, atkW:182, atkH:195, atkY:195, stomp:true, senseRange:660, stompRange:235, stompPeak:205, stompLeapDur:0.62, chargeDur:0.62, slamDur:0.22, recoverDur:0.72, stompDmg:2, stompR:108, stompCdMin:3.4} };
 function timeBrackets(idx){
   const s=idx*30;   // each act shifts brackets by 30s
   return [[90+s,3000],[120+s,2000],[180+s,1000]];
@@ -1434,9 +1434,9 @@ function update(dt){
         const _inPat=(p.x>=z.min-45 && p.x<=z.max+45);
         if(_inPat && !z.aggro && (z.x-camX)>-80 && (z.x-camX)<W+80 && !p.dead) z.aggro=true;
         else if(!_inPat && z.aggro) z.aggro=false;
-        if(z.stompPhase==='leap'){ z.stompT-=dt; const k=Math.max(0,Math.min(1,1-z.stompT/C.stompLeapDur)); z.x=z.sx0+(z.stompTx-z.sx0)*k; z.y=z.sy0-z.stompPeak*Math.sin(k*Math.PI*0.5); z.state='jump'; z.facing=(z.stompTx<z.sx0)?-1:1; if(z.stompT<=0){ z.x=z.stompTx; z.y=z.sy0-z.stompPeak; z.stompPhase='charge'; z.stompT=C.chargeDur; } continue; }
-        if(z.stompPhase==='charge'){ z.stompT-=dt; z.state='jump'; z.facing=(p.x<z.x)?-1:1; if(z.stompT<=0){ z.stompPhase='slam'; z.stompT=C.slamDur; z.slamY0=z.y; } continue; }
-        if(z.stompPhase==='slam'){ z.stompT-=dt; const k=Math.max(0,Math.min(1,1-z.stompT/C.slamDur)); z.y=z.slamY0+(z.sy0-z.slamY0)*(k*k); z.state='jump'; if(z.stompT<=0){ z.y=z.sy0; z.stompPhase='recover'; z.stompT=C.recoverDur; addShake(15,0.55); playSfx('sfx_golemsmash',0.9); playSfx('sfx_meleehit',0.8); for(let i=0;i<30;i++){ const sd=(Math.random()<0.5?-1:1); zbits.push({x:z.x+sd*(12+Math.random()*135), y:z.sy0-2, vx:sd*(70+Math.random()*255), vy:-40-Math.random()*175, sz:2+Math.random()*3.6, life:0.4+Math.random()*0.45, t:0, c:['#8a2a2a','#c0392b','#6a1a1a','#bbb','#7a1818'][(Math.random()*5)|0]}); } if(p.onGround && !p.dead && p.inv<=0 && Math.abs(p.x-z.x)<(C.stompR||100)) hurtPlayer(z.x,C.stompDmg||2); } continue; }
+        if(z.stompPhase==='leap'){ z.stompT-=dt; const k=Math.max(0,Math.min(1,1-z.stompT/C.stompLeapDur)); z.x=z.sx0+(z.stompTx-z.sx0)*k; z.y=z.sy0-z.stompPeak*Math.sin(k*Math.PI*0.5); z.state='jump'; z.facing=(z.stompTx<z.sx0)?-1:1; if(z.stompT<=0){ z.x=z.stompTx; z.y=z.sy0-z.stompPeak; z.stompPhase='charge'; z.stompT=C.chargeDur; } if(p.inv<=0&&!p.dead&&overlap(pBodyBox(),zBodyBox(z)))hurtPlayer(z.x,1); continue; }
+        if(z.stompPhase==='charge'){ z.stompT-=dt; z.state='jump'; z.facing=(p.x<z.x)?-1:1; if(z.stompT<=0){ z.stompPhase='slam'; z.stompT=C.slamDur; z.slamY0=z.y; } if(p.inv<=0&&!p.dead&&overlap(pBodyBox(),zBodyBox(z)))hurtPlayer(z.x,1); continue; }
+        if(z.stompPhase==='slam'){ z.stompT-=dt; const k=Math.max(0,Math.min(1,1-z.stompT/C.slamDur)); z.y=z.slamY0+(z.sy0-z.slamY0)*(k*k); z.state='jump'; if(z.stompT<=0){ z.y=z.sy0; z.stompPhase='recover'; z.stompT=C.recoverDur; addShake(15,0.55); playSfx('sfx_golemsmash',0.9); playSfx('sfx_meleehit',0.8); for(let i=0;i<30;i++){ const sd=(Math.random()<0.5?-1:1); zbits.push({x:z.x+sd*(12+Math.random()*135), y:z.sy0-2, vx:sd*(70+Math.random()*255), vy:-40-Math.random()*175, sz:2+Math.random()*3.6, life:0.4+Math.random()*0.45, t:0, c:['#8a2a2a','#c0392b','#6a1a1a','#bbb','#7a1818'][(Math.random()*5)|0]}); } if(p.onGround && !p.dead && p.inv<=0 && Math.abs(p.x-z.x)<(C.stompR||100)) hurtPlayer(z.x,C.stompDmg||2); } else if(p.inv<=0&&!p.dead&&overlap(pBodyBox(),zBodyBox(z)))hurtPlayer(z.x,1); continue; }
         if(z.stompPhase==='recover'){ z.stompT-=dt; z.state='idle'; if(z.stompT<=0){ z.stompPhase=null; z.stompCd=(C.stompCdMin||3)+Math.random()*2; } continue; }
       }
       if(C.wave && z.castT>0){
@@ -2788,30 +2788,34 @@ function drawCurses(){
 }
 function skelFlameWave(z){
   const dir=(p.x<z.x)?-1:1;
-  flameWaves.push({x0:z.x+dir*30, y:z.y-4, dir, wf:0, reach:330, spd:250, t:0, dead:false, parts:[]});
-  playSfx('sfx_ignite',0.75);
+  for(let i=0;i<3;i++) flameWaves.push({x:z.x+dir*34, y:z.y-6, dir, dist:0, reach:470, spd:305, delay:i*0.17, t:0, dead:false, parts:[], r:12+i});
+  playSfx('sfx_ignite',0.8);
 }
 function updateFlameWaves(dt){
   for(const w of flameWaves){
     if(w.dead) continue; w.t+=dt;
-    if(w.wf<w.reach){ w.wf+=w.spd*dt; if(w.wf>w.reach) w.wf=w.reach; }
-    const fx=w.x0+w.dir*w.wf, growing=w.wf<w.reach;
-    if(growing) for(let i=0;i<3;i++) w.parts.push({x:fx+(Math.random()-0.5)*26, y:w.y-Math.random()*8, vx:w.dir*(10+Math.random()*40), vy:-40-Math.random()*95, life:0.32+Math.random()*0.34, t:0, sz:7+Math.random()*12, c:['#ffd98a','#ffae57','#ff6a2c','#e8431f'][(Math.random()*4)|0]});
+    if(w.delay>0){ w.delay-=dt; continue; }
+    const moving=w.dist<w.reach;
+    if(moving){ const dx=w.spd*dt; w.x+=w.dir*dx; w.dist+=dx;
+      for(let i=0;i<3;i++) w.parts.push({x:w.x+(Math.random()-0.5)*18, y:w.y-Math.random()*8, vx:-w.dir*(8+Math.random()*44), vy:-40-Math.random()*95, life:0.3+Math.random()*0.32, t:0, sz:6+Math.random()*10, c:['#ffd98a','#ffae57','#ff6a2c','#e8431f'][(Math.random()*4)|0]});
+    }
     for(const pp of w.parts){ pp.t+=dt; pp.x+=pp.vx*dt; pp.y+=pp.vy*dt; pp.vy+=150*dt; }
     w.parts=w.parts.filter(pp=>pp.t<pp.life);
-    if(p.inv<=0 && !p.dead && growing){ const hb={x:fx-30, y:w.y-48, w:60, h:50}; if(overlap(hb,pBodyBox())) hurtPlayer(fx,1); }
-    if(w.wf>=w.reach && w.parts.length===0) w.dead=true;
+    if(p.inv<=0 && !p.dead && moving){ const hb={x:w.x-w.r-3, y:w.y-46, w:w.r*2+6, h:50}; if(overlap(hb,pBodyBox())) hurtPlayer(w.x,1); }
+    if(!moving && w.parts.length===0) w.dead=true;
   }
   flameWaves=flameWaves.filter(w=>!w.dead);
 }
 function drawFlameWaves(){
   ctx.save(); ctx.globalCompositeOperation='lighter';
   for(const w of flameWaves){
+    if(w.delay>0) continue;
     for(const pp of w.parts){ const k=Math.max(0,1-pp.t/pp.life), sx=pp.x-camX; if(sx<-40||sx>W+40) continue;
       const R=Math.max(0.6, pp.sz*k);
       ctx.globalAlpha=0.8*k; ctx.fillStyle=pp.c; ctx.beginPath(); ctx.arc(sx,pp.y,R,0,7); ctx.fill();
       ctx.globalAlpha=0.5*k; ctx.fillStyle='#fff5d0'; ctx.beginPath(); ctx.arc(sx,pp.y,R*0.5,0,7); ctx.fill();
     }
+    if(w.dist<w.reach){ const sx=w.x-camX; if(sx>-40&&sx<W+40){ const g=ctx.createRadialGradient(sx,w.y,1,sx,w.y,w.r); g.addColorStop(0,'rgba(255,245,210,0.95)'); g.addColorStop(0.45,'rgba(255,150,60,0.72)'); g.addColorStop(1,'rgba(200,40,10,0)'); ctx.globalAlpha=1; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,w.y,w.r,0,7); ctx.fill(); } }
   }
   ctx.globalAlpha=1; ctx.restore();
 }
