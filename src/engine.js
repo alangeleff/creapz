@@ -1,4 +1,4 @@
-const ASSET_VER='1781500000';
+const ASSET_VER='1781510000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -59,6 +59,8 @@ function cycleSkin(dir){ const list=isDing(chosen)?DORDER:ORDER; let i=list.inde
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='+ASSET_VER;
+const WITCHGND_IMG=new Image(); WITCHGND_IMG.src='./assets/witchwood_ground.png?v='+ASSET_VER;
+const WITCHTOP_IMG=new Image(); WITCHTOP_IMG.src='./assets/witchwood_top.png?v='+ASSET_VER;
 const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png?v='+ASSET_VER;
 const DECOR_NAMES=['skull1', 'bone01', 'bone02', 'bone03', 'bone04', 'bone05', 'bone06', 'bone07', 'bone08', 'bone09', 'bone10', 'bone11', 'bone12', 'bone13', 'bone14', 'bone15', 'bone16'];
 const DECOR_IMG={}; DECOR_NAMES.forEach(n=>{ const i=new Image(); i.src='./assets/decor_'+n+'.png?v='+ASSET_VER; DECOR_IMG[n]=i; });
@@ -1808,6 +1810,14 @@ function drawCaveTopper(x0,x1,sgy){
   for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(img,x,topY,tw,TH);
   ctx.restore();
 }
+function drawWitchTopper(x0,x1,sgy){
+  const img=WITCHTOP_IMG; if(!img.complete||!img.naturalWidth) return;
+  const TH=54, tw=TH*img.naturalWidth/img.naturalHeight, topY=sgy-0.60*TH;
+  ctx.save(); ctx.beginPath(); ctx.rect(x0,topY,x1-x0,TH); ctx.clip(); ctx.imageSmoothingEnabled=true;
+  const off=((camX%tw)+tw)%tw;
+  for(let x=-off; x<W+tw; x+=tw) ctx.drawImage(img,x,topY,tw,TH);
+  ctx.restore();
+}
 function drawTreeImg(x,type){ const t=SPR.trees[type]; if(!t) return; ctx.drawImage(t.img, x-t.w/2, GROUND+10-t.h, t.w, t.h); }
 function drawGraveBg(x,base,sc,cross){
   ctx.fillStyle='#211d33';
@@ -1931,6 +1941,8 @@ function drawOneTerrace(s){
     if (kind==='cave' && CAVEGND_IMG.complete && CAVEGND_IMG.naturalWidth){
       tileImage(CAVEGND_IMG, sgy, bot-sgy, 1);
       ctx.fillStyle='rgba(8,5,16,0.16)'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy);
+    } else if (kind==='witchwood' && WITCHGND_IMG.complete && WITCHGND_IMG.naturalWidth){
+      tileImage(WITCHGND_IMG, sgy, bot-sgy, 1);
     } else {
       tileDirt(x0,x1,sgy,0,undefined,bot-sgy);
       if (crypt){ ctx.fillStyle='rgba(34,22,52,0.55)'; ctx.fillRect(x0,sgy,x1-x0,bot-sgy);
@@ -1938,7 +1950,8 @@ function drawOneTerrace(s){
     }
     ctx.restore();
     if (kind==='cave') drawCaveTopper(x0,x1,sgy);
-    if (SPR.grass && !crypt && kind!=='cave'){
+    else if (kind==='witchwood') drawWitchTopper(x0,x1,sgy);
+    if (SPR.grass && !crypt && kind!=='cave' && kind!=='witchwood'){
       const gr=SPR.grass, gy=sgy-Math.round(gr.h*0.55);
       ctx.save(); ctx.beginPath(); ctx.rect(x0,gy,x1-x0,gr.h); ctx.clip();
       const goff=((camX%gr.w)+gr.w)%gr.w;
