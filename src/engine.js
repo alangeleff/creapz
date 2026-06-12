@@ -1,4 +1,4 @@
-const ASSET_VER='1781570000';
+const ASSET_VER='1781580000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1223,7 +1223,7 @@ function update(dt){
     p.castT-=dt;
     const cf0=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast'));
     const cfi=Math.min(SPR.chars[chosen].cast.frames-1, Math.floor((cf0 - p.castT)*pfps('cast')));
-    const fireAt = chosen==='dingbat' ? 2 : 3;   // dingbat: bolt leaves on the open-mouth frame (11f @40fps)
+    const fireAt = chosen==='dingbat' ? 2 : chosen==='son' ? 0 : 3;   // dingbat: bolt leaves on the open-mouth frame (11f @40fps)
     if (!p.castFired && cfi>=fireAt){
       p.castFired=true; p.muzzleT=0.14;
       if (powerActive && equippedStone==='obsidian'){
