@@ -1,4 +1,4 @@
-const ASSET_VER='1781540000';
+const ASSET_VER='1781550000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -61,6 +61,8 @@ const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v=
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='+ASSET_VER;
 const WITCHGND_IMG=new Image(); WITCHGND_IMG.src='./assets/witchwood_ground.png?v='+ASSET_VER;
 const WITCHTOP_IMG=new Image(); WITCHTOP_IMG.src='./assets/witchwood_top.png?v='+ASSET_VER;
+const ETHFLOAT_IMG=new Image(); ETHFLOAT_IMG.src='./assets/eth_float.png?v='+ASSET_VER;
+const ETHGND_IMG=new Image(); ETHGND_IMG.src='./assets/eth_ground.png?v='+ASSET_VER;
 const ROCKPILE_IMG=new Image(); ROCKPILE_IMG.src='./assets/tex_rockpile1.png?v='+ASSET_VER;
 const DECOR_NAMES=['skull1', 'bone01', 'bone02', 'bone03', 'bone04', 'bone05', 'bone06', 'bone07', 'bone08', 'bone09', 'bone10', 'bone11', 'bone12', 'bone13', 'bone14', 'bone15', 'bone16'];
 const DECOR_IMG={}; DECOR_NAMES.forEach(n=>{ const i=new Image(); i.src='./assets/decor_'+n+'.png?v='+ASSET_VER; DECOR_IMG[n]=i; });
@@ -1851,6 +1853,18 @@ function drawOnePlat(q){
   if (q.t==='k'){ if (q.gone && q.dy>340) return; const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) return;
     if (CAVEPLAT_IMG.complete && CAVEPLAT_IMG.naturalWidth){ const dh=q.w*CAVEPLAT_IMG.naturalHeight/CAVEPLAT_IMG.naturalWidth;
       ctx.imageSmoothingEnabled=true; ctx.drawImage(CAVEPLAT_IMG, x0, y-dh*0.46, q.w, dh); return; } }
+  if (q.skin==='ethf' || q.skin==='ethg'){
+    if (q.gone && q.dy>340) return;
+    const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) return;
+    const img=(q.skin==='ethf')?ETHFLOAT_IMG:ETHGND_IMG, OFF=(q.skin==='ethf')?0.06:0.13;
+    let jx=0, jy=0; if (q.t==='c' && q.ct>0 && !q.falling){ jx=(Math.random()-0.5)*3; jy=(Math.random()-0.5)*2; }
+    ctx.save(); ctx.translate(jx,jy);
+    if (img.complete && img.naturalWidth){ const dh=q.w*img.naturalHeight/img.naturalWidth; ctx.imageSmoothingEnabled=true; ctx.drawImage(img, x0, y-dh*OFF, q.w, dh); }
+    else { ctx.fillStyle='#46564e'; ctx.fillRect(x0,y,q.w,22); }
+    if (q.t==='c'){ ctx.strokeStyle='rgba(8,14,12,.55)'; ctx.lineWidth=1.5; for(let cx2=x0+14;cx2<x0+q.w-6;cx2+=26){ ctx.beginPath(); ctx.moveTo(cx2,y+3); ctx.lineTo(cx2-5,y+12); ctx.stroke(); } }
+    ctx.restore();
+    return;
+  }
   if (q.skin==='cave'){
     if (q.gone && q.dy>340) return;
     const x0=pxf(q.x,1), y=q.y+q.dy; if(x0+q.w<-30||x0>W+30) return;
