@@ -1,4 +1,4 @@
-const ASSET_VER='1781260000';
+const ASSET_VER='1781270000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -448,6 +448,7 @@ SPR.bd={}; for (const k in SPRITES.bd){ SPR.bd[k]=L(SPRITES.bd[k]); }
 SPR.golem={}; for (const k in SPRITES.golem||{}){ SPR.golem[k]=L(SPRITES.golem[k]); }
 SPR.witch={}; for (const k in SPRITES.witch||{}){ SPR.witch[k]=L(SPRITES.witch[k]); }
 SPR.skel={}; for (const k in SPRITES.skel||{}){ SPR.skel[k]=L(SPRITES.skel[k]); }
+SPR.knight={}; for (const k in SPRITES.knight||{}){ SPR.knight[k]=L(SPRITES.knight[k]); }
 SPR.bat={}; for (const k in SPRITES.bat){ const d=SPRITES.bat[k]; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src;
   SPR.bat[k]={img,sw:d.sw,sh:d.sh,w:d.w,h:d.h,frames:d.frames,cxs:d.cxs,cys:d.cys}; }
 { const d=SPRITES.dirt; const img=new Image(); total++; img.onload=()=>loaded++; img.src=d.src; SPR.dirt={img,w:d.w,h:d.h}; }
@@ -472,7 +473,7 @@ const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, c
 function isDing(ck){ return ck==='dingbat'||ck.slice(0,5)==='ding_'; }
 function pfps(st2){ const f=SPR.chars[chosen]&&SPR.chars[chosen].fps; return (f&&f[st2])||FPS[st2]; }
 const FZ = { idle:24, walk:12, attack:16 };
-const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12}, golem:{idle:12, walk:12, attack:18}, witch:{idle:12, jump:22, attack:12}, skel:{idle:24, walk:24, run:24, jump:24, attack:24} };
+const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12}, golem:{idle:12, walk:12, attack:18}, witch:{idle:12, jump:22, attack:12}, skel:{idle:24, walk:24, run:24, jump:24, attack:24}, knight:{idle:12, walk:12, jump:12, attack:17} };
 const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15, golem:1.05 };
 const KRNG = { zombie:74, zgen:74, gob:76, bd:-1, golem:200 };  // gob spear reach ~78; bd never melee-attacks (contact only)
 const GOLEM_RNG=205, GOLEM_SHOCK=300, GOLEM_ATK_DUR=15/27+10/18;
@@ -484,8 +485,8 @@ function curMaxHP(){ const m=artProg().megas||{}; return PMAXHP + Math.min(6,(m.
 function greedMult(){ return (artProg().megas||{}).greed?2:1; }
 function hasDiscord(){ return !!(artProg().megas||{}).discord; }
 const SOUL_PTS = 100;
-const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800, golem:1500, witch:600, skel:500 };
-const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1} };
+const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800, golem:1500, witch:600, skel:500, knight:700 };
+const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1}, knight:{walkSpd:1.6, atkRange:104, atkFrames:16, atkFps:17, atkHit:[6,12], atkDmg:2} };
 function timeBrackets(idx){
   const s=idx*30;   // each act shifts brackets by 30s
   return [[90+s,3000],[120+s,2000],[180+s,1000]];
@@ -903,7 +904,7 @@ function reset(keep){
     range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0,
     ct:0, falling:false, gone:false, dy:0, fv:0, rt:0}));
   const zspawn=ST.enemies;
-  zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=(kw==='golem')?8:(kw==='witch'||kw==='skel')?3:(kw==='zgen')?3:((kw==='gob'||kw==='bd')?1:ZMAXHP);
+  zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=(kw==='golem')?8:(kw==='knight')?4:(kw==='witch'||kw==='skel')?3:(kw==='zgen')?3:((kw==='gob'||kw==='bd')?1:ZMAXHP);
     return {x:z[0], y:(z[4]!==undefined?z[4]:GROUND), t:Math.random(), facing:(z[5]!==undefined?z[5]:-1), face:(z[5]!==undefined?z[5]:-1), state:'idle', atkT:0,
     dead:false, dieT:0, dframe:0, dstate:kw==='bd'?'walk':'idle', pdir:(z[5]!==undefined?z[5]:-1), min:z[1], max:z[2], kw,
     hp:mh, maxhp:mh, hpShown:mh, hitCd:0, shown:0, aggro:false, atkCd:0, smashDone:false, atkElapsed:0}; });
@@ -1018,6 +1019,7 @@ function drawSlamFx(){
 function zBodyBox(z){
   if (z.kw==='witch') return {x:z.x-26, y:z.y-120, w:52, h:120};
   if (z.kw==='skel') return {x:z.x-26, y:z.y-122, w:52, h:122};
+  if (z.kw==='knight') return {x:z.x-30, y:z.y-132, w:60, h:132};
   if (z.kw==='golem') return {x:z.x-92, y:z.y-191, w:184, h:189};
   if (z.kw==='gob') return {x:z.x-19, y:z.y-78, w:38, h:74};
   if (z.kw==='bd')  return {x:z.x-18, y:z.y-100, w:36, h:96};
