@@ -1,4 +1,4 @@
-const ASSET_VER='1781420000';
+const ASSET_VER='1781430000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1413,7 +1413,7 @@ function update(dt){
       if(z.atkT>0){
         z.atkT-=dt*efr; z.state='attack';
         const cp=Math.max(0,Math.min(1,1-z.atkT/z.atkDur));
-        z.orbX=z.x+z.facing*22; z.orbY=z.y-74; z.orbR=3+cp*16; z.charging=!z.fired;
+        z.orbX=z.x+z.facing*50; z.orbY=z.y-60; z.orbR=5+cp*21; z.charging=!z.fired;
         if(cp>=0.82 && !z.fired){ z.fired=true; z.charging=false; angelLaunchOrb(z); }
         if(z.atkT<=0){ z.angelState='fly'; z.charging=false; }
         continue;
@@ -2759,8 +2759,8 @@ function chaserFire(z,C){
   for(let i=0;i<10;i++) zbits.push({x:wx,y:wy,vx:(Math.random()-0.5)*120,vy:(Math.random()-0.5)*120,sz:1.5+Math.random()*2,life:0.3+Math.random()*0.25,t:0,c:cols[(Math.random()*3)|0]});
 }
 function angelLaunchOrb(z){
-  const wx=z.x+z.facing*22, wy=z.y-74, dx=p.x-wx, dy=(p.y-44)-wy, d=Math.hypot(dx,dy)||1, sp=440;
-  curses.push({x:wx,y:wy,vx:dx/d*sp,vy:dy/d*sp,t:0,dead:false,col:'dark',r:18}); playSfx('sfx_portalblast',0.55);
+  const wx=z.x+z.facing*50, wy=z.y-60, dx=p.x-wx, dy=(p.y-44)-wy, d=Math.hypot(dx,dy)||1, sp=430;
+  curses.push({x:wx,y:wy,vx:dx/d*sp,vy:dy/d*sp,t:0,dead:false,col:'dark',r:26}); playSfx('sfx_portalblast',0.55);
   for(let i=0;i<16;i++) zbits.push({x:wx,y:wy,vx:(Math.random()-0.5)*155,vy:(Math.random()-0.5)*155,sz:1.6+Math.random()*2.4,life:0.3+Math.random()*0.3,t:0,c:['#c79bff','#8a4ad8','#f0d8ff'][(Math.random()*3)|0]});
 }
 function angelBlast(z){
@@ -2780,7 +2780,7 @@ function witchStartTele(z){ z.teleT=z.teleDur; z.teleDone=false; z.wmode='tele';
 function updateCurses(dt){
   for(const c of curses){ if(c.dead) continue; c.t+=dt; c.x+=c.vx*dt; c.y+=c.vy*dt;
     if(c.t>2.4){ c.dead=true; continue; }
-    if(p.inv<=0 && !p.dead){ const pb=pBodyBox(); if(c.x>pb.x-6&&c.x<pb.x+pb.w+6&&c.y>pb.y-6&&c.y<pb.y+pb.h+6){ hurtPlayer(c.x,1); c.dead=true; const hc=c.col==='dark'?['#b06bff','#7a3ad8','#ffffff']:['#9bff4a','#5fd83a','#ffffff']; for(let i=0;i<14;i++) zbits.push({x:c.x,y:c.y,vx:(Math.random()-0.5)*190,vy:(Math.random()-0.5)*190,sz:2+Math.random()*2.5,life:0.3+Math.random()*0.3,t:0,c:hc[(Math.random()*3)|0]}); } }
+    if(p.inv<=0 && !p.dead){ const pb=pBodyBox(), m=Math.max(6,(c.r||14)*0.5); if(c.x>pb.x-m&&c.x<pb.x+pb.w+m&&c.y>pb.y-m&&c.y<pb.y+pb.h+m){ hurtPlayer(c.x,1); c.dead=true; const hc=c.col==='dark'?['#b06bff','#7a3ad8','#ffffff']:['#9bff4a','#5fd83a','#ffffff']; for(let i=0;i<14;i++) zbits.push({x:c.x,y:c.y,vx:(Math.random()-0.5)*190,vy:(Math.random()-0.5)*190,sz:2+Math.random()*2.5,life:0.3+Math.random()*0.3,t:0,c:hc[(Math.random()*3)|0]}); } }
     if(Math.random()<0.55) zbits.push({x:c.x,y:c.y,vx:(Math.random()-0.5)*26,vy:(Math.random()-0.5)*26,sz:1+Math.random()*1.4,life:0.2+Math.random()*0.2,t:0,c:(c.col==='dark'?'#9a5ae8':'#7fe83a')});
   }
   curses=curses.filter(c=>!c.dead);
