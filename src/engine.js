@@ -1,4 +1,4 @@
-const ASSET_VER='1781470000';
+const ASSET_VER='1781480000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -873,7 +873,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>(p.deathHurt?3.05:2.3)) || (p && p.won); }
-const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum','sfx_chaosspawn','sfx_chaoslaunch','sfx_vigorboost','sfx_golemsee','sfx_golemsmash','sfx_knightsee','sfx_knightstomp','sfx_knightjump','sfx_knightimpact','sfx_skelsee','sfx_skelfire','sfx_skeljump','sfx_angelcharge'];
+const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum','sfx_chaosspawn','sfx_chaoslaunch','sfx_vigorboost','sfx_golemsee','sfx_golemsmash','sfx_knightsee','sfx_knightstomp','sfx_knightjump','sfx_knightimpact','sfx_skelsee','sfx_skelfire','sfx_skeljump','sfx_angelcharge','sfx_witchjump','sfx_witchcast','sfx_witchtele'];
 function bootIntoWorld(){ primeAudio(); SFXLIST.forEach(loadSfx); banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); enterWorld(false); }
 function startGame(ck){
   if (selMode==='skin'){ chosen=ck; saveProg(); }
@@ -1487,7 +1487,7 @@ function update(dt){
       if(z.aggro && !p.dead){ const ad=Math.abs(p.x-z.x);
         if(ad<110){ if(z.teleCd<=0) witchStartTele(z); else witchStartHop(z); }
         else if(ad<195){ witchStartHop(z); }
-        else if(z.castCd<=0){ z.atkT=z.atkDur; z.fired=false; z.wmode='attack'; z.state='attack'; z.castCd=1.5+Math.random()*1.0; }
+        else if(z.castCd<=0){ z.atkT=z.atkDur; z.fired=false; z.wmode='attack'; z.state='attack'; z.castCd=1.5+Math.random()*1.0; playSfx('sfx_witchcast',0.85); }
         else if(z.teleCd<=0 && Math.random()<0.004){ witchStartTele(z); }
         else z.state='idle';
       } else z.state='idle';
@@ -2774,9 +2774,9 @@ function witchStartHop(z){
   for(const q of plats){ if(q.gone) continue; const cx=q.x+q.w/2, top=q.y+(q.dy||0);
     if(top<z.y-30 && Math.abs(cx-z.x)<300 && Math.abs(cx-z.x)>30){ if(!target||Math.abs(cx-z.x)<Math.abs(target.x-z.x)) target={x:cx,y:top}; } }
   if(!target){ const dir=(p.x<z.x)?1:-1; let tx=Math.max(camX+40,Math.min(camX+W-40,z.x+dir*150)); const fy=witchFloorAt(tx); target={x:tx,y:(fy!==null?fy:z.y)}; }
-  z.hx0=z.x; z.hy0=z.y; z.hx1=target.x; z.hy1=target.y; z.hopT=z.hopDur; z.wmode='hop'; z.state='jump'; playSfx('sfx_rwhoosh',0.5);
+  z.hx0=z.x; z.hy0=z.y; z.hx1=target.x; z.hy1=target.y; z.hopT=z.hopDur; z.wmode='hop'; z.state='jump'; playSfx('sfx_witchjump',0.85);
 }
-function witchStartTele(z){ z.teleT=z.teleDur; z.teleDone=false; z.wmode='tele'; z.teleCd=3.5+Math.random()*2.5; playSfx('sfx_wportal',0.5);
+function witchStartTele(z){ z.teleT=z.teleDur; z.teleDone=false; z.wmode='tele'; z.teleCd=3.5+Math.random()*2.5; playSfx('sfx_wportal',0.5); playSfx('sfx_witchtele',0.95);
   for(let i=0;i<16;i++) zbits.push({x:z.x+(Math.random()-0.5)*30,y:z.y-50+(Math.random()-0.5)*70,vx:(Math.random()-0.5)*120,vy:-30-Math.random()*120,sz:2+Math.random()*2.5,life:0.4+Math.random()*0.3,t:0,c:['#9bff4a','#5fd83a','#caffa0'][(Math.random()*3)|0]}); }
 function updateCurses(dt){
   for(const c of curses){ if(c.dead) continue; c.t+=dt; c.x+=c.vx*dt; c.y+=c.vy*dt;
