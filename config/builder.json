@@ -425,6 +425,13 @@
    "base": "assets/custom/gmqb9pd3q_base.png",
    "top": "assets/custom/gmqb9pd3q_top.png",
    "v": 1781289378808
+  },
+  {
+   "id": "gmqb9zpio",
+   "name": "Witchwood Ground 2",
+   "base": "assets/custom/gmqb9zpio_base.png",
+   "top": "assets/custom/gmqb9zpio_top.png",
+   "v": 1781289861448
   }
  ],
  "music": [
