@@ -1,4 +1,4 @@
-const ASSET_VER='1781560000';
+const ASSET_VER='1781570000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -36,10 +36,11 @@ const MEGA_LOOT_IMG={}, MEGA_LOOT_COL={};
 const CREAPER_POWER_IMG=new Image(); CREAPER_POWER_IMG.src='./assets/creaper_power.png?v='+ASSET_VER;
 const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_power.png?v='+ASSET_VER;
 const CREAPER_PRAY_IMG=new Image(); CREAPER_PRAY_IMG.src='./assets/creaper_pray.png?v='+ASSET_VER;
+const SON_PRAY_IMG=new Image(); SON_PRAY_IMG.src='./assets/son_pray.png?v='+ASSET_VER;
 const DINGBAT_PRAY_IMG=new Image(); DINGBAT_PRAY_IMG.src='./assets/dingbat_pray.png?v='+ASSET_VER;
 const CREAPER_PRAY_CHIBI_IMG=new Image(); CREAPER_PRAY_CHIBI_IMG.src='./assets/creaper_pray_chibi.png?v='+ASSET_VER;
-function prayImg(){ const im=isDing(chosen)?DINGBAT_PRAY_IMG:CREAPER_PRAY_IMG; return (im&&im.complete&&im.naturalWidth)?im:null; }
-function drawPrayFrame(sx,yy,fc,scl,foot,atk){ const pimg=(atk && !isDing(chosen) && CREAPER_PRAY_CHIBI_IMG.complete && CREAPER_PRAY_CHIBI_IMG.naturalWidth)?CREAPER_PRAY_CHIBI_IMG:prayImg(); if(!pimg) return; const hh=(isDing(chosen)?107:142)*(scl||1), ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, yy-hh+(foot===undefined?14:foot), ww, hh); ctx.restore(); }
+function prayImg(){ const im=chosen==='son'?SON_PRAY_IMG:(isDing(chosen)?DINGBAT_PRAY_IMG:CREAPER_PRAY_IMG); return (im&&im.complete&&im.naturalWidth)?im:null; }
+function drawPrayFrame(sx,yy,fc,scl,foot,atk){ const pimg=(atk && !isDing(chosen) && chosen!=='son' && CREAPER_PRAY_CHIBI_IMG.complete && CREAPER_PRAY_CHIBI_IMG.naturalWidth)?CREAPER_PRAY_CHIBI_IMG:prayImg(); if(!pimg) return; const hh=(chosen==='son'?128:isDing(chosen)?107:142)*(scl||1), ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, yy-hh+(foot===undefined?14:foot), ww, hh); ctx.restore(); }
 const POWER_IMGS={};
 function poweredImg(){ const ck=chosen; if(!POWER_IMGS[ck]){ const im=new Image(); im._ok=null; im.onload=()=>{im._ok=true;}; im.onerror=()=>{im._ok=false;}; im.src='./assets/power_'+ck+'.png?v='+ASSET_VER; POWER_IMGS[ck]=im; } const sk=POWER_IMGS[ck]; if(sk && sk._ok && sk.naturalWidth) return sk; return isDing(ck)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; }
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
@@ -55,7 +56,7 @@ function activatePower(){ powerActive=true; powerDur=10; powerT=powerDur; transf
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
 function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Classic','ding_swamp':'Swamp','ding_azure':'Azure','ding_blood':'Blood','ding_magic':'Magic','ding_mystic':'Mystic','ding_wisp':'Wisp','ding_news':'Newspaper','ding_noir':'Noir'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
-function cycleSkin(dir){ const list=isDing(chosen)?DORDER:ORDER; let i=list.indexOf(chosen); if(i<0)i=0; chosen=list[(i+dir+list.length)%list.length]; if(isDing(chosen))dingSkin=chosen; else creaperSkin=chosen; try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
+function cycleSkin(dir){ const list=isDing(chosen)?DORDER:corder(); let i=list.indexOf(chosen); if(i<0)i=0; chosen=list[(i+dir+list.length)%list.length]; if(isDing(chosen))dingSkin=chosen; else creaperSkin=chosen; try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
 const CAVETOP_IMG=new Image(); CAVETOP_IMG.src='./assets/caveground_top1.png?v='+ASSET_VER;
@@ -231,6 +232,7 @@ function loadStage(i){
   tally=null; fading=0; fadeIn=0.5;
 }
 const ORDER = SPRITES.order;
+function corder(){ return (typeof devMode!=='undefined'&&devMode)?ORDER.concat('son'):ORDER; }
 const LABELS = { default:'Classic', green:'Emerald', blue:'Ruby', red:'Corruption' };
 
 const keys = {};
@@ -313,7 +315,7 @@ addEventListener('keydown', e => {
     if (e.code==='ArrowLeft'||e.code==='ArrowRight'){
       const dd=e.code==='ArrowRight'?1:-1;
       if (selRow===0){ if(!skinOnly) selFoc=(selFoc+1)%2; }
-      else if (selFoc===0){ const i=ORDER.indexOf(creaperSkin); creaperSkin=ORDER[(i+dd+ORDER.length)%ORDER.length]; }
+      else if (selFoc===0){ const _o=corder(); const i=_o.indexOf(creaperSkin); creaperSkin=_o[(i+dd+_o.length)%_o.length]; }
       else { const i=DORDER.indexOf(dingSkin); dingSkin=DORDER[(i+dd+DORDER.length)%DORDER.length]; }
       playSfx('sfx_mtog'); return;
     }
@@ -420,7 +422,7 @@ cv.addEventListener('pointerdown', e=>{
     return;
   }
   if (mode==='select'){
-    for (const aR of arrowRects){ if (pt.x>aR.x&&pt.x<aR.x+aR.w&&pt.y>aR.y&&pt.y<aR.y+aR.h){ if(aR.who==='d'){ const i=DORDER.indexOf(dingSkin); dingSkin=DORDER[(i+aR.dir+DORDER.length)%DORDER.length]; selFoc=1; } else { const i=ORDER.indexOf(creaperSkin); creaperSkin=ORDER[(i+aR.dir+ORDER.length)%ORDER.length]; selFoc=0; } selRow=1; playSfx('sfx_mtog'); return; } }
+    for (const aR of arrowRects){ if (pt.x>aR.x&&pt.x<aR.x+aR.w&&pt.y>aR.y&&pt.y<aR.y+aR.h){ if(aR.who==='d'){ const i=DORDER.indexOf(dingSkin); dingSkin=DORDER[(i+aR.dir+DORDER.length)%DORDER.length]; selFoc=1; } else { const _o=corder(); const i=_o.indexOf(creaperSkin); creaperSkin=_o[(i+aR.dir+_o.length)%_o.length]; selFoc=0; } selRow=1; playSfx('sfx_mtog'); return; } }
     for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ playSfx('sfx_msel'); startGame(c.key==='creaper'?creaperSkin:dingSkin); break; } }
     return;
   }
@@ -2346,7 +2348,7 @@ function drawCharSprite(ck,state,fi,cx,feetY,facing,scale,tint){
 
 let cardRects=[], arrowRects=[];
 let creaperSkin='default', dingSkin='dingbat';
-const SKINC={default:'#5b3fd6', green:'#18a88a', blue:'#d82a2a', red:'#20c8c8', wraith:'#ff7a2a', gilded:'#2fcf55', bone:'#8a2a6a', crimson:'#d8e040'};
+const SKINC={default:'#5b3fd6', green:'#18a88a', blue:'#d82a2a', red:'#20c8c8', wraith:'#ff7a2a', gilded:'#2fcf55', bone:'#8a2a6a', crimson:'#d8e040', son:'#3aa0e0'};
 const DSKINC={dingbat:'#b5762e', ding_swamp:'#6f9a1a', ding_azure:'#2470d8', ding_blood:'#c0231e', ding_magic:'#1fe0a0', ding_mystic:'#9a4ae0', ding_wisp:'#7fd8e8', ding_news:'#c4c4c4', ding_noir:'#ff3ca0'};
 const DORDER=['dingbat','ding_swamp','ding_azure','ding_blood','ding_magic','ding_mystic','ding_wisp','ding_news','ding_noir'];
 function drawSlots(){
@@ -2460,7 +2462,7 @@ function drawSelect(){
     }
     {
       const isC=(it.key==='creaper');
-      const list=isC?ORDER:DORDER, cmap=isC?SKINC:DSKINC, cur=isC?creaperSkin:dingSkin;
+      const list=isC?corder():DORDER, cmap=isC?SKINC:DSKINC, cur=isC?creaperSkin:dingSkin;
       // skin name + index atop the card
       ctx.textAlign='center';
       ctx.fillStyle=cmap[cur]||'#cdbbe6'; ctx.font='bold 19px sans-serif';
