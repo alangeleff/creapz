@@ -1446,6 +1446,7 @@ function update(dt){
     }
     if (z.kw==='witch'){
       if(z.wmode===undefined){ z.wmode='idle'; z.castCd=0.8+Math.random(); z.teleCd=3+Math.random()*3; z.atkDur=8/12; z.hopDur=0.55; z.teleDur=0.5; z.alpha=1; z.fired=false; z.hopT=0; z.teleT=0; z.atkT=0; }
+      if(!z.aggro && (z.x-camX)>-30 && (z.x-camX)<W+30 && Math.abs(p.x-z.x)<W*0.95 && !p.dead) z.aggro=true; else if(z.aggro && Math.abs(p.x-z.x)>W+220) z.aggro=false;
       if(z.castCd>0) z.castCd-=dt; if(z.teleCd>0) z.teleCd-=dt;
       if(z.teleT>0){ z.teleT-=dt; const k=z.teleT/z.teleDur; z.alpha = k>0.5?(k-0.5)*2:(0.5-k)*2;
         if(!z.teleDone && k<=0.5){ witchRelocate(z); z.teleDone=true; for(let i=0;i<16;i++) zbits.push({x:z.x+(Math.random()-0.5)*30,y:z.y-50+(Math.random()-0.5)*70,vx:(Math.random()-0.5)*130,vy:-30-Math.random()*120,sz:2+Math.random()*2.5,life:0.4+Math.random()*0.3,t:0,c:['#9bff4a','#5fd83a','#caffa0'][(Math.random()*3)|0]}); }
@@ -1456,9 +1457,10 @@ function update(dt){
         if(af>=19 && !z.fired){ z.fired=true; witchFireCurse(z); }
         if(z.atkT<=0){ z.wmode='idle'; z.state='idle'; } continue; }
       if(z.aggro && !p.dead){ const ad=Math.abs(p.x-z.x);
-        if(ad<170){ if(z.teleCd<=0 && Math.random()<0.45) witchStartTele(z); else witchStartHop(z); }
-        else if(z.castCd<=0){ z.atkT=z.atkDur; z.fired=false; z.wmode='attack'; z.state='attack'; z.castCd=1.8+Math.random()*1.3; }
-        else if(z.teleCd<=0 && Math.random()<0.006){ witchStartTele(z); }
+        if(ad<110){ if(z.teleCd<=0) witchStartTele(z); else witchStartHop(z); }
+        else if(ad<195){ witchStartHop(z); }
+        else if(z.castCd<=0){ z.atkT=z.atkDur; z.fired=false; z.wmode='attack'; z.state='attack'; z.castCd=1.5+Math.random()*1.0; }
+        else if(z.teleCd<=0 && Math.random()<0.004){ witchStartTele(z); }
         else z.state='idle';
       } else z.state='idle';
       if (p.inv<=0 && !p.dead && overlap(pBodyBox(), zBodyBox(z))) hurtPlayer(z.x,1);
@@ -2712,7 +2714,7 @@ function witchFloorAt(x){
 }
 function witchRelocate(z){
   const L=camX+60, R=camX+W-60; let lo,hi;
-  if(p.x < camX+W/2){ lo=camX+W*0.55; hi=R; } else { lo=L; hi=camX+W*0.45; }
+  if(p.x < camX+W/2){ lo=camX+W*0.74; hi=R; } else { lo=L; hi=camX+W*0.26; }
   for(let t=0;t<12;t++){ const tx=lo+Math.random()*(hi-lo), fy=witchFloorAt(tx); if(fy!==null){ z.x=tx; z.y=fy; return; } }
   z.x=Math.max(L,Math.min(R,2*(camX+W/2)-z.x)); const fy=witchFloorAt(z.x); if(fy!==null) z.y=fy;
 }
@@ -2740,7 +2742,7 @@ function witchStartHop(z){
   if(!target){ const dir=(p.x<z.x)?1:-1; let tx=Math.max(camX+40,Math.min(camX+W-40,z.x+dir*150)); const fy=witchFloorAt(tx); target={x:tx,y:(fy!==null?fy:z.y)}; }
   z.hx0=z.x; z.hy0=z.y; z.hx1=target.x; z.hy1=target.y; z.hopT=z.hopDur; z.wmode='hop'; z.state='jump'; playSfx('sfx_rwhoosh',0.5);
 }
-function witchStartTele(z){ z.teleT=z.teleDur; z.teleDone=false; z.wmode='tele'; z.teleCd=4.5+Math.random()*3; playSfx('sfx_wportal',0.5);
+function witchStartTele(z){ z.teleT=z.teleDur; z.teleDone=false; z.wmode='tele'; z.teleCd=3.5+Math.random()*2.5; playSfx('sfx_wportal',0.5);
   for(let i=0;i<16;i++) zbits.push({x:z.x+(Math.random()-0.5)*30,y:z.y-50+(Math.random()-0.5)*70,vx:(Math.random()-0.5)*120,vy:-30-Math.random()*120,sz:2+Math.random()*2.5,life:0.4+Math.random()*0.3,t:0,c:['#9bff4a','#5fd83a','#caffa0'][(Math.random()*3)|0]}); }
 function updateCurses(dt){
   for(const c of curses){ if(c.dead) continue; c.t+=dt; c.x+=c.vx*dt; c.y+=c.vy*dt;
