@@ -1,4 +1,4 @@
-const ASSET_VER='1781400000';
+const ASSET_VER='1781410000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -873,7 +873,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>(p.deathHurt?3.05:2.3)) || (p && p.won); }
-const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum','sfx_chaosspawn','sfx_chaoslaunch','sfx_vigorboost','sfx_golemsee','sfx_golemsmash','sfx_knightsee','sfx_knightstomp'];
+const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum','sfx_chaosspawn','sfx_chaoslaunch','sfx_vigorboost','sfx_golemsee','sfx_golemsmash','sfx_knightsee','sfx_knightstomp','sfx_knightjump'];
 function bootIntoWorld(){ primeAudio(); SFXLIST.forEach(loadSfx); banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); enterWorld(false); }
 function startGame(ck){
   if (selMode==='skin'){ chosen=ck; saveProg(); }
@@ -1460,7 +1460,7 @@ function update(dt){
         if(C.fly){ z.y=z.yhover+Math.sin(gt*1.8+z.t)*5; } else z.x=terrWallX(z.x,zpx,z.y,16); if(p.inv<=0 && !p.dead && overlap(pBodyBox(), zBodyBox(z))) hurtPlayer(z.x,1); continue;
       }
       if(z.aggro && !p.dead){
-        if(C.stomp && ad>(C.stompRange||240) && (z.stompCd||0)<=0 && !(z.atkT>0)){ z.stompPhase='leap'; z.stompT=C.stompLeapDur; z.sx0=z.x; z.sy0=z.y; z.stompTx=clamp(p.x,z.min,z.max); z.stompPeak=C.stompPeak||190; z.state='jump'; z.facing=(z.stompTx<z.x)?-1:1; playSfx('sfx_jump',0.6); }
+        if(C.stomp && ad>(C.stompRange||240) && (z.stompCd||0)<=0 && !(z.atkT>0)){ z.stompPhase='leap'; z.stompT=C.stompLeapDur; z.sx0=z.x; z.sy0=z.y; z.stompTx=clamp(p.x,z.min,z.max); z.stompPeak=C.stompPeak||190; z.state='jump'; z.facing=(z.stompTx<z.x)?-1:1; playSfx('sfx_knightjump',0.95); }
         else if(C.wave && (z.castCd||0)<=0 && ad>=(C.waveMin||135) && ad<=(C.waveMax||430)){ z.castT=C.castFrames/C.castFps; z.fired=false; z.state='punch'; z.facing=(p.x<z.x)?-1:1; playSfx('sfx_zswing',0.45); }
         else if(ad<=C.atkRange && z.atkCd<=0){ z.atkT=C.atkFrames/C.atkFps; z.state='attack'; z.fired=false; if(!C.ranged) playSfx(z.kw==='knight'?'sfx_knightstomp':'sfx_zswing',0.7); }
         else if(ad>C.atkRange){ if(C.runSpd && ad<=C.runRange){ z.state='run'; z.x=clamp(z.x+z.facing*C.runSpd*efr,z.min,z.max); } else { z.state='walk'; z.x=clamp(z.x+z.facing*C.walkSpd*efr,z.min,z.max); } }
