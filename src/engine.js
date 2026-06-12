@@ -1,4 +1,4 @@
-const ASSET_VER='1781350000';
+const ASSET_VER='1781360000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -88,6 +88,7 @@ const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+
 const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='+ASSET_VER; return i;})(), cavebg2:(()=>{const i=new Image(); i.src='./assets/cavebg2.png?v='+ASSET_VER; return i;})(), cryptbg:(()=>{const i=new Image(); i.src='./assets/cryptbg1.png?v='+ASSET_VER; return i;})(), rockwall:(()=>{const i=new Image(); i.src='./assets/rockwall1.png?v='+ASSET_VER; return i;})(), bonedirt:(()=>{const i=new Image(); i.src='./assets/bonedirt1.png?v='+ASSET_VER; return i;})()};
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[], GHURT=[], GSLAM=[], GBOUNCE=[];
 let curses=[];   // Wood Witch aimed curse projectiles
+let flameWaves=[];   // Molten Skeleton crawling flame waves
 let STARS=[], TREES=[], GRAVES_BG=[];
 let titleT = 99;
 // ---- live progress (Phase A: single implicit save; slots arrive in Phase B) ----
@@ -474,7 +475,7 @@ const FPS = { idle:17, walk:16, run:16, jump:23, attack:38, hurt:48, kneel:48, c
 function isDing(ck){ return ck==='dingbat'||ck.slice(0,5)==='ding_'; }
 function pfps(st2){ const f=SPR.chars[chosen]&&SPR.chars[chosen].fps; return (f&&f[st2])||FPS[st2]; }
 const FZ = { idle:24, walk:12, attack:16 };
-const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12}, golem:{idle:12, walk:12, attack:18}, witch:{idle:12, jump:22, attack:12}, skel:{idle:24, walk:24, run:24, jump:24, attack:24}, knight:{idle:12, walk:12, jump:12, attack:17}, angel:{idle:24, walk:24, run:24, attack:24} };
+const FZK = { zombie:FZ, zgen:FZ, gob:{idle:13, walk:12, attack:43}, bd:{idle:12, walk:12, attack:12}, golem:{idle:12, walk:12, attack:18}, witch:{idle:12, jump:22, attack:12}, skel:{idle:24, walk:24, run:24, jump:24, attack:24, punch:24}, knight:{idle:12, walk:12, jump:12, attack:17}, angel:{idle:24, walk:24, run:24, attack:24} };
 const KSPD = { zombie:1.7, zgen:1.7, gob:2.4, bd:1.15, golem:1.05 };
 const KRNG = { zombie:74, zgen:74, gob:76, bd:-1, golem:200 };  // gob spear reach ~78; bd never melee-attacks (contact only)
 const GOLEM_RNG=205, GOLEM_SHOCK=300, GOLEM_ATK_DUR=15/27+10/18;
@@ -487,7 +488,7 @@ function greedMult(){ return (artProg().megas||{}).greed?2:1; }
 function hasDiscord(){ return !!(artProg().megas||{}).discord; }
 const SOUL_PTS = 100;
 const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800, golem:1500, witch:600, skel:500, knight:700, angel:700 };
-const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1}, knight:{walkSpd:1.7, atkRange:120, atkFrames:16, atkFps:17, atkHit:[3,15], atkDmg:2, atkCdMin:0.25, atkW:182, atkH:195, atkY:195, stomp:true, senseRange:660, stompRange:235, stompPeak:205, stompLeapDur:0.62, chargeDur:0.62, slamDur:0.22, recoverDur:0.72, stompDmg:2, stompR:108, stompCdMin:3.4} };
+const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1, wave:true, waveMin:135, waveMax:430, waveCdMin:2.3, castFrames:22, castFps:24, castFire:12}, knight:{walkSpd:1.7, atkRange:120, atkFrames:16, atkFps:17, atkHit:[3,15], atkDmg:2, atkCdMin:0.25, atkW:182, atkH:195, atkY:195, stomp:true, senseRange:660, stompRange:235, stompPeak:205, stompLeapDur:0.62, chargeDur:0.62, slamDur:0.22, recoverDur:0.72, stompDmg:2, stompR:108, stompCdMin:3.4} };
 function timeBrackets(idx){
   const s=idx*30;   // each act shifts brackets by 30s
   return [[90+s,3000],[120+s,2000],[180+s,1000]];
@@ -895,7 +896,7 @@ function reset(keep){
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
   for(const bo of (bolts||[])){ if(bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
-  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; curses=[]; shakeT=0; shakeMag=0; maxHPShown=curMaxHP(); hpGrowPending=0; vigorFlash=0;
+  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; curses=[]; flameWaves=[]; shakeT=0; shakeMag=0; maxHPShown=curMaxHP(); hpGrowPending=0; vigorFlash=0;
   if (!keep){
     soulCount=0; soulOrbGot=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],val:(s[2]||1),got:false,pop:0,ph:i*0.31}));
@@ -1019,7 +1020,7 @@ function drawSlamFx(){
 }
 function zBodyBox(z){
   if (z.kw==='witch') return {x:z.x-26, y:z.y-120, w:52, h:120};
-  if (z.kw==='skel') return {x:z.x-26, y:z.y-122, w:52, h:122};
+  if (z.kw==='skel') return {x:z.x-36, y:z.y-124, w:72, h:124};
   if (z.kw==='knight') return {x:z.x-50, y:z.y-186, w:100, h:186};
   if (z.kw==='angel') return {x:z.x-30, y:z.y-130, w:60, h:130};
   if (z.kw==='golem') return {x:z.x-92, y:z.y-191, w:184, h:189};
@@ -1426,15 +1427,26 @@ function update(dt){
       continue;
     }
     if (CHASER[z.kw]){
-      const C=CHASER[z.kw]; if(z.atkCd>0) z.atkCd-=dt; const ad=Math.abs(p.x-z.x);
+      const C=CHASER[z.kw]; if(z.atkCd>0) z.atkCd-=dt; if(C.wave && z.castCd>0) z.castCd-=dt; const ad=Math.abs(p.x-z.x);
       if(C.fly){ if(z.yhover===undefined) z.yhover=z.y-(C.flyLift||0); if(!z.aggro && ad<C.atkRange+120 && (z.x-camX)>-30 && (z.x-camX)<W+30 && !p.dead) z.aggro=true; }
       if(C.stomp){
         if(z.stompCd>0) z.stompCd-=dt;
-        if(!z.aggro && ad<(C.senseRange||300) && (z.x-camX)>-80 && (z.x-camX)<W+80 && !p.dead) z.aggro=true;
+        const _inPat=(p.x>=z.min-45 && p.x<=z.max+45);
+        if(_inPat && !z.aggro && (z.x-camX)>-80 && (z.x-camX)<W+80 && !p.dead) z.aggro=true;
+        else if(!_inPat && z.aggro) z.aggro=false;
         if(z.stompPhase==='leap'){ z.stompT-=dt; const k=Math.max(0,Math.min(1,1-z.stompT/C.stompLeapDur)); z.x=z.sx0+(z.stompTx-z.sx0)*k; z.y=z.sy0-z.stompPeak*Math.sin(k*Math.PI*0.5); z.state='jump'; z.facing=(z.stompTx<z.sx0)?-1:1; if(z.stompT<=0){ z.x=z.stompTx; z.y=z.sy0-z.stompPeak; z.stompPhase='charge'; z.stompT=C.chargeDur; } continue; }
         if(z.stompPhase==='charge'){ z.stompT-=dt; z.state='jump'; z.facing=(p.x<z.x)?-1:1; if(z.stompT<=0){ z.stompPhase='slam'; z.stompT=C.slamDur; z.slamY0=z.y; } continue; }
         if(z.stompPhase==='slam'){ z.stompT-=dt; const k=Math.max(0,Math.min(1,1-z.stompT/C.slamDur)); z.y=z.slamY0+(z.sy0-z.slamY0)*(k*k); z.state='jump'; if(z.stompT<=0){ z.y=z.sy0; z.stompPhase='recover'; z.stompT=C.recoverDur; addShake(15,0.55); playSfx('sfx_golemsmash',0.9); playSfx('sfx_meleehit',0.8); for(let i=0;i<30;i++){ const sd=(Math.random()<0.5?-1:1); zbits.push({x:z.x+sd*(12+Math.random()*135), y:z.sy0-2, vx:sd*(70+Math.random()*255), vy:-40-Math.random()*175, sz:2+Math.random()*3.6, life:0.4+Math.random()*0.45, t:0, c:['#8a2a2a','#c0392b','#6a1a1a','#bbb','#7a1818'][(Math.random()*5)|0]}); } if(p.onGround && !p.dead && p.inv<=0 && Math.abs(p.x-z.x)<(C.stompR||100)) hurtPlayer(z.x,C.stompDmg||2); } continue; }
         if(z.stompPhase==='recover'){ z.stompT-=dt; z.state='idle'; if(z.stompT<=0){ z.stompPhase=null; z.stompCd=(C.stompCdMin||3)+Math.random()*2; } continue; }
+      }
+      if(C.wave && z.castT>0){
+        z.castT-=dt*efr; z.state='punch';
+        const cf=Math.min(C.castFrames-1, Math.floor((C.castFrames/C.castFps - z.castT)*C.castFps));
+        if(cf>=C.castFire && !z.fired){ z.fired=true; skelFlameWave(z); }
+        z.x=terrWallX(z.x,zpx,z.y,16);
+        if(z.castT<=0) z.castCd=(C.waveCdMin||2.3)+Math.random()*1.4;
+        if(p.inv<=0 && !p.dead && overlap(pBodyBox(), zBodyBox(z))) hurtPlayer(z.x,1);
+        continue;
       }
       if(z.atkT>0){
         z.atkT-=dt*efr; z.state='attack'; const af=Math.min(C.atkFrames-1, Math.floor((C.atkFrames/C.atkFps - z.atkT)*C.atkFps));
@@ -1444,7 +1456,8 @@ function update(dt){
         if(C.fly){ z.y=z.yhover+Math.sin(gt*1.8+z.t)*5; } else z.x=terrWallX(z.x,zpx,z.y,16); continue;
       }
       if(z.aggro && !p.dead){
-        if(C.stomp && ad>(C.stompRange||240) && (z.stompCd||0)<=0 && !(z.atkT>0)){ z.stompPhase='leap'; z.stompT=C.stompLeapDur; z.sx0=z.x; z.sy0=z.y; z.stompTx=clamp(p.x,z.x-700,z.x+700); z.stompPeak=C.stompPeak||190; z.state='jump'; z.facing=(z.stompTx<z.x)?-1:1; playSfx('sfx_jump',0.6); }
+        if(C.stomp && ad>(C.stompRange||240) && (z.stompCd||0)<=0 && !(z.atkT>0)){ z.stompPhase='leap'; z.stompT=C.stompLeapDur; z.sx0=z.x; z.sy0=z.y; z.stompTx=clamp(p.x,z.min,z.max); z.stompPeak=C.stompPeak||190; z.state='jump'; z.facing=(z.stompTx<z.x)?-1:1; playSfx('sfx_jump',0.6); }
+        else if(C.wave && (z.castCd||0)<=0 && ad>=(C.waveMin||135) && ad<=(C.waveMax||430)){ z.castT=C.castFrames/C.castFps; z.fired=false; z.state='punch'; z.facing=(p.x<z.x)?-1:1; playSfx('sfx_zswing',0.45); }
         else if(ad<=C.atkRange && z.atkCd<=0){ z.atkT=C.atkFrames/C.atkFps; z.state='attack'; z.fired=false; if(!C.ranged) playSfx('sfx_zswing',0.7); }
         else if(ad>C.atkRange){ if(C.runSpd && ad<=C.runRange){ z.state='run'; z.x=clamp(z.x+z.facing*C.runSpd*efr,z.min,z.max); } else { z.state='walk'; z.x=clamp(z.x+z.facing*C.walkSpd*efr,z.min,z.max); } }
         else z.state='idle';
@@ -1618,6 +1631,7 @@ function update(dt){
   for(const bo of bolts){ if(bo.kind==='void'&&bo.dead&&bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
   bolts=bolts.filter(bo=>!bo.dead||bo.t<1.2);
   updateCurses(dt*efr);
+  updateFlameWaves(dt*efr);
   updateHazards(dt*efr);
   updateZbits(dt);
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
@@ -2772,6 +2786,35 @@ function drawCurses(){
     ctx.fillStyle='rgba(245,240,255,'+fl.toFixed(2)+')'; ctx.beginPath(); ctx.arc(sx,sy,3,0,7); ctx.fill(); ctx.restore();
   }
 }
+function skelFlameWave(z){
+  const dir=(p.x<z.x)?-1:1;
+  flameWaves.push({x0:z.x+dir*30, y:z.y-4, dir, wf:0, reach:330, spd:250, t:0, dead:false, parts:[]});
+  playSfx('sfx_ignite',0.75);
+}
+function updateFlameWaves(dt){
+  for(const w of flameWaves){
+    if(w.dead) continue; w.t+=dt;
+    if(w.wf<w.reach){ w.wf+=w.spd*dt; if(w.wf>w.reach) w.wf=w.reach; }
+    const fx=w.x0+w.dir*w.wf, growing=w.wf<w.reach;
+    if(growing) for(let i=0;i<3;i++) w.parts.push({x:fx+(Math.random()-0.5)*26, y:w.y-Math.random()*8, vx:w.dir*(10+Math.random()*40), vy:-40-Math.random()*95, life:0.32+Math.random()*0.34, t:0, sz:7+Math.random()*12, c:['#ffd98a','#ffae57','#ff6a2c','#e8431f'][(Math.random()*4)|0]});
+    for(const pp of w.parts){ pp.t+=dt; pp.x+=pp.vx*dt; pp.y+=pp.vy*dt; pp.vy+=150*dt; }
+    w.parts=w.parts.filter(pp=>pp.t<pp.life);
+    if(p.inv<=0 && !p.dead && growing){ const hb={x:fx-30, y:w.y-48, w:60, h:50}; if(overlap(hb,pBodyBox())) hurtPlayer(fx,1); }
+    if(w.wf>=w.reach && w.parts.length===0) w.dead=true;
+  }
+  flameWaves=flameWaves.filter(w=>!w.dead);
+}
+function drawFlameWaves(){
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(const w of flameWaves){
+    for(const pp of w.parts){ const k=Math.max(0,1-pp.t/pp.life), sx=pp.x-camX; if(sx<-40||sx>W+40) continue;
+      const R=Math.max(0.6, pp.sz*k);
+      ctx.globalAlpha=0.8*k; ctx.fillStyle=pp.c; ctx.beginPath(); ctx.arc(sx,pp.y,R,0,7); ctx.fill();
+      ctx.globalAlpha=0.5*k; ctx.fillStyle='#fff5d0'; ctx.beginPath(); ctx.arc(sx,pp.y,R*0.5,0,7); ctx.fill();
+    }
+  }
+  ctx.globalAlpha=1; ctx.restore();
+}
 function drawZombie(z){
   if(z.dead && z.erase){ const a=SPR[z.kw][z.dstate], k=Math.min(1,z.dieT/0.55); if(k>=1) return; const sx2=z.x-camX, ex=z.erase.x-camX, ey=z.erase.y, lx=sx2+(ex-sx2)*k, ly=z.y+(ey-z.y)*k, sc=Math.max(0.02,1-k);
     ctx.save(); ctx.globalAlpha=Math.max(0,1-k*0.9); ctx.translate(lx,ly); ctx.rotate(k*7*(z.facing<0?-1:1)); ctx.scale(sc*(z.facing<0?-1:1),sc); ctx.imageSmoothingEnabled=true; ctx.drawImage(a.img, z.dframe*a.sw,0,a.sw,a.sh, -a.w/2,-a.h/2, a.w,a.h); ctx.restore(); return; }
@@ -2782,7 +2825,7 @@ function drawZombie(z){
   if (z.dead){ fi=z.dframe; const k=z.dieT/0.7; alpha=Math.max(0,1-k); dy=-34*k; if(z.dieT>0.75) return; }
   else if (z.kw==='golem' && state==='attack') fi=golemAtkFrame(z.atkElapsed||0);
   else if (z.kw==='angel'){ if(state==='attack') fi=Math.min(a.frames-1, Math.floor((z.atkDur-z.atkT)*24)); else fi=Math.floor(z.t*24)%a.frames; }
-  else if (CHASER[z.kw]){ if(state==='attack') fi=Math.min(a.frames-1, Math.floor((CHASER[z.kw].atkFrames/CHASER[z.kw].atkFps - z.atkT)*CHASER[z.kw].atkFps)); else fi=Math.floor(z.t*FZK[z.kw][state])%a.frames; }
+  else if (CHASER[z.kw]){ const _C=CHASER[z.kw]; if(state==='attack') fi=Math.min(a.frames-1, Math.floor((_C.atkFrames/_C.atkFps - z.atkT)*_C.atkFps)); else if(state==='punch') fi=Math.min(a.frames-1, Math.floor((_C.castFrames/_C.castFps - z.castT)*_C.castFps)); else fi=Math.floor(z.t*FZK[z.kw][state])%a.frames; }
   else if (z.kw==='witch'){ if(state==='attack') fi=Math.min(24,17+Math.floor((z.atkDur-z.atkT)*12)); else if(state==='jump') fi=Math.min(24,Math.max(0,Math.floor((1-(z.hopT||0)/(z.hopDur||1))*24))); else fi=Math.floor(z.t*12)%a.frames; }
   else fi=Math.floor(z.t*FZK[z.kw][state])%a.frames;
   if(z.kw==='witch' && z.alpha!==undefined) alpha*=z.alpha;
@@ -3108,6 +3151,7 @@ function draw(){
     }
   }
   drawCurses();
+  drawFlameWaves();
   for (const bo of bolts){
     if (bo.dead) continue;
     const bx=bo.x-camX; if(bx<-60||bx>W+60) continue;
