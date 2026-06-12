@@ -95,6 +95,7 @@ const ZONE_STAGES={cem:[0,1],crypt:[2,3]};       // zone -> stage indices per ac
 const RELEASED={cem:2};                        // publicly playable act count per zone (dev sees everything built)
 const DEVKEY='hellstone';
 let devMode=false;
+let _devTaps=0, _devTapT=0, devToast='', devToastT=0;
 try{
   const q=new URLSearchParams(location.search);
   if(q.has('dev')){ if(q.get('dev')==='off') localStorage.removeItem('creapz_dev'); else localStorage.setItem('creapz_dev', q.get('dev')); }
@@ -385,6 +386,11 @@ cv.addEventListener('pointerdown', e=>{
     return;
   }
   if (mode==='title'){
+    if (pt.x<48 && pt.y<48){ const now2=performance.now(); if(now2-_devTapT>2500) _devTaps=0; _devTapT=now2;
+      if(++_devTaps>=5){ _devTaps=0; const turnOn=localStorage.getItem('creapz_dev')!==DEVKEY;
+        try{ if(turnOn){ localStorage.setItem('creapz_dev',DEVKEY); devMode=true; } else { localStorage.removeItem('creapz_dev'); devMode=false; } }catch(e){}
+        playSfx('sfx_healthup',0.9); devToast=turnOn?'Dev stages unlocked':'Dev locked'; devToastT=2.4; }
+      return; }
     if (cryptOpen || optionsOpen || menuShown){
       for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){
         if (typeof r.action==='string') titleMenuAction(r.action); else { playSfx('sfx_msel'); r.action(); }
@@ -1064,6 +1070,7 @@ function loop(now){
   else if (mode==='controls') drawControls();
   else if (mode==='soulbox'){}
   else { try{ update(dt); draw(); }catch(err){ if(!window.__loopErr){ window.__loopErr=1; console.error('loop error:',err); } } }
+  if (devToastT>0){ devToastT-=dt; ctx.setTransform(RS,0,0,RS,0,0); ctx.save(); ctx.globalAlpha=Math.min(1,devToastT*2.5); const tw=210; ctx.fillStyle='rgba(8,6,18,0.85)'; roundRect(W/2-tw/2,H-54,tw,30,8); ctx.fill(); ctx.strokeStyle='rgba(200,251,80,0.6)'; ctx.lineWidth=1; ctx.stroke(); ctx.fillStyle='#c8fb50'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center'; ctx.fillText(devToast, W/2, H-34); ctx.textAlign='left'; ctx.restore(); }
   requestAnimationFrame(loop);
 }
 
