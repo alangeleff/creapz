@@ -1,4 +1,4 @@
-const ASSET_VER='1781280000';
+const ASSET_VER='1781290000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -487,7 +487,7 @@ function greedMult(){ return (artProg().megas||{}).greed?2:1; }
 function hasDiscord(){ return !!(artProg().megas||{}).discord; }
 const SOUL_PTS = 100;
 const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800, golem:1500, witch:600, skel:500, knight:700, angel:700 };
-const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1}, knight:{walkSpd:1.6, atkRange:104, atkFrames:16, atkFps:17, atkHit:[6,12], atkDmg:2}, angel:{walkSpd:1.3, runSpd:2.6, runRange:540, atkRange:450, atkFrames:33, atkFps:24, atkFire:16, atkDmg:1, ranged:true, fly:true, flyLift:90, fcol:'dark', shotSpd:300, shotR:17, atkCdMin:1.4} };
+const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1}, knight:{walkSpd:1.6, atkRange:148, atkFrames:16, atkFps:17, atkHit:[6,12], atkDmg:2}, angel:{walkSpd:1.3, runSpd:2.6, runRange:540, atkRange:450, atkFrames:33, atkFps:24, atkFire:16, atkDmg:1, ranged:true, fly:true, flyLift:90, fcol:'dark', shotSpd:300, shotR:17, atkCdMin:1.4} };
 function timeBrackets(idx){
   const s=idx*30;   // each act shifts brackets by 30s
   return [[90+s,3000],[120+s,2000],[180+s,1000]];
@@ -1020,7 +1020,7 @@ function drawSlamFx(){
 function zBodyBox(z){
   if (z.kw==='witch') return {x:z.x-26, y:z.y-120, w:52, h:120};
   if (z.kw==='skel') return {x:z.x-26, y:z.y-122, w:52, h:122};
-  if (z.kw==='knight') return {x:z.x-30, y:z.y-132, w:60, h:132};
+  if (z.kw==='knight') return {x:z.x-40, y:z.y-180, w:80, h:180};
   if (z.kw==='angel') return {x:z.x-30, y:z.y-130, w:60, h:130};
   if (z.kw==='golem') return {x:z.x-92, y:z.y-191, w:184, h:189};
   if (z.kw==='gob') return {x:z.x-19, y:z.y-78, w:38, h:74};
