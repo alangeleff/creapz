@@ -1,4 +1,4 @@
-const ASSET_VER='1781390000';
+const ASSET_VER='1781400000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -873,7 +873,7 @@ function drawPauseBtn(){
   ctx.fillStyle='#cfd0e8'; ctx.fillRect(PB.x+12,PB.y+8,5,16); ctx.fillRect(PB.x+23,PB.y+8,5,16);
 }
 function menuOpen(){ return paused || (p && p.dead && p.deadT>(p.deathHurt?3.05:2.3)) || (p && p.won); }
-const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum','sfx_chaosspawn','sfx_chaoslaunch','sfx_vigorboost','sfx_golemsee','sfx_golemsmash'];
+const SFXLIST=['sfx_slash','sfx_bolt','sfx_jump','sfx_soul','sfx_shriek','sfx_meleehit','sfx_projhit','sfx_die','sfx_wing','sfx_hurt','sfx_ignite','sfx_healthup','sfx_wportal','sfx_dportal','sfx_msel','sfx_mtog','sfx_gspear','sfx_rwhoosh','sfx_zswing','sfx_run','sfx_zsee','sfx_ksee','sfx_count','sfx_gsee','sfx_pdie','sfx_screamchorus','sfx_wportal_fast','sfx_wportal_rev','sfx_wportal_rev2','sfx_wportal_low','sfx_wportal_low2','sfx_portalblast','sfx_portalhum','sfx_chaosspawn','sfx_chaoslaunch','sfx_vigorboost','sfx_golemsee','sfx_golemsmash','sfx_knightsee','sfx_knightstomp'];
 function bootIntoWorld(){ primeAudio(); SFXLIST.forEach(loadSfx); banked=0; document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); enterWorld(false); }
 function startGame(ck){
   if (selMode==='skin'){ chosen=ck; saveProg(); }
@@ -1436,11 +1436,11 @@ function update(dt){
       if(C.stomp){
         if(z.stompCd>0) z.stompCd-=dt;
         const _inPat=(p.x>=z.min-45 && p.x<=z.max+45);
-        if(_inPat && !z.aggro && (z.x-camX)>-80 && (z.x-camX)<W+80 && !p.dead) z.aggro=true;
+        if(_inPat && !z.aggro && (z.x-camX)>-80 && (z.x-camX)<W+80 && !p.dead){ z.aggro=true; playSfx('sfx_knightsee',0.95); }
         else if(!_inPat && z.aggro) z.aggro=false;
         if(z.stompPhase==='leap'){ z.stompT-=dt; const k=Math.max(0,Math.min(1,1-z.stompT/C.stompLeapDur)); z.x=z.sx0+(z.stompTx-z.sx0)*k; z.y=z.sy0-z.stompPeak*Math.sin(k*Math.PI*0.5); z.state='jump'; z.facing=(z.stompTx<z.sx0)?-1:1; if(z.stompT<=0){ z.x=z.stompTx; z.y=z.sy0-z.stompPeak; z.stompPhase='charge'; z.stompT=C.chargeDur; } if(p.inv<=0&&!p.dead&&overlap(pBodyBox(),zBodyBox(z)))hurtPlayer(z.x,1); continue; }
-        if(z.stompPhase==='charge'){ z.stompT-=dt; z.state='jump'; z.facing=(p.x<z.x)?-1:1; if(z.stompT<=0){ z.stompPhase='slam'; z.stompT=C.slamDur; z.slamY0=z.y; } if(p.inv<=0&&!p.dead&&overlap(pBodyBox(),zBodyBox(z)))hurtPlayer(z.x,1); continue; }
-        if(z.stompPhase==='slam'){ z.stompT-=dt; const k=Math.max(0,Math.min(1,1-z.stompT/C.slamDur)); z.y=z.slamY0+(z.sy0-z.slamY0)*(k*k); z.state='jump'; if(z.stompT<=0){ z.y=z.sy0; z.stompPhase='recover'; z.stompT=C.recoverDur; addShake(15,0.55); playSfx('sfx_golemsmash',0.9); playSfx('sfx_meleehit',0.8); for(let i=0;i<30;i++){ const sd=(Math.random()<0.5?-1:1); zbits.push({x:z.x+sd*(12+Math.random()*135), y:z.sy0-2, vx:sd*(70+Math.random()*255), vy:-40-Math.random()*175, sz:2+Math.random()*3.6, life:0.4+Math.random()*0.45, t:0, c:['#8a2a2a','#c0392b','#6a1a1a','#bbb','#7a1818'][(Math.random()*5)|0]}); } if(p.onGround && !p.dead && p.inv<=0 && Math.abs(p.x-z.x)<(C.stompR||100)) hurtPlayer(z.x,C.stompDmg||2); } else if(p.inv<=0&&!p.dead&&overlap(pBodyBox(),zBodyBox(z)))hurtPlayer(z.x,1); continue; }
+        if(z.stompPhase==='charge'){ z.stompT-=dt; z.state='jump'; z.facing=(p.x<z.x)?-1:1; if(z.stompT<=0){ z.stompPhase='slam'; z.stompT=C.slamDur; z.slamY0=z.y; playSfx('sfx_knightstomp',1.0); } if(p.inv<=0&&!p.dead&&overlap(pBodyBox(),zBodyBox(z)))hurtPlayer(z.x,1); continue; }
+        if(z.stompPhase==='slam'){ z.stompT-=dt; const k=Math.max(0,Math.min(1,1-z.stompT/C.slamDur)); z.y=z.slamY0+(z.sy0-z.slamY0)*(k*k); z.state='jump'; if(z.stompT<=0){ z.y=z.sy0; z.stompPhase='recover'; z.stompT=C.recoverDur; addShake(15,0.55); for(let i=0;i<30;i++){ const sd=(Math.random()<0.5?-1:1); zbits.push({x:z.x+sd*(12+Math.random()*135), y:z.sy0-2, vx:sd*(70+Math.random()*255), vy:-40-Math.random()*175, sz:2+Math.random()*3.6, life:0.4+Math.random()*0.45, t:0, c:['#8a2a2a','#c0392b','#6a1a1a','#bbb','#7a1818'][(Math.random()*5)|0]}); } if(p.onGround && !p.dead && p.inv<=0 && Math.abs(p.x-z.x)<(C.stompR||100)) hurtPlayer(z.x,C.stompDmg||2); } else if(p.inv<=0&&!p.dead&&overlap(pBodyBox(),zBodyBox(z)))hurtPlayer(z.x,1); continue; }
         if(z.stompPhase==='recover'){ z.stompT-=dt; z.state='idle'; if(z.stompT<=0){ z.stompPhase=null; z.stompCd=(C.stompCdMin||3)+Math.random()*2; } continue; }
       }
       if(C.wave && z.castT>0){
@@ -1462,7 +1462,7 @@ function update(dt){
       if(z.aggro && !p.dead){
         if(C.stomp && ad>(C.stompRange||240) && (z.stompCd||0)<=0 && !(z.atkT>0)){ z.stompPhase='leap'; z.stompT=C.stompLeapDur; z.sx0=z.x; z.sy0=z.y; z.stompTx=clamp(p.x,z.min,z.max); z.stompPeak=C.stompPeak||190; z.state='jump'; z.facing=(z.stompTx<z.x)?-1:1; playSfx('sfx_jump',0.6); }
         else if(C.wave && (z.castCd||0)<=0 && ad>=(C.waveMin||135) && ad<=(C.waveMax||430)){ z.castT=C.castFrames/C.castFps; z.fired=false; z.state='punch'; z.facing=(p.x<z.x)?-1:1; playSfx('sfx_zswing',0.45); }
-        else if(ad<=C.atkRange && z.atkCd<=0){ z.atkT=C.atkFrames/C.atkFps; z.state='attack'; z.fired=false; if(!C.ranged) playSfx('sfx_zswing',0.7); }
+        else if(ad<=C.atkRange && z.atkCd<=0){ z.atkT=C.atkFrames/C.atkFps; z.state='attack'; z.fired=false; if(!C.ranged) playSfx(z.kw==='knight'?'sfx_knightstomp':'sfx_zswing',0.7); }
         else if(ad>C.atkRange){ if(C.runSpd && ad<=C.runRange){ z.state='run'; z.x=clamp(z.x+z.facing*C.runSpd*efr,z.min,z.max); } else { z.state='walk'; z.x=clamp(z.x+z.facing*C.walkSpd*efr,z.min,z.max); } }
         else z.state='idle';
       } else z.state='idle';
