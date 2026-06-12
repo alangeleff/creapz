@@ -273,28 +273,12 @@ function tileSeam(X,Y,Wd,Dp){ if(!DIRT_SEAM.naturalWidth){ ctx.fillStyle='#3a2a1
   const T=84*zoom; ctx.save(); ctx.beginPath(); ctx.rect(X,Y,Wd,Dp); ctx.clip();
   for(let y=Y;y<Y+Dp;y+=T) for(let x=X;x<X+Wd+T;x+=T) ctx.drawImage(DIRT_SEAM,x,y,T,T); ctx.restore(); }
 const STAMPS=[
- {k:'terrace',label:'Cemetery Ground',sw:'#7a5a36',cat:'Ground'},
- {k:'terrace_cave',label:'Cave Ground',sw:'#5a4a36',cat:'Ground'},
- {k:'terrace_witch',label:'Witchwood Ground',sw:'#3a2e24',cat:'Ground'},
- {k:'terrace_eth',label:'Ethereal Ground',sw:'#4a5a52',cat:'Ground'},
- {k:'plat_s',label:'Platform · static',sw:'#caa46a',cat:'Ground'},
- {k:'plat_m',label:'Platform · moving',sw:'#6ad0ff',cat:'Ground'},
- {k:'plat_c',label:'Platform · crumble',sw:'#e0843c',cat:'Ground'},
+ {k:'terrace',label:'Ground',sw:'#7a5a36',cat:'Ground'},
+ {k:'plat_s',label:'Static Platform',sw:'#caa46a',cat:'Ground'},
+ {k:'plat_m',label:'Moving Platform',sw:'#6ad0ff',cat:'Ground'},
+ {k:'plat_c',label:'Crumble Platform',sw:'#e0843c',cat:'Ground'},
+ {k:'plat_v',label:'Elevator Platform',sw:'#b06bff',cat:'Ground'},
  {k:'plat_k',label:'Cave Slab (art)',sw:'#9a7b3a',cat:'Ground'},
- {k:'plat_cave_s',label:'Cave Platform · static',sw:'#7a5836',cat:'Ground'},
- {k:'plat_cave_m',label:'Cave Platform · moving',sw:'#6ad0ff',cat:'Ground'},
- {k:'plat_cave_c',label:'Cave Platform · crumble',sw:'#e0843c',cat:'Ground'},
- {k:'plat_witch_s',label:'Witchwood Platform · static',sw:'#5a4a36',cat:'Ground'},
- {k:'plat_witch_m',label:'Witchwood Platform · moving',sw:'#6ad0ff',cat:'Ground'},
- {k:'plat_witch_c',label:'Witchwood Platform · crumble',sw:'#e0843c',cat:'Ground'},
- {k:'plat_v',label:'Platform · elevator',sw:'#b06bff',cat:'Ground'},
- {k:'plat_cave_v',label:'Cave Platform · elevator',sw:'#b06bff',cat:'Ground'},
- {k:'plat_witch_v',label:'Witchwood Platform · elevator',sw:'#b06bff',cat:'Ground'},
- {k:'plat_ethf_s',label:'Ethereal Floating · static',sw:'#7a9a8a',cat:'Ground'},
- {k:'plat_ethg_s',label:'Ethereal Platform · static',sw:'#6a8a7a',cat:'Ground'},
- {k:'plat_ethg_m',label:'Ethereal Platform · moving',sw:'#6ad0ff',cat:'Ground'},
- {k:'plat_ethg_c',label:'Ethereal Platform · crumble',sw:'#e0843c',cat:'Ground'},
- {k:'plat_ethg_v',label:'Ethereal Platform · elevator',sw:'#b06bff',cat:'Ground'},
  {k:'haz_spike',label:'Bone Spike Pit',sw:'#d9d2c0',cat:'Hazards'},
  {k:'haz_rock',label:'Rock Drop',sw:'#7a7280',cat:'Hazards'},
  {k:'haz_tar',label:'Tar Pit',sw:'#2a1f30',cat:'Hazards'},
@@ -555,7 +539,7 @@ function showSel(){
    selBox.querySelector('.gug').onclick=()=>ungroup(sel.name);
    return; }
  selBox.style.display='block';
- const o=sel.obj; const _ak=assetKey(sel); let html='<h4>'+(LABELOF[_ak]||LABELOF[sel.kind]||sel.type)+'</h4>';
+ const o=sel.obj; const _ak=assetKey(sel); let html='<h4>'+(LABELOF[_ak]||(swapGroupOf(_ak)&&swapGroupOf(_ak).label)||LABELOF[sel.kind]||sel.type)+'</h4>';
  let _flds=(sel.type==='haz'&&o.t==='spikeshot')?['x','y','dir','tx','ty','tw','th']:(SEL_FIELDS[sel.type]||[]);
  if(sel.type==='bg'||sel.type==='fg') _flds=(o.w&&o.h)?['x','y','w','h']:['par'];
  { const _fr=_flds.filter(f=>o[f]!==undefined); if(_fr.length){ html+='<div class="cg">'; for(const f of _fr){ html+=`<div class="row"><span>${f}</span><input data-f="${f}" inputmode="numeric" value="${o[f]}"></div>`; } html+='</div>'; } }
@@ -586,7 +570,9 @@ function showSel(){
    if(cur.indexOf('stone_')===0) html+='<div style="text-align:center;margin:6px 0 2px"><img src="./assets/'+cur+'.png?'+ASSET_PV+'" style="height:66px;filter:drop-shadow(0 0 7px #ffffffaa)"><div style="font-size:10px;color:#9b8cff;margin-top:2px">floats out of the chest with a glowing aura</div></div>'; }
  const _grp=swapGroupOf(_ak);
  if(_grp){ const _others=_grp.members.filter(m=>m[0]!==_ak);
-   if(_others.length){ html+='<div style="margin-top:10px;font-size:11px;color:#9bd0ff">Swap to ('+_grp.label+')</div>';
+   if(_others.length){ const _cnt=allProps().filter(p=>swapGroupOf(assetKey(p))===_grp).length;
+     html+='<div style="margin-top:10px;font-size:11px;color:#9bd0ff">Skin \u00b7 '+_grp.label+'</div>';
+     html+='<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#bfe4ff;margin:5px 0 2px;cursor:pointer"><input type="checkbox" class="swapall" style="cursor:pointer"> Apply to ALL '+_cnt+' in scene</label>';
      _others.forEach(m=>{ html+='<button class="swapb" data-k="'+m[0]+'" style="width:100%;margin-top:4px;background:#16263a;border:1px solid #3f9bdf;color:#bfe4ff;border-radius:6px;padding:7px;cursor:pointer">\u21c4 '+m[1]+'</button>'; }); } }
  if(sel.type==='enemy'||sel.type==='obst'||sel.type==='bat'||sel.type==='tex'){ const fidx = sel.type==='enemy'?5:(sel.type==='bat'?4:-1); const fv = fidx>=0 ? (sel.raw[fidx]!==undefined?sel.raw[fidx]:(sel.type==='enemy'?-1:1)) : (o.f===-1?-1:1);
    html+='<button class="faceb" style="width:100%;margin-top:8px;background:#1d2a3a;border:1px solid #7b5cff;color:#cdbbe6;border-radius:6px;padding:8px;cursor:pointer">Face: '+(fv===-1?'◄ Left':'Right ►')+'  · tap to flip</button>'; }
@@ -602,7 +588,7 @@ function showSel(){
  const _ps=selBox.querySelector('.parsl'); if(_ps)_ps.oninput=()=>{ o.par=parseFloat(_ps.value); const pv=selBox.querySelector('.parval'); if(pv)pv.textContent=o.par+'\u00d7'; persist(); draw(); };
  const _bt=selBox.querySelector('.bgtile'); if(_bt)_bt.onclick=()=>{ histPush(); delete o.x; delete o.y; delete o.w; delete o.h; persist(); showSel(); draw(); };
  const _bfd=selBox.querySelector('.bgfade'); if(_bfd)_bfd.onclick=()=>{ histPush(); o.fade=!o.fade; persist(); showSel(); draw(); };
- selBox.querySelectorAll('.swapb').forEach(b=>b.onclick=()=>{ histPush(); applySwap(sel.raw,b.dataset.k); persist(); sel=reselect(sel); showSel(); draw(); });
+ selBox.querySelectorAll('.swapb').forEach(b=>b.onclick=()=>{ histPush(); const _all=selBox.querySelector('.swapall')&&selBox.querySelector('.swapall').checked; if(_all){ const _g=swapGroupOf(assetKey(sel)); allProps().forEach(p=>{ if(swapGroupOf(assetKey(p))===_g) applySwap(p.raw,b.dataset.k); }); } else applySwap(sel.raw,b.dataset.k); persist(); sel=reselect(sel); showSel(); draw(); });
  const _ls=selBox.querySelector('[data-loot]'); if(_ls) _ls.onchange=()=>{ histPush(); o.loot=_ls.value; persist(); showSel(); draw(); };
  selBox.querySelectorAll('input').forEach(inp=>inp.onchange=()=>{ const v=parseFloat(inp.value); if(!isNaN(v)){ histPush(); o[inp.dataset.f]=v; syncBack(sel); persist(); draw(); } });
  const _fb=selBox.querySelector('.faceb'); if(_fb) _fb.onclick=()=>{ histPush(); if(sel.type==='enemy'){ const c=sel.raw[5]!==undefined?sel.raw[5]:-1; sel.raw[5]=c===-1?1:-1; } else if(sel.type==='bat'){ const c=sel.raw[4]!==undefined?sel.raw[4]:1; sel.raw[4]=c===-1?1:-1; } else { if(o.f===-1) delete o.f; else o.f=-1; } persist(); showSel(); draw(); };
