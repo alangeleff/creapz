@@ -1,4 +1,4 @@
-const ASSET_VER='1781380000';
+const ASSET_VER='1781390000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1396,6 +1396,8 @@ function update(dt){
       if(_dk){ for(let i=0;i<18;i++) zbits.push({x:z.x,y:z.y-44,vx:(Math.random()-0.5)*250,vy:-40-Math.random()*170,sz:2+Math.random()*3,life:0.3+Math.random()*0.35,t:0,c:['#ffae57','#ff6a2c','#ffffff'][(Math.random()*3)|0]}); }
       if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); continue; }
     }
+    // UNIVERSAL contact damage: any living enemy's body hurts on touch in EVERY state/animation (p.inv + power-up protection gate it; faded/teleporting excluded)
+    if(p.inv<=0 && !p.dead && (z.alpha===undefined || z.alpha>0.45) && overlap(pBodyBox(), zBodyBox(z))) hurtPlayer(z.x,1);
     if (z.kw==='angel'){
       if(z.angelState===undefined){ z.angelState='fly'; z.actCd=1.6+Math.random()*1.2; z.orbitPh=Math.random()*6.28; z.diveT=0; z.atkT=0; z.atkDur=33/24; z.fired=false; z.dvx=0; z.dvy=0; }
       z.facing=(p.x<z.x)?-1:1;
@@ -1409,9 +1411,11 @@ function update(dt){
         continue;
       }
       if(z.atkT>0){
-        z.atkT-=dt*efr; z.state='attack'; const af=Math.floor((z.atkDur-z.atkT)*24);
-        if(af>=16 && !z.fired){ z.fired=true; angelBlast(z); }
-        if(z.atkT<=0) z.angelState='fly';
+        z.atkT-=dt*efr; z.state='attack';
+        const cp=Math.max(0,Math.min(1,1-z.atkT/z.atkDur));
+        z.orbX=z.x+z.facing*22; z.orbY=z.y-74; z.orbR=3+cp*16; z.charging=!z.fired;
+        if(cp>=0.82 && !z.fired){ z.fired=true; z.charging=false; angelLaunchOrb(z); }
+        if(z.atkT<=0){ z.angelState='fly'; z.charging=false; }
         continue;
       }
       if(z.aggro && !p.dead){
@@ -2754,6 +2758,11 @@ function chaserFire(z,C){
   const cols=C.fcol==='dark'?['#b06bff','#7a3ad8','#e0c0ff']:['#9bff4a','#5fd83a','#caffa0'];
   for(let i=0;i<10;i++) zbits.push({x:wx,y:wy,vx:(Math.random()-0.5)*120,vy:(Math.random()-0.5)*120,sz:1.5+Math.random()*2,life:0.3+Math.random()*0.25,t:0,c:cols[(Math.random()*3)|0]});
 }
+function angelLaunchOrb(z){
+  const wx=z.x+z.facing*22, wy=z.y-74, dx=p.x-wx, dy=(p.y-44)-wy, d=Math.hypot(dx,dy)||1, sp=440;
+  curses.push({x:wx,y:wy,vx:dx/d*sp,vy:dy/d*sp,t:0,dead:false,col:'dark',r:18}); playSfx('sfx_portalblast',0.55);
+  for(let i=0;i<16;i++) zbits.push({x:wx,y:wy,vx:(Math.random()-0.5)*155,vy:(Math.random()-0.5)*155,sz:1.6+Math.random()*2.4,life:0.3+Math.random()*0.3,t:0,c:['#c79bff','#8a4ad8','#f0d8ff'][(Math.random()*3)|0]});
+}
 function angelBlast(z){
   const wx=z.x+z.facing*20, wy=z.y-72, dx=p.x-wx, dy=(p.y-44)-wy, d=Math.hypot(dx,dy)||1, sp=320;
   curses.push({x:wx,y:wy,vx:dx/d*sp,vy:dy/d*sp,t:0,dead:false,col:'dark',r:16}); playSfx('sfx_shriek',0.6);
@@ -2839,6 +2848,10 @@ function drawZombie(z){
   ctx.imageSmoothingEnabled=true;
   ctx.drawImage(a.img, fi*a.sw,0,a.sw,a.sh, sx-a.cxs[fi], z.y-a.foots[fi]+dy, a.w,a.h);
   ctx.restore(); ctx.globalAlpha=1;
+  if(z.kw==='angel' && z.charging && !z.dead && z.orbR>0){ const ox=z.orbX-camX, oy=z.orbY, pls=0.82+0.18*Math.sin(gt*30); ctx.save(); ctx.globalCompositeOperation='lighter';
+    const g=ctx.createRadialGradient(ox,oy,0.5,ox,oy,Math.max(0.6,z.orbR*pls)); g.addColorStop(0,'rgba(245,225,255,0.97)'); g.addColorStop(0.45,'rgba(165,95,240,0.78)'); g.addColorStop(1,'rgba(95,35,180,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(ox,oy,Math.max(0.6,z.orbR*pls),0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,250,255,0.92)'; ctx.beginPath(); ctx.arc(ox,oy,Math.max(1,z.orbR*0.34),0,7); ctx.fill(); ctx.restore(); }
 }
 function drawBat(b){
   if(b.dead && b.erase){ const a=SPR.bat.idle, k=Math.min(1,b.dieT/0.5); if(k>=1) return; const sx2=b.x-camX, ex=b.erase.x-camX, ey=b.erase.y, lx=sx2+(ex-sx2)*k, ly=(b.yD||b.y)+(ey-(b.yD||b.y))*k, sc=Math.max(0.02,1-k);
