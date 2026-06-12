@@ -1,4 +1,4 @@
-const ASSET_VER='1781310000';
+const ASSET_VER='1781320000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -487,7 +487,7 @@ function greedMult(){ return (artProg().megas||{}).greed?2:1; }
 function hasDiscord(){ return !!(artProg().megas||{}).discord; }
 const SOUL_PTS = 100;
 const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800, golem:1500, witch:600, skel:500, knight:700, angel:700 };
-const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1}, knight:{walkSpd:1.7, atkRange:118, atkFrames:16, atkFps:17, atkHit:[6,12], atkDmg:2} };
+const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1}, knight:{walkSpd:1.7, atkRange:120, atkFrames:16, atkFps:17, atkHit:[3,15], atkDmg:2, atkCdMin:0.25, atkW:182, atkH:195, atkY:195} };
 function timeBrackets(idx){
   const s=idx*30;   // each act shifts brackets by 30s
   return [[90+s,3000],[120+s,2000],[180+s,1000]];
@@ -1020,7 +1020,7 @@ function drawSlamFx(){
 function zBodyBox(z){
   if (z.kw==='witch') return {x:z.x-26, y:z.y-120, w:52, h:120};
   if (z.kw==='skel') return {x:z.x-26, y:z.y-122, w:52, h:122};
-  if (z.kw==='knight') return {x:z.x-40, y:z.y-180, w:80, h:180};
+  if (z.kw==='knight') return {x:z.x-50, y:z.y-186, w:100, h:186};
   if (z.kw==='angel') return {x:z.x-30, y:z.y-130, w:60, h:130};
   if (z.kw==='golem') return {x:z.x-92, y:z.y-191, w:184, h:189};
   if (z.kw==='gob') return {x:z.x-19, y:z.y-78, w:38, h:74};
@@ -1431,7 +1431,7 @@ function update(dt){
       if(z.atkT>0){
         z.atkT-=dt*efr; z.state='attack'; const af=Math.min(C.atkFrames-1, Math.floor((C.atkFrames/C.atkFps - z.atkT)*C.atkFps));
         if(C.ranged){ if(af>=C.atkFire && !z.fired){ z.fired=true; chaserFire(z,C); } }
-        else if(af>=C.atkHit[0] && af<=C.atkHit[1] && z.hitCd<=0 && p.inv<=0 && !p.dead){ const wb={x:z.facing>0?z.x-10:z.x-C.atkRange+10, y:z.y-96, w:C.atkRange, h:96}; if(overlap(wb,pBodyBox())){ hurtPlayer(z.x,C.atkDmg); z.hitCd=0.5; } }
+        else if(af>=C.atkHit[0] && af<=C.atkHit[1] && z.hitCd<=0 && p.inv<=0 && !p.dead){ const aw=C.atkW||C.atkRange, ah=C.atkH||96, ay=C.atkY||96; const wb={x:z.facing>0?z.x-14:z.x-aw+14, y:z.y-ay, w:aw, h:ah}; if(overlap(wb,pBodyBox())){ hurtPlayer(z.x,C.atkDmg); z.hitCd=0.45; } }
         if(z.atkT<=0){ z.atkCd=(C.atkCdMin||0.7)+Math.random()*0.6; }
         if(C.fly){ z.y=z.yhover+Math.sin(gt*1.8+z.t)*5; } else z.x=terrWallX(z.x,zpx,z.y,16); continue;
       }
