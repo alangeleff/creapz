@@ -1,4 +1,4 @@
-const ASSET_VER='1781290000';
+const ASSET_VER='1781300000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -487,7 +487,7 @@ function greedMult(){ return (artProg().megas||{}).greed?2:1; }
 function hasDiscord(){ return !!(artProg().megas||{}).discord; }
 const SOUL_PTS = 100;
 const KPTS = { bd:100, gob:300, bat:300, zombie:500, zgen:800, golem:1500, witch:600, skel:500, knight:700, angel:700 };
-const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1}, knight:{walkSpd:1.6, atkRange:148, atkFrames:16, atkFps:17, atkHit:[6,12], atkDmg:2}, angel:{walkSpd:1.3, runSpd:2.6, runRange:540, atkRange:450, atkFrames:33, atkFps:24, atkFire:16, atkDmg:1, ranged:true, fly:true, flyLift:90, fcol:'dark', shotSpd:300, shotR:17, atkCdMin:1.4} };
+const CHASER = { skel:{walkSpd:1.5, runSpd:3.5, runRange:340, atkRange:92, atkFrames:22, atkFps:24, atkHit:[9,16], atkDmg:1}, knight:{walkSpd:1.6, atkRange:148, atkFrames:16, atkFps:17, atkHit:[6,12], atkDmg:2} };
 function timeBrackets(idx){
   const s=idx*30;   // each act shifts brackets by 30s
   return [[90+s,3000],[120+s,2000],[180+s,1000]];
@@ -1394,6 +1394,36 @@ function update(dt){
       z.x=clamp(z.x + (z.x<p.x?-12:12), z.min, z.max);
       if(_dk){ for(let i=0;i<18;i++) zbits.push({x:z.x,y:z.y-44,vx:(Math.random()-0.5)*250,vy:-40-Math.random()*170,sz:2+Math.random()*3,life:0.3+Math.random()*0.35,t:0,c:['#ffae57','#ff6a2c','#ffffff'][(Math.random()*3)|0]}); }
       if (z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=Math.floor(z.t*FZK[z.kw][z.state])%SPR[z.kw][z.state].frames; zbitsBurst(z,16); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.7); continue; }
+    }
+    if (z.kw==='angel'){
+      if(z.angelState===undefined){ z.angelState='fly'; z.actCd=1.6+Math.random()*1.2; z.orbitPh=Math.random()*6.28; z.diveT=0; z.atkT=0; z.atkDur=33/24; z.fired=false; z.dvx=0; z.dvy=0; }
+      z.facing=(p.x<z.x)?-1:1;
+      if(!z.aggro && Math.abs(p.x-z.x)<560 && (z.x-camX)>-40 && (z.x-camX)<W+40 && !p.dead) z.aggro=true;
+      else if(z.aggro && Math.abs(p.x-z.x)>820) z.aggro=false;
+      if(z.diveT>0){
+        z.diveT-=dt*efr; z.state='run'; z.x+=z.dvx*dt*efr; z.y+=z.dvy*dt*efr; if(z.hitCd>0) z.hitCd-=dt;
+        if(z.hitCd<=0 && p.inv<=0 && !p.dead && overlap(pBodyBox(), zBodyBox(z))){ hurtPlayer(z.x,1); z.hitCd=0.6; }
+        z.x=clamp(z.x,20,WORLD-20); z.y=clamp(z.y,70,GROUND);
+        if(z.diveT<=0) z.angelState='fly';
+        continue;
+      }
+      if(z.atkT>0){
+        z.atkT-=dt*efr; z.state='attack'; const af=Math.floor((z.atkDur-z.atkT)*24);
+        if(af>=16 && !z.fired){ z.fired=true; angelBlast(z); }
+        if(z.atkT<=0) z.angelState='fly';
+        continue;
+      }
+      if(z.aggro && !p.dead){
+        z.state='walk'; z.orbitPh+=dt*0.85;
+        const tx=p.x+Math.cos(z.orbitPh)*215, ty=p.y-150+Math.sin(z.orbitPh)*42;
+        z.x+=(tx-z.x)*Math.min(1,dt*1.7); z.y+=(ty-z.y)*Math.min(1,dt*1.7); z.actCd-=dt;
+        if(z.actCd<=0){
+          if(Math.random()<0.5){ z.atkT=z.atkDur; z.fired=false; z.actCd=2.6+Math.random()*1.4; }
+          else { const dx=p.x-z.x, dy=(p.y-40)-z.y, d=Math.hypot(dx,dy)||1, sp=500; z.dvx=dx/d*sp; z.dvy=dy/d*sp; z.diveT=Math.min(0.8, d/sp+0.18); z.hitCd=0; z.actCd=3+Math.random()*1.6; playSfx('sfx_rwhoosh',0.7); }
+        }
+      } else { z.state='idle'; z.y+=Math.sin(gt*1.6+z.t)*0.4; }
+      z.x=clamp(z.x,20,WORLD-20); z.y=clamp(z.y,70,GROUND);
+      continue;
     }
     if (CHASER[z.kw]){
       const C=CHASER[z.kw]; if(z.atkCd>0) z.atkCd-=dt; const ad=Math.abs(p.x-z.x);
@@ -2698,6 +2728,11 @@ function chaserFire(z,C){
   const cols=C.fcol==='dark'?['#b06bff','#7a3ad8','#e0c0ff']:['#9bff4a','#5fd83a','#caffa0'];
   for(let i=0;i<10;i++) zbits.push({x:wx,y:wy,vx:(Math.random()-0.5)*120,vy:(Math.random()-0.5)*120,sz:1.5+Math.random()*2,life:0.3+Math.random()*0.25,t:0,c:cols[(Math.random()*3)|0]});
 }
+function angelBlast(z){
+  const wx=z.x+z.facing*20, wy=z.y-72, dx=p.x-wx, dy=(p.y-44)-wy, d=Math.hypot(dx,dy)||1, sp=320;
+  curses.push({x:wx,y:wy,vx:dx/d*sp,vy:dy/d*sp,t:0,dead:false,col:'dark',r:16}); playSfx('sfx_shriek',0.6);
+  for(let i=0;i<10;i++) zbits.push({x:wx,y:wy,vx:(Math.random()-0.5)*120,vy:(Math.random()-0.5)*120,sz:1.5+Math.random()*2,life:0.3+Math.random()*0.25,t:0,c:['#b06bff','#7a3ad8','#e0c0ff'][(Math.random()*3)|0]});
+}
 function witchStartHop(z){
   let target=null;
   for(const q of plats){ if(q.gone) continue; const cx=q.x+q.w/2, top=q.y+(q.dy||0);
@@ -2733,6 +2768,7 @@ function drawZombie(z){
   let fi, alpha=1, dy=0;
   if (z.dead){ fi=z.dframe; const k=z.dieT/0.7; alpha=Math.max(0,1-k); dy=-34*k; if(z.dieT>0.75) return; }
   else if (z.kw==='golem' && state==='attack') fi=golemAtkFrame(z.atkElapsed||0);
+  else if (z.kw==='angel'){ if(state==='attack') fi=Math.min(a.frames-1, Math.floor((z.atkDur-z.atkT)*24)); else fi=Math.floor(z.t*24)%a.frames; }
   else if (CHASER[z.kw]){ if(state==='attack') fi=Math.min(a.frames-1, Math.floor((CHASER[z.kw].atkFrames/CHASER[z.kw].atkFps - z.atkT)*CHASER[z.kw].atkFps)); else fi=Math.floor(z.t*FZK[z.kw][state])%a.frames; }
   else if (z.kw==='witch'){ if(state==='attack') fi=Math.min(24,17+Math.floor((z.atkDur-z.atkT)*12)); else if(state==='jump') fi=Math.min(24,Math.max(0,Math.floor((1-(z.hopT||0)/(z.hopDur||1))*24))); else fi=Math.floor(z.t*12)%a.frames; }
   else fi=Math.floor(z.t*FZK[z.kw][state])%a.frames;
