@@ -1,4 +1,4 @@
-const ASSET_VER='1781630000';
+const ASSET_VER='1781640000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -269,7 +269,7 @@ addEventListener('keydown', e => {
     if (e.code==='Escape'){ if(optionsOpen||cryptOpen){ optionsOpen=false; cryptOpen=false; playSfx('sfx_mtog'); } return; }
     if (cryptOpen){ if (e.code==='Enter'||e.code==='Space'){ cryptOpen=false; playSfx('sfx_mtog'); } return; }
     if (optionsOpen){
-      if (e.code==='ArrowUp'||e.code==='ArrowDown'){ optSel=(optSel+(e.code==='ArrowDown'?1:6))%7; playSfx('sfx_mtog'); }
+      if (e.code==='ArrowUp'||e.code==='ArrowDown'){ optSel=(optSel+(e.code==='ArrowDown'?1:7))%8; playSfx('sfx_mtog'); }
       else if (e.code==='ArrowLeft'||e.code==='ArrowRight'){
         const d=e.code==='ArrowRight'?'+':'-';
         if (optSel===0) titleMenuAction('m'+d); else if (optSel===1) titleMenuAction('s'+d);
@@ -279,7 +279,8 @@ addEventListener('keydown', e => {
         else if (optSel===3) titleMenuAction('import');
         else if (optSel===4) titleMenuAction('install');
         else if (optSel===5) titleMenuAction('controller');
-        else if (optSel===6) titleMenuAction('close');
+        else if (optSel===6) titleMenuAction('togglejoy');
+        else if (optSel===7) titleMenuAction('close');
       }
       return;
     }
@@ -367,6 +368,22 @@ function bindBtn(id,code){
   el.addEventListener('pointercancel',e=>{e.preventDefault();release(code);});
 }
 bindBtn('bL','ArrowLeft'); bindBtn('bR','ArrowRight'); bindBtn('bJ','Space'); bindBtn('bA','KeyZ'); bindBtn('bC','KeyX'); bindBtn('bD','ArrowDown');
+// --- Floating joystick (left half of screen) — alternative to the D-pad ---
+let joystickMode=(function(){ try{ return localStorage.getItem('creapz_joystick')!=='0'; }catch(e){ return true; } })();
+function applyJoyMode(){ document.body.classList.toggle('joy', joystickMode); }
+function setJoystickMode(on){ joystickMode=on; try{ localStorage.setItem('creapz_joystick',on?'1':'0'); }catch(e){} applyJoyMode(); }
+applyJoyMode();
+const _joy={active:false,id:-1,ox:0,oy:0,codes:new Set()};
+function _joySet(nc){ for(const c of _joy.codes) if(!nc.has(c)) release(c); for(const c of nc) if(!_joy.codes.has(c)) press(c); _joy.codes=nc; }
+function _joyClear(){ for(const c of _joy.codes) release(c); _joy.codes=new Set(); }
+(function(){
+  const zone=document.getElementById('joyzone'), base=document.getElementById('joybase'), knob=document.getElementById('joyknob');
+  if(!zone) return;
+  zone.addEventListener('pointerdown',e=>{ if(mode!=='play')return; e.preventDefault(); _joy.active=true; _joy.id=e.pointerId; _joy.ox=e.clientX; _joy.oy=e.clientY; base.style.left=knob.style.left=e.clientX+'px'; base.style.top=knob.style.top=e.clientY+'px'; base.style.display=knob.style.display='block'; try{zone.setPointerCapture(e.pointerId);}catch(_){} });
+  zone.addEventListener('pointermove',e=>{ if(!_joy.active||e.pointerId!==_joy.id)return; e.preventDefault(); const dx=e.clientX-_joy.ox, dy=e.clientY-_joy.oy, dz=16, R=48; const nc=new Set(); if(dx<-dz)nc.add('ArrowLeft'); else if(dx>dz)nc.add('ArrowRight'); if(dy<-dz)nc.add('ArrowUp'); else if(dy>dz)nc.add('ArrowDown'); _joySet(nc); const m=Math.hypot(dx,dy)||1, k=Math.min(1,R/m); knob.style.left=(_joy.ox+dx*k)+'px'; knob.style.top=(_joy.oy+dy*k)+'px'; });
+  const end=()=>{ _joy.active=false; _joyClear(); base.style.display=knob.style.display='none'; };
+  zone.addEventListener('pointerup',end); zone.addEventListener('pointercancel',end);
+})();
 // --- block mobile zoom gestures (two-finger button presses were triggering a stuck pinch-zoom) ---
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{ if(e.touches&&e.touches.length>1) e.preventDefault(); },{passive:false});
@@ -1071,6 +1088,7 @@ if (!window.SPRITES_INLINE){
 }
 let last=performance.now();
 function loop(now){
+  document.body.classList.toggle('playing', mode==='play'); if(mode!=='play' && _joy.codes.size) _joyClear();
   const dt=Math.min(0.05,(now-last)/1000); last=now; gt+=dt;
   pollGamepad();
   document.querySelector('.touch').style.display = mode==='play'?'flex':'none';
@@ -3464,7 +3482,7 @@ function drawOptions(){
     ctx.fillStyle='#e8e6f5'; ctx.fillText('+', bx2+bw2+32, y+7);
     menuRects.push({x:bx2+bw2+14,y:y-16,w:36,h:32,action:row[1]+'+'});
   });
-  [['Export Save','export',2],['Import Save','import',3],['Install App','install',4],['Controller','controller',5]].forEach((row,k)=>{
+  [['Export Save','export',2],['Import Save','import',3],['Install App','install',4],['Controller','controller',5],['Controls: '+(joystickMode?'Joystick':'D-Pad'),'togglejoy',6]].forEach((row,k)=>{
     const y=my+162+k*40;
     const hot=(optSel===row[2]);
     ctx.fillStyle=hot?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(mx+60,y,mw-120,33,9); ctx.fill();
@@ -3475,8 +3493,8 @@ function drawOptions(){
   });
   if (optMsg){ ctx.fillStyle='#7fe0ff'; ctx.font='11px sans-serif'; ctx.textAlign='center'; ctx.fillText(optMsg, W/2, my+mh-44); }
   const by3=my+mh-30;
-  ctx.fillStyle=(optSel===6)?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(W/2-80,by3-12,160,34,10); ctx.fill();
-  ctx.strokeStyle=(optSel===6)?'#c8fb50':'rgba(155,140,255,.45)'; ctx.lineWidth=(optSel===6)?2:1; ctx.stroke();
+  ctx.fillStyle=(optSel===7)?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(W/2-80,by3-12,160,34,10); ctx.fill();
+  ctx.strokeStyle=(optSel===7)?'#c8fb50':'rgba(155,140,255,.45)'; ctx.lineWidth=(optSel===7)?2:1; ctx.stroke();
   ctx.fillStyle='#e8e6f5'; ctx.font='600 16px sans-serif'; ctx.textAlign='center';
   ctx.fillText('Close', W/2, by3+11);
   menuRects.push({x:W/2-80,y:by3-12,w:160,h:34,action:'close'});
@@ -3493,6 +3511,7 @@ function titleMenuAction(a){
   else if (a==='import'){ importSave(); }
   else if (a==='install'){ installApp(); }
   else if (a==='controller'){ ctrlReturn='title'; gpListen=null; mode='controls'; }
+  else if (a==='togglejoy'){ setJoystickMode(!joystickMode); }
   else if (a==='m-'){ musicVol=Math.max(0,Math.round((musicVol-0.1)*10)/10); saveVols(); }
   else if (a==='m+'){ musicVol=Math.min(1,Math.round((musicVol+0.1)*10)/10); saveVols(); }
   else if (a==='s-'){ sfxVol=Math.max(0,Math.round((sfxVol-0.1)*10)/10); if(sfxGain) sfxGain.gain.value=0.45*sfxVol; saveVols(); }

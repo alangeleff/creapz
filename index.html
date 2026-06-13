@@ -68,6 +68,11 @@
     canvas{border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);
       width:min(96vw, calc((100dvh - 60px) * 960 / 440))}
   }
+  #joyzone{position:fixed;left:0;top:0;width:50%;height:100%;z-index:6;touch-action:none;display:none}
+  body.joy.playing #joyzone{display:block}
+  body.joy .grpL{display:none}
+  #joybase{position:fixed;width:128px;height:128px;border-radius:50%;border:2px solid rgba(205,195,255,.38);background:radial-gradient(circle,rgba(150,130,220,.18),rgba(120,100,190,.06));transform:translate(-50%,-50%);pointer-events:none;z-index:7;display:none}
+  #joyknob{position:fixed;width:58px;height:58px;border-radius:50%;background:rgba(200,180,255,.5);border:2px solid rgba(235,228,255,.7);transform:translate(-50%,-50%);pointer-events:none;z-index:8;display:none;box-shadow:0 0 14px rgba(170,120,255,.5)}
 </style>
 </head>
 <body>
@@ -92,11 +97,12 @@
     <button class="btn jump" id="bJ" aria-label="jump"></button>
   </div>
 </div>
+<div id="joyzone"></div><div id="joybase"></div><div id="joyknob"></div>
 <script src="./levels/stage1.js?v=1780859618"></script>
 <script src="./levels/stage2.js?v=1780859618"></script>
 <script src="./levels/crypt1.js?v=1780859618"></script>
 <script src="./levels/crypt2.js?v=1780859618"></script>
-<script src="./src/world.js?v=1781630000"></script>
-<script src="./src/engine.js?v=1781630000"></script>
+<script src="./src/world.js?v=1781640000"></script>
+<script src="./src/engine.js?v=1781640000"></script>
 </body>
 </html>
