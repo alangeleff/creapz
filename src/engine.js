@@ -1,4 +1,4 @@
-const ASSET_VER='1781600000';
+const ASSET_VER='1781610000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -37,10 +37,11 @@ const CREAPER_POWER_IMG=new Image(); CREAPER_POWER_IMG.src='./assets/creaper_pow
 const DINGBAT_POWER_IMG=new Image(); DINGBAT_POWER_IMG.src='./assets/dingbat_power.png?v='+ASSET_VER;
 const CREAPER_PRAY_IMG=new Image(); CREAPER_PRAY_IMG.src='./assets/creaper_pray.png?v='+ASSET_VER;
 const SON_PRAY_IMG=new Image(); SON_PRAY_IMG.src='./assets/son_pray.png?v='+ASSET_VER;
+const FUSION_PRAY_IMG=new Image(); FUSION_PRAY_IMG.src='./assets/fus_pray.png?v='+ASSET_VER;
 const DINGBAT_PRAY_IMG=new Image(); DINGBAT_PRAY_IMG.src='./assets/dingbat_pray.png?v='+ASSET_VER;
 const CREAPER_PRAY_CHIBI_IMG=new Image(); CREAPER_PRAY_CHIBI_IMG.src='./assets/creaper_pray_chibi.png?v='+ASSET_VER;
-function prayImg(){ const im=chosen==='son'?SON_PRAY_IMG:(isDing(chosen)?DINGBAT_PRAY_IMG:CREAPER_PRAY_IMG); return (im&&im.complete&&im.naturalWidth)?im:null; }
-function drawPrayFrame(sx,yy,fc,scl,foot,atk){ const pimg=(atk && !isDing(chosen) && chosen!=='son' && CREAPER_PRAY_CHIBI_IMG.complete && CREAPER_PRAY_CHIBI_IMG.naturalWidth)?CREAPER_PRAY_CHIBI_IMG:prayImg(); if(!pimg) return; const hh=(chosen==='son'?132:isDing(chosen)?107:142)*(scl||1), ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, yy-hh+(foot===undefined?14:foot), ww, hh); ctx.restore(); }
+function prayImg(){ const im=chosen==='fusion'?FUSION_PRAY_IMG:chosen==='son'?SON_PRAY_IMG:(isDing(chosen)?DINGBAT_PRAY_IMG:CREAPER_PRAY_IMG); return (im&&im.complete&&im.naturalWidth)?im:null; }
+function drawPrayFrame(sx,yy,fc,scl,foot,atk){ const pimg=(atk && !isDing(chosen) && chosen!=='son' && chosen!=='fusion' && CREAPER_PRAY_CHIBI_IMG.complete && CREAPER_PRAY_CHIBI_IMG.naturalWidth)?CREAPER_PRAY_CHIBI_IMG:prayImg(); if(!pimg) return; const hh=(chosen==='fusion'?150:chosen==='son'?132:isDing(chosen)?107:142)*(scl||1), ww=hh*pimg.naturalWidth/pimg.naturalHeight; ctx.save(); ctx.imageSmoothingEnabled=true; if(fc<0){ ctx.translate(sx,0); ctx.scale(-1,1); ctx.translate(-sx,0);} ctx.drawImage(pimg, sx-ww/2, yy-hh+(foot===undefined?14:foot), ww, hh); ctx.restore(); }
 const POWER_IMGS={};
 function poweredImg(){ const ck=chosen; if(!POWER_IMGS[ck]){ const im=new Image(); im._ok=null; im.onload=()=>{im._ok=true;}; im.onerror=()=>{im._ok=false;}; im.src='./assets/power_'+ck+'.png?v='+ASSET_VER; POWER_IMGS[ck]=im; } const sk=POWER_IMGS[ck]; if(sk && sk._ok && sk.naturalWidth) return sk; return isDing(ck)?DINGBAT_POWER_IMG:CREAPER_POWER_IMG; }
 const STONE_POWER={ruby:'Hellfire Aura',sapphire:'Time Frost',emerald:'Verdant Renewal',amethyst:'Phantom Veil',topaz:'Thunder Rush',holy:'Reaper Ascension',obsidian:'Void Maw',fluorite:'Prism Barrage',chaos:'Chaos Storm'};
@@ -232,7 +233,7 @@ function loadStage(i){
   tally=null; fading=0; fadeIn=0.5;
 }
 const ORDER = SPRITES.order;
-function corder(){ return (typeof devMode!=='undefined'&&devMode)?ORDER.concat('son'):ORDER; }
+function corder(){ return (typeof devMode!=='undefined'&&devMode)?ORDER.concat(['son','fusion']):ORDER; }
 const LABELS = { default:'Classic', green:'Emerald', blue:'Ruby', red:'Corruption' };
 
 const keys = {};
@@ -2348,7 +2349,7 @@ function drawCharSprite(ck,state,fi,cx,feetY,facing,scale,tint){
 
 let cardRects=[], arrowRects=[];
 let creaperSkin='default', dingSkin='dingbat';
-const SKINC={default:'#5b3fd6', green:'#18a88a', blue:'#d82a2a', red:'#20c8c8', wraith:'#ff7a2a', gilded:'#2fcf55', bone:'#8a2a6a', crimson:'#d8e040', son:'#3aa0e0'};
+const SKINC={default:'#5b3fd6', green:'#18a88a', blue:'#d82a2a', red:'#20c8c8', wraith:'#ff7a2a', gilded:'#2fcf55', bone:'#8a2a6a', crimson:'#d8e040', son:'#3aa0e0', fusion:'#9a4ae0'};
 const DSKINC={dingbat:'#b5762e', ding_swamp:'#6f9a1a', ding_azure:'#2470d8', ding_blood:'#c0231e', ding_magic:'#1fe0a0', ding_mystic:'#9a4ae0', ding_wisp:'#7fd8e8', ding_news:'#c4c4c4', ding_noir:'#ff3ca0'};
 const DORDER=['dingbat','ding_swamp','ding_azure','ding_blood','ding_magic','ding_mystic','ding_wisp','ding_news','ding_noir'];
 function drawSlots(){
@@ -3086,7 +3087,7 @@ function drawPlayerLayer(){
       if(powerActive&&equippedStone==='sapphire'&&transformT<=0){ for(let gi=0;gi<sapTrail.length;gi++){ const g=sapTrail[gi]; ctx.save(); ctx.globalAlpha=0.08+0.26*(gi/Math.max(1,sapTrail.length)); drawCharSprite(chosen,g.st,g.fi,g.x-camX,g.y,g.f,1,0); ctx.restore(); } }
       const _spec=(powerActive&&equippedStone==='amethyst'&&transformT<=0), _obs=(powerActive&&equippedStone==='obsidian'&&transformT<=0), _top=(powerActive&&equippedStone==='topaz'&&transformT<=0), _chaos=(powerActive&&equippedStone==='chaos'&&transformT<=0), _upcast=(p.castT>0 && p.castUp && !!prayImg());
       let _skip=false; ctx.save();
-      if(_upcast){ _skip=true; const fast=Math.floor(gt*24)%2; ctx.filter= fast ? 'grayscale(1) invert(1) brightness(1.15)' : 'grayscale(1) brightness(1.7) contrast(1.25)'; drawPrayFrame(sx,p.y,p.facing,chosen==='son'?1.0:(isDing(chosen)?1.05:0.82),isDing(chosen)?-1:2,true); ctx.filter='none'; }
+      if(_upcast){ _skip=true; const fast=Math.floor(gt*24)%2; ctx.filter= fast ? 'grayscale(1) invert(1) brightness(1.15)' : 'grayscale(1) brightness(1.7) contrast(1.25)'; drawPrayFrame(sx,p.y,p.facing,(chosen==='son'||chosen==='fusion')?1.0:(isDing(chosen)?1.05:0.82),isDing(chosen)?-1:2,true); ctx.filter='none'; }
       if(_spec){ ctx.globalAlpha=0.42+0.12*Math.sin(gt*6); }
       if(_obs){ if(Math.random()<0.12){ _skip=true; } else { ctx.globalAlpha=0.45+0.5*Math.random(); ctx.filter='invert(1) brightness(1.2) drop-shadow(0 0 6px rgba(150,90,255,0.85))'; if(Math.random()<0.45) ctx.translate((Math.random()-0.5)*6,0); } }
       if(_top){ const r=Math.random(); ctx.filter = r<0.08 ? 'brightness(0) invert(1)' : (r<0.20 ? 'brightness(1.8) saturate(2.2) sepia(0.5) hue-rotate(-8deg)' : 'brightness(1.18) saturate(1.5)'); }
