@@ -1,4 +1,4 @@
-const ASSET_VER='1781610000';
+const ASSET_VER='1781620000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -19,7 +19,8 @@ cv.width = W*RS; cv.height = H*RS;
 const GROUND = 360;
 const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
 const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
-const SLAM_VY = 19.0, SLAM_REC = 0.26, SLAM_IFRAMES = 0.6, SLAM_R = 134;   // Crush Drop (down-slam)
+const SLAM_VY = 19.0, SLAM_REC = 0.26, SLAM_IFRAMES = 0.6, SLAM_R = 134;
+const FLYSPD = 10.0;   // fusion supersonic fly speed   // Crush Drop (down-slam)
 const BASH_VX = 11.4, BASH_VY = 12.6;   // Scythe Bash (cReaper) — snappier than the dive per Alan
 const OBJ = SPRITES.obst;
 const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VER;
@@ -240,7 +241,8 @@ const keys = {};
 const DOUBLE_TAP = 350;
 const lastRelease = { ArrowLeft:-1e9, ArrowRight:-1e9 };
 const runHeld = { ArrowLeft:false, ArrowRight:false };
-let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0, chaosGlitchT=0, chaosSpawnQ=[], chaosSpawnN=0, chaosSpawnT=0;   // Power Dive trail + Sapphire after-image trail
+let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0, chaosGlitchT=0, chaosSpawnQ=[], chaosSpawnN=0, chaosSpawnT=0;
+let flyGhosts=[];   // Power Dive trail + Sapphire after-image trail
 let maxHPShown=4, hpGrowPending=0, vigorFlash=0;   // Vigor HP-slot grow animation
 let slamReq=null, slamGhosts=[], slamFx=[], zapFx=[];   // Crush Drop + Topaz dash-impact white flashes
 let shakeT=0, shakeMag=0;
@@ -252,6 +254,7 @@ function press(code){
   if (code==='KeyZ' && !keys[code] && mode==='play' && p && !p.dead && !p.onGround)
     diveReq={dir:0, t:performance.now()};   // dir resolved at trigger (held dir, else facing)
   if ((code==='Space'||code==='ArrowUp') && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && equippedStone && stoneCharge>=PMETER && !powerActive) activatePower();
+  if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && chosen==='fusion' && (!p.onGround || p.flying)){ p.flying=!p.flying; if(p.flying){ p.vx=0; p.vy=0; flyGhosts=[]; playSfx('sfx_rwhoosh',0.9); } else { playSfx('sfx_jump',0.5); } }
   keys[code]=true;
 }
 function release(code){
@@ -901,11 +904,11 @@ function reset(keep){
   const sx = keep && p ? p.spawn : 90;
   const sy = keep && p && p.spawnY!==undefined ? p.spawnY : (segFloorsAt(sx)[0]!==undefined?segFloorsAt(sx)[0]:GROUND);
   p = { x:sx, y:sy, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
-        hp:curMaxHP(), hpShown:curMaxHP(), inv:0, flash:0, dead:false, hurtT:0, invHurt:0, diveT:0, diveRec:0, slamT:0, slamRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
+        hp:curMaxHP(), hpShown:curMaxHP(), inv:0, flash:0, dead:false, hurtT:0, invHurt:0, diveT:0, diveRec:0, slamT:0, slamRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, flying:false, castT:0, castCd:0, castFired:true, winning:false, winT:0 };
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
   for(const bo of (bolts||[])){ if(bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
-  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; curses=[]; flameWaves=[]; shakeT=0; shakeMag=0; maxHPShown=curMaxHP(); hpGrowPending=0; vigorFlash=0;
+  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; curses=[]; flameWaves=[]; flyGhosts=[]; shakeT=0; shakeMag=0; maxHPShown=curMaxHP(); hpGrowPending=0; vigorFlash=0;
   if (!keep){
     soulCount=0; soulOrbGot=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],val:(s[2]||1),got:false,pop:0,ph:i*0.31}));
@@ -1194,6 +1197,7 @@ function update(dt){
   else if (slamGhosts.length) slamGhosts.shift();
   if (powerActive && equippedStone==='sapphire' && transformT<=0){ if(Math.abs(p.vx)>1.5||!p.onGround){ sapTrail.push({x:p.x,y:p.y,st:p.state,fi:curFrame(),f:p.facing}); if(sapTrail.length>10) sapTrail.shift(); } else if(sapTrail.length) sapTrail.shift(); }
   else if (sapTrail.length) sapTrail.length=0;
+  if(p.dead||p.won||p.winning) p.flying=false;
   const kneeling = false;   // crouch removed; Down is now a modifier (Down+cast = upward attack)
   let dir=0;
   if (!kneeling){ if (keys['ArrowLeft']) dir=-1; else if (keys['ArrowRight']) dir=1; }
@@ -1202,8 +1206,8 @@ function update(dt){
   let inTar=false; for(const h of HAZ){ if(h.t==='tar' && p.onGround && p.x>=h.x && p.x<=h.x+h.w && Math.abs(p.y-h.y)<8){ inTar=true; break; } }
   if(p.inv<=0){ for(const z of GHURT){ if(p.x+26>z.l && p.x-26<z.r && p.y>z.top && (p.y-PH)<z.bot){ hurtPlayer((z.l+z.r)/2,1); break; } } }
   const speed=(running?RUN:WALK)*(inTar?0.4:1)*((powerActive&&equippedStone==='topaz')?1.7:1);
-  if (p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
-  if (!kneeling && p.diveRec<=0 && p.slamRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
+  if (p.flying){ p.vx=dir*FLYSPD; if(dir!==0) p.facing=dir; } else if (p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
+  if (!kneeling && !p.flying && p.diveRec<=0 && p.slamRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
   if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamRec<=0&&p.onGround&&SPR.chars[chosen].attack.weapon){
     p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
     playSfx(isDing(chosen)?'sfx_wing':'sfx_slash');
@@ -1260,8 +1264,9 @@ function update(dt){
     }
   }
   p.x=nx;
-  const prevFeet=p.y; if (powerActive && equippedStone==='chaos' && chaosSpawnN>0 && !p.dead){ p.vy=0; p.onGround=false; } else if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else if (p.slamT>0) p.vy=SLAM_VY; else p.vy+=GRAV; p.y+=p.vy;
-  if (p.vy>=0){
+  const prevFeet=p.y; if (powerActive && equippedStone==='chaos' && chaosSpawnN>0 && !p.dead){ p.vy=0; p.onGround=false; } else if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else if (p.slamT>0) p.vy=SLAM_VY; else if (p.flying){ p.vy=((keys['ArrowDown']||keys['KeyS']?1:0)-(keys['ArrowUp']||keys['KeyW']?1:0))*FLYSPD; } else p.vy+=GRAV; p.y+=p.vy;
+  if (p.flying){ p.onGround=false; p.standPlat=null; }
+  else if (p.vy>=0){
     let cand=[]; for(const fy of segFloorsAt(p.x)) cand.push({t:fy,q:null});
     for (const s of SOLID){ if(p.x>=s.l&&p.x<=s.r) cand.push({t:s.top,q:null}); }
     for (const b of GBOUNCE){ if(p.x>=b.l&&p.x<=b.r) cand.push({t:b.top,q:null,bounce:b}); }
@@ -1283,8 +1288,9 @@ function update(dt){
       }
     }
   }
+  if(p.flying){ p.x=clamp(p.x,18,WORLD-18); p.y=clamp(p.y,70,GROUND+24); flyGhosts.push({x:p.x,y:p.y,fc:p.facing}); if(flyGhosts.length>11) flyGhosts.shift(); }
   // hard-resolve overlap with solid terrain walls (accurate edges, no pass-through)
-  for (const s of TSOLID){
+  if(!p.flying) for (const s of TSOLID){
     if (p.y>s.top+4 && (p.y-PH)<s.bot){
       const pl=p.x-PW/2, pr=p.x+PW/2;
       if (pr>s.l && pl<s.r){
@@ -1292,7 +1298,7 @@ function update(dt){
       }
     }
   }
-  if (p.y>WORLDH+220){
+  if (!p.flying && p.y>WORLDH+220){
     gotHit=true; playSfx('sfx_hurt');
     p.hp-=1; p.x=p.spawn; p.y=(p.spawnY!==undefined?p.spawnY:GROUND); p.vy=0; p.vx=0; p.onGround=true; p.standPlat=null;
     p.inv=1.2; p.invHurt=1.2; p.flash=0.35; p.hurtT=0;
@@ -1313,7 +1319,8 @@ function update(dt){
   if (p.onGround && p.diveT>0){ p.diveT=0; p.diveRec=DIVE_REC; p.vx=0; p.clock=0; playSfx('sfx_meleehit',0.45); }
   if (p.onGround && p.slamT>0){ p.slamT=0; p.slamRec=SLAM_REC; p.vx=0; p.clock=0; p.inv=Math.max(p.inv,SLAM_IFRAMES); slamBoom(p.x, p.y); }
   let st;
-  if (p.diveT>0) st='dive';
+  if (p.flying) st='run';
+  else if (p.diveT>0) st='dive';
   else if (p.slamT>0||p.slamRec>0) st='kneel';
   else if (p.diveRec>0) st='kneel';
   else if (p.hurtT>0) st='hurt';
@@ -3043,6 +3050,16 @@ function renderCrushDeath(sx, gt){
 function drawPlayerLayer(){
   if (p.won) return;
   const sx=p.x-camX;
+  if (p.flying && !p.dead && !p.winning){
+    ctx.save(); ctx.strokeStyle='rgba(198,150,255,0.5)'; ctx.lineWidth=2;
+    for(let i=0;i<8;i++){ const ly=p.y-130+Math.random()*108, lx=sx-p.facing*(18+Math.random()*46), ln=44+Math.random()*80; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx-p.facing*ln,ly); ctx.stroke(); }
+    ctx.restore();
+    const rfr=SPR.chars[chosen].run?(Math.floor(p.clock*pfps('run'))%SPR.chars[chosen].run.frames):0;
+    for(let gi=0; gi<flyGhosts.length; gi+=2){ const g=flyGhosts[gi], gsx=g.x-camX;
+      ctx.save(); ctx.globalAlpha=0.06+0.13*(gi/Math.max(1,flyGhosts.length));
+      drawCharSprite(chosen,'run',rfr,gsx,g.y,g.fc,1,0); ctx.restore();
+    }
+  }
   if (p.winning){
     const t=p.winT, gi=Math.min(1,t/1.6);
     const fl=(Math.floor(gt*(6+26*gi*gi))%4===0)?Math.max(0.25,1-0.9*gi*gi):(Math.random()<0.12*gi*gi?0.55:1);
