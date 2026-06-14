@@ -73,6 +73,29 @@
   body.joy .grpL{visibility:hidden}
   #joybase{position:fixed;width:128px;height:128px;border-radius:50%;border:2px solid rgba(205,195,255,.38);background:radial-gradient(circle,rgba(150,130,220,.18),rgba(120,100,190,.06));transform:translate(-50%,-50%);pointer-events:none;z-index:7;display:none}
   #joyknob{position:fixed;width:58px;height:58px;border-radius:50%;background:rgba(200,180,255,.5);border:2px solid rgba(235,228,255,.7);transform:translate(-50%,-50%);pointer-events:none;z-index:8;display:none;box-shadow:0 0 14px rgba(170,120,255,.5)}
+:root{--bs:1}
+  .btn{width:calc(66px*var(--bs));height:calc(66px*var(--bs))}
+  .btn.jump{width:calc(82px*var(--bs));height:calc(82px*var(--bs))}
+  .grpDiamond{position:relative;width:calc(196px*var(--bs));height:calc(196px*var(--bs));pointer-events:none;display:none}
+  body.diamond .grpDiamond{display:block}
+  body.diamond .grpR{display:none}
+  .grpDiamond .btn,.grpDiamond .btn.jump{position:absolute;width:calc(62px*var(--bs));height:calc(62px*var(--bs));margin:0;pointer-events:auto}
+  .grpDiamond .dia-top{top:0;left:calc(67px*var(--bs))}
+  .grpDiamond .dia-bottom{top:calc(134px*var(--bs));left:calc(67px*var(--bs))}
+  .grpDiamond .dia-left{top:calc(67px*var(--bs));left:0}
+  .grpDiamond .dia-right{top:calc(67px*var(--bs));left:calc(134px*var(--bs))}
+  .dia-ph{font-size:calc(26px*var(--bs));color:rgba(255,255,255,.55)}
+  body.desktop .touch{display:none!important}
+  body.desktop #joyzone{display:none!important}
+  #touchSettings{position:fixed;inset:0;z-index:50;background:rgba(8,5,18,.82);display:none;align-items:center;justify-content:center;font-family:sans-serif;color:#eae6ff}
+  #touchSettings .ts-panel{background:rgba(22,16,44,.98);border:1.5px solid rgba(150,140,255,.5);border-radius:14px;padding:22px 24px;width:min(380px,86vw);display:flex;flex-direction:column;gap:15px}
+  #touchSettings .ts-title{font-size:20px;font-weight:bold;text-align:center}
+  #touchSettings .ts-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
+  #touchSettings .opts{display:flex;gap:8px}
+  #touchSettings button.tg{background:#1a1330;border:1px solid rgba(155,140,255,.4);color:#cdbbe6;border-radius:8px;padding:8px 12px;font-size:13px}
+  #touchSettings button.tg.on{background:rgba(200,251,80,.18);border-color:#c8fb50;color:#eaffcf}
+  #touchSettings input[type=range]{flex:1}
+  #tsClose{background:rgba(200,251,80,.16);border:1px solid #c8fb50;color:#eaffcf;border-radius:9px;padding:11px;font-size:15px;font-weight:600}
 </style>
 </head>
 <body>
@@ -96,13 +119,26 @@
     </div>
     <button class="btn jump" id="bJ" aria-label="jump"></button>
   </div>
+  <div class="grpDiamond">
+    <button class="btn dia-ph dia-top" id="bDT" aria-label="top">?</button>
+    <button class="btn cast dia-right" id="bDR" aria-label="bolt"></button>
+    <button class="btn atk dia-left" id="bDL" aria-label="melee"></button>
+    <button class="btn jump dia-bottom" id="bDB" aria-label="jump"></button>
+  </div>
 </div>
 <div id="joyzone"></div><div id="joybase"></div><div id="joyknob"></div>
+<div id="touchSettings"><div class="ts-panel">
+  <div class="ts-title">Touch Controls</div>
+  <div class="ts-row"><span>Movement</span><div class="opts"><button class="tg" data-move="joy">Joystick</button><button class="tg" data-move="dpad">D-Pad</button></div></div>
+  <div class="ts-row"><span>Action Buttons</span><div class="opts"><button class="tg" data-layout="diamond">Diamond</button><button class="tg" data-layout="classic">Classic</button></div></div>
+  <div class="ts-row"><span>Button Size</span><input type="range" id="tsSize" min="0.7" max="1.5" step="0.05"></div>
+  <button id="tsClose">Done</button>
+</div></div>
 <script src="./levels/stage1.js?v=1780859618"></script>
 <script src="./levels/stage2.js?v=1780859618"></script>
 <script src="./levels/crypt1.js?v=1780859618"></script>
 <script src="./levels/crypt2.js?v=1780859618"></script>
-<script src="./src/world.js?v=1781650000"></script>
-<script src="./src/engine.js?v=1781650000"></script>
+<script src="./src/world.js?v=1781660000"></script>
+<script src="./src/engine.js?v=1781660000"></script>
 </body>
 </html>

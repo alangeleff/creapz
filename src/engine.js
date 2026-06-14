@@ -1,4 +1,4 @@
-const ASSET_VER='1781650000';
+const ASSET_VER='1781660000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -383,6 +383,28 @@ function _joyClear(){ for(const c of _joy.codes) release(c); _joy.codes=new Set(
   zone.addEventListener('pointermove',e=>{ if(!_joy.active||e.pointerId!==_joy.id)return; e.preventDefault(); const dx=e.clientX-_joy.ox, dy=e.clientY-_joy.oy, dz=16, R=48; const nc=new Set(); if(dx<-dz)nc.add('ArrowLeft'); else if(dx>dz)nc.add('ArrowRight'); if(dy<-dz)nc.add('ArrowUp'); else if(dy>dz)nc.add('ArrowDown'); _joySet(nc); const m=Math.hypot(dx,dy)||1, k=Math.min(1,R/m); knob.style.left=(_joy.ox+dx*k)+'px'; knob.style.top=(_joy.oy+dy*k)+'px'; });
   const end=()=>{ _joy.active=false; _joyClear(); base.style.display=knob.style.display='none'; };
   zone.addEventListener('pointerup',end); zone.addEventListener('pointercancel',end);
+})();
+// --- Action-button layout (classic 3 / diamond 4) + size + desktop auto-hide ---
+let btnLayout=(function(){ try{ return localStorage.getItem('creapz_btnlayout')||'classic'; }catch(e){ return 'classic'; } })();
+let btnScale=(function(){ try{ return parseFloat(localStorage.getItem('creapz_btnscale'))||1; }catch(e){ return 1; } })();
+function applyBtnLayout(){ document.body.classList.toggle('diamond', btnLayout==='diamond'); }
+function setBtnLayout(v){ btnLayout=v; try{ localStorage.setItem('creapz_btnlayout',v); }catch(e){} applyBtnLayout(); syncTouchPanel(); }
+function applyBtnScale(){ document.documentElement.style.setProperty('--bs', btnScale); }
+function setBtnScale(v){ btnScale=v; try{ localStorage.setItem('creapz_btnscale',String(v)); }catch(e){} applyBtnScale(); }
+applyBtnLayout(); applyBtnScale();
+(function(){ const t=('ontouchstart' in window)||navigator.maxTouchPoints>0; document.body.classList.toggle('desktop', !t); })();
+bindBtn('bDB','Space'); bindBtn('bDR','KeyX'); bindBtn('bDL','KeyZ');   // diamond: bottom=jump, right=bolt, left=melee; bDT(top)=placeholder
+function syncTouchPanel(){ const p=document.getElementById('touchSettings'); if(!p) return;
+  p.querySelectorAll('[data-move]').forEach(b=>b.classList.toggle('on',(b.dataset.move==='joy')===joystickMode));
+  p.querySelectorAll('[data-layout]').forEach(b=>b.classList.toggle('on',b.dataset.layout===btnLayout));
+  const sl=document.getElementById('tsSize'); if(sl) sl.value=btnScale;
+}
+function openTouchPanel(){ const p=document.getElementById('touchSettings'); if(!p) return; syncTouchPanel(); p.style.display='flex'; }
+(function(){ const p=document.getElementById('touchSettings'); if(!p) return;
+  p.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('click',()=>{ setJoystickMode(b.dataset.move==='joy'); syncTouchPanel(); }));
+  p.querySelectorAll('[data-layout]').forEach(b=>b.addEventListener('click',()=>setBtnLayout(b.dataset.layout)));
+  const sl=document.getElementById('tsSize'); if(sl) sl.addEventListener('input',()=>setBtnScale(parseFloat(sl.value)));
+  const cl=document.getElementById('tsClose'); if(cl) cl.addEventListener('click',()=>{ p.style.display='none'; });
 })();
 // --- block mobile zoom gestures (two-finger button presses were triggering a stuck pinch-zoom) ---
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
@@ -3482,7 +3504,7 @@ function drawOptions(){
     ctx.fillStyle='#e8e6f5'; ctx.fillText('+', bx2+bw2+32, y+7);
     menuRects.push({x:bx2+bw2+14,y:y-16,w:36,h:32,action:row[1]+'+'});
   });
-  [['Export Save','export',2],['Import Save','import',3],['Install App','install',4],['Controller','controller',5],['Controls: '+(joystickMode?'Joystick':'D-Pad'),'togglejoy',6]].forEach((row,k)=>{
+  [['Export Save','export',2],['Import Save','import',3],['Install App','install',4],['Controller','controller',5],['Touch Controls','touchpanel',6]].forEach((row,k)=>{
     const y=my+162+k*40;
     const hot=(optSel===row[2]);
     ctx.fillStyle=hot?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(mx+60,y,mw-120,33,9); ctx.fill();
@@ -3511,7 +3533,7 @@ function titleMenuAction(a){
   else if (a==='import'){ importSave(); }
   else if (a==='install'){ installApp(); }
   else if (a==='controller'){ ctrlReturn='title'; gpListen=null; mode='controls'; }
-  else if (a==='togglejoy'){ setJoystickMode(!joystickMode); }
+  else if (a==='touchpanel'){ openTouchPanel(); }
   else if (a==='m-'){ musicVol=Math.max(0,Math.round((musicVol-0.1)*10)/10); saveVols(); }
   else if (a==='m+'){ musicVol=Math.min(1,Math.round((musicVol+0.1)*10)/10); saveVols(); }
   else if (a==='s-'){ sfxVol=Math.max(0,Math.round((sfxVol-0.1)*10)/10); if(sfxGain) sfxGain.gain.value=0.45*sfxVol; saveVols(); }
