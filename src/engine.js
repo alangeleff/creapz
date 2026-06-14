@@ -1,4 +1,4 @@
-const ASSET_VER='1781680000';
+const ASSET_VER='1781690000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -245,7 +245,7 @@ let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0, chaosGl
 let flyGhosts=[];   // Power Dive trail + Sapphire after-image trail
 let maxHPShown=4, hpGrowPending=0, vigorFlash=0;   // Vigor HP-slot grow animation
 let slamReq=null, slamGhosts=[], slamFx=[], zapFx=[];   // Crush Drop + Topaz dash-impact white flashes
-let _xWasDown=false,_xT=0,_xHeld=false,_zWasDown=false,_zT=0,_zHeld=false,_zAir=false; const ACT_HOLD_MS=200;
+let _xWasDown=false,_xT=0,_xHeld=false,_zWasDown=false,_zT=0,_zHeld=false,_zAir=false; const ACT_HOLD_MS=140;
 let shakeT=0, shakeMag=0;
 function press(code){
   if (code==='ArrowLeft'||code==='ArrowRight'){
