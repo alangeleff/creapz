@@ -1,4 +1,4 @@
-const ASSET_VER='1781730000';
+const ASSET_VER='1781740000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -76,7 +76,7 @@ function exitSkins(){ chosen = isDing(chosen) ? (dingSkin||'dingbat') : (creaper
 // ===== DUAL MODE (Phase 1): cReaper + Dingbat, one leads, one CPU-follows =====
 let pal=null, dualMode=false, _crumbs=[];
 let _cWasDown=false,_cT=0,_cHeld=false;
-const FOLLOW_DELAY=18, CRUMB_MAX=72, PAL_TELE_DIST=260, PAL_AGGRO_R=200, PAL_ATK_CD=1.0, PAL_DMG=1;
+const FOLLOW_DELAY=18, CRUMB_MAX=72, PAL_TELE_DIST=260, PAL_AGGRO_R=200, PAL_ATK_CD=1.0, PAL_DMG=1, PAL_STANDBACK=44;
 function spawnPal(){
   if(!p) return;
   const palck = isDing(chosen) ? (creaperSkin||'default') : (dingSkin||'dingbat');
@@ -121,11 +121,21 @@ function updatePal(dt){
   if(_crumbs.length>CRUMB_MAX) _crumbs.shift();
   const idx=_crumbs.length-1-FOLLOW_DELAY, tgt=idx>=0?_crumbs[idx]:null;
   if(tgt){
-    const dx=tgt.x-pal.x, dy=tgt.y-pal.y, d=Math.hypot(dx,dy);
-    if(d>PAL_TELE_DIST) pal.tele=0.25;                 // warp poof when snapping a big gap
-    pal.x=tgt.x; pal.y=tgt.y;
-    pal.facing = Math.abs(dx)>0.5 ? (dx>0?1:-1) : (tgt.facing||pal.facing);
-    pal.state = tgt.air ? 'jump' : (d>1.5 ? 'run' : 'idle');
+    const leadIdle = p.onGround && Math.abs(p.vx)<0.8;
+    if(leadIdle){
+      // lead stopped: settle to a fixed gap BEHIND the lead instead of stacking on top of them
+      const restX = p.x - p.facing*PAL_STANDBACK;
+      pal.x += (restX-pal.x)*Math.min(1,dt*9);
+      pal.y += (p.y-pal.y)*Math.min(1,dt*9);
+      pal.facing = p.facing;
+      pal.state = Math.abs(restX-pal.x)>3 ? 'run' : 'idle';
+    } else {
+      const dx=tgt.x-pal.x, dy=tgt.y-pal.y, d=Math.hypot(dx,dy);
+      if(d>PAL_TELE_DIST) pal.tele=0.25;               // warp poof when snapping a big gap
+      pal.x=tgt.x; pal.y=tgt.y;
+      pal.facing = Math.abs(dx)>0.5 ? (dx>0?1:-1) : (tgt.facing||pal.facing);
+      pal.state = tgt.air ? 'jump' : (d>1.5 ? 'run' : 'idle');
+    }
   }
   if(pal.x<camX-90 || pal.x>camX+W+90){ const c=_crumbs[Math.max(0,_crumbs.length-1-((FOLLOW_DELAY/2)|0))]; if(c){ pal.x=c.x; pal.y=c.y; pal.tele=0.25; } }
   pal.clock+=dt; if(pal.tele>0) pal.tele-=dt;
