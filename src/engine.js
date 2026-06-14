@@ -1,4 +1,4 @@
-const ASSET_VER='1781720000';
+const ASSET_VER='1781730000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -72,6 +72,81 @@ function swapChar(){
 }
 // Leaving the Skins screen: make the character you're currently playing show its assigned skin.
 function exitSkins(){ chosen = isDing(chosen) ? (dingSkin||'dingbat') : (creaperSkin||'default'); saveProg(); enterWorld(false); }
+
+// ===== DUAL MODE (Phase 1): cReaper + Dingbat, one leads, one CPU-follows =====
+let pal=null, dualMode=false, _crumbs=[];
+let _cWasDown=false,_cT=0,_cHeld=false;
+const FOLLOW_DELAY=18, CRUMB_MAX=72, PAL_TELE_DIST=260, PAL_AGGRO_R=200, PAL_ATK_CD=1.0, PAL_DMG=1;
+function spawnPal(){
+  if(!p) return;
+  const palck = isDing(chosen) ? (creaperSkin||'default') : (dingSkin||'dingbat');
+  pal={ ck:palck, x:p.x-34*p.facing, y:p.y, facing:p.facing, state:'idle', clock:0, attackT:0, atkCd:0, tele:0 };
+  _crumbs=[];
+}
+function toggleDual(){
+  if(chosen==='fusion'||chosen==='son') return;   // special forms don't pair
+  if(dualMode){ dualMode=false; pal=null; playSfx('sfx_jump',0.5); }
+  else { dualMode=true; spawnPal(); playSfx('sfx_rwhoosh',0.7); }
+  if(prog) prog.dual=dualMode;
+  saveProg();
+}
+function swapLead(){            // dual: front & back characters trade identities (bodies stay put)
+  if(!pal) return;
+  const t=chosen; chosen=pal.ck; pal.ck=t;
+  if(isDing(chosen)) dingSkin=chosen; else creaperSkin=chosen;
+  if(isDing(pal.ck)) dingSkin=pal.ck; else creaperSkin=pal.ck;
+  p.attackT=0; p.castT=0; p.castFired=true; p.diveT=0; p.slamT=0; pal.attackT=0;
+  p.swapFlash=performance.now();
+  try{poweredImg();}catch(e){}
+  saveProg(); playSfx('sfx_mtog');
+}
+function palFrame(){
+  const C=SPR.chars[pal.ck];
+  if(pal.attackT>0 && C.attack){ const afps=(C.fps&&C.fps.attack)||FPS.attack; return Math.min(C.attack.frames-1, Math.floor((C.attack.frames/afps - pal.attackT)*afps)); }
+  const st=C[pal.state]?pal.state:'idle', a=C[st], fps=(C.fps&&C.fps[st])||FPS[st]||FPS.idle;
+  return Math.floor(pal.clock*fps)%a.frames;
+}
+function palApplyHits(){
+  const C=SPR.chars[pal.ck]; if(!C.attack||!C.attack.weapon) return;
+  const afps=(C.fps&&C.fps.attack)||FPS.attack;
+  const fi=Math.min(C.attack.frames-1, Math.floor((C.attack.frames/afps - pal.attackT)*afps));
+  const wb=worldWeaponBox(C.attack, fi, pal.x, pal.y, pal.facing); if(!wb) return;
+  for(const z of zombies){ if(z.dead||z.hitCd>0) continue; if(overlap(wb, zBodyBox(z))){ z.hp-=PAL_DMG; z.hitCd=0.4; z.shown=3; playSfx('sfx_meleehit',0.5);
+    if(z.hp<=0){ z.dead=true; z.dieT=0; z.dstate=z.state; z.dframe=0; zbitsBurst(z,14); killCount++; addScore(KPTS[z.kw]||300); playSfx('sfx_die',0.55); } } }
+  for(const b of bats){ if(b.dead) continue; if(overlap(wb, batBox(b))){ b.dead=true; b.dieT=0; batBits(b,14); killCount++; addScore(KPTS.bat); playSfx('sfx_die',0.5); } }
+}
+function updatePal(dt){
+  if(!dualMode||!pal||p.dead||p.won||p.winning) return;
+  _crumbs.push({x:p.x,y:p.y,facing:p.facing,air:!p.onGround});
+  if(_crumbs.length>CRUMB_MAX) _crumbs.shift();
+  const idx=_crumbs.length-1-FOLLOW_DELAY, tgt=idx>=0?_crumbs[idx]:null;
+  if(tgt){
+    const dx=tgt.x-pal.x, dy=tgt.y-pal.y, d=Math.hypot(dx,dy);
+    if(d>PAL_TELE_DIST) pal.tele=0.25;                 // warp poof when snapping a big gap
+    pal.x=tgt.x; pal.y=tgt.y;
+    pal.facing = Math.abs(dx)>0.5 ? (dx>0?1:-1) : (tgt.facing||pal.facing);
+    pal.state = tgt.air ? 'jump' : (d>1.5 ? 'run' : 'idle');
+  }
+  if(pal.x<camX-90 || pal.x>camX+W+90){ const c=_crumbs[Math.max(0,_crumbs.length-1-((FOLLOW_DELAY/2)|0))]; if(c){ pal.x=c.x; pal.y=c.y; pal.tele=0.25; } }
+  pal.clock+=dt; if(pal.tele>0) pal.tele-=dt;
+  if(pal.atkCd>0) pal.atkCd-=dt;
+  if(pal.attackT>0){ pal.attackT-=dt; palApplyHits(); }
+  else if(pal.atkCd<=0){
+    let best=null,bd=PAL_AGGRO_R;
+    for(const z of zombies){ if(z.dead)continue; const dd=Math.hypot(z.x-pal.x,(z.y-40)-(pal.y-40)); if(dd<bd){bd=dd;best=z;} }
+    if(best){ pal.facing=best.x>pal.x?1:-1; const C=SPR.chars[pal.ck];
+      if(C.attack&&C.attack.weapon){ pal.attackT=C.attack.frames/((C.fps&&C.fps.attack)||FPS.attack); pal.atkCd=PAL_ATK_CD; playSfx(isDing(pal.ck)?'sfx_wing':'sfx_slash',0.5); } }
+  }
+  for(const sl of souls){ if(sl.got)continue; if(Math.hypot(sl.x-pal.x,sl.y-(pal.y-40))<48){ sl.got=true; sl.pop=0; soulCount+=sl.val; soulOrbGot++; addScore(SOUL_PTS,'soul'); playSfx('sfx_soul'); if(equippedStone&&!powerActive) stoneCharge=Math.min(PMETER,stoneCharge+sl.val*greedMult()); } }
+}
+function drawPal(){
+  if(!dualMode||!pal) return;
+  const sx=pal.x-camX; if(sx<-90||sx>W+90) return;
+  const st = pal.attackT>0 ? 'attack' : (SPR.chars[pal.ck][pal.state]?pal.state:'idle');
+  ctx.save(); ctx.globalAlpha = pal.tele>0 ? 0.55 : 0.85;
+  drawCharSprite(pal.ck, st, palFrame(), sx, pal.y, pal.facing, 0.92, 0);
+  ctx.restore();
+}
 function cycleSkin(dir){ const list=isDing(chosen)?DORDER:corder(); let i=list.indexOf(chosen); if(i<0)i=0; chosen=list[(i+dir+list.length)%list.length]; if(isDing(chosen))dingSkin=chosen; else creaperSkin=chosen; try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
@@ -140,9 +215,9 @@ try{ // migrate the Phase-A single save into slot 1
   if(p0) localStorage.removeItem('creapz_prog_v1');
 }catch(e){}
 function saveAll(){ try{ localStorage.setItem(SAVEK,JSON.stringify(saves)); }catch(e){} }
-function bindSlot(i){ slotIdx=i; prog=saves.slots[i]; chosen=prog.chosen||'default'; }
+function bindSlot(i){ slotIdx=i; prog=saves.slots[i]; chosen=prog.chosen||'default'; dualMode=!!(prog&&prog.dual); pal=null; }
 function slotStats(sl){ const n=Object.keys(sl.acts||{}).filter(k=>sl.acts[k].done).length; return {acts:n, pct:Math.max(1,Math.round(n*100/TOTAL_ACTS)), soulz:sl.soulz||0}; }
-function saveProg(){ if(slotIdx>=0&&prog){ prog.chosen=chosen; prog.played=Date.now(); } saveAll(); }
+function saveProg(){ if(slotIdx>=0&&prog){ prog.chosen=chosen; prog.dual=dualMode; prog.played=Date.now(); } saveAll(); }
 let optMsg='', deferredInstall=null;
 window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredInstall=e; });
 function exportSave(){
@@ -267,7 +342,6 @@ function press(code){
   }
   if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && equippedStone && stoneCharge>=PMETER && !powerActive) activatePower();
   if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && chosen==='fusion' && (!p.onGround || p.flying)){ p.flying=!p.flying; if(p.flying){ p.vx=0; p.vy=0; flyGhosts=[]; playSfx('sfx_rwhoosh',0.9); } else { playSfx('sfx_jump',0.5); } }
-  if (code==='KeyC' && mode==='play') swapChar();
   keys[code]=true;
 }
 function release(code){
@@ -961,7 +1035,7 @@ function reset(keep){
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
   for(const bo of (bolts||[])){ if(bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
-  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; curses=[]; flameWaves=[]; flyGhosts=[]; _xWasDown=false; _zWasDown=false; _xHeld=false; _zHeld=false; shakeT=0; shakeMag=0; maxHPShown=curMaxHP(); hpGrowPending=0; vigorFlash=0;
+  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; curses=[]; flameWaves=[]; flyGhosts=[]; _xWasDown=false; _zWasDown=false; _xHeld=false; _zHeld=false; _cWasDown=false; _cHeld=false; shakeT=0; shakeMag=0; maxHPShown=curMaxHP(); hpGrowPending=0; vigorFlash=0;
   if (!keep){
     soulCount=0; soulOrbGot=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],val:(s[2]||1),got:false,pop:0,ph:i*0.31}));
@@ -979,6 +1053,7 @@ function reset(keep){
   bats = bspawn.map((b,i)=>({x:b[0], y:b[3], y0:b[3], t:Math.random()*3, ph:i*1.7, facing:(b[4]!==undefined?b[4]:-1), dir:(b[4]!==undefined?b[4]:(i%2?1:-1)),
     min:b[1], max:b[2], dead:false, dieT:0, yD:b[3], state:'idle', bt:0, biteCd:0}));
   hazReset();
+  _crumbs=[]; if(dualMode) spawnPal();
 }
 function onReset(){ if (p && p.dead && !p.won) reset(true); else reset(); }
 function inTerrain(x,y){ for(const sg of TSOLID){ if(x>sg.l+1 && x<sg.r-1 && y>sg.top+1 && y<sg.bot-1) return true; } return false; }
@@ -1274,6 +1349,11 @@ function update(dt){
       _zHeld=true; p.slamT=1; p.vx=0; p.vy=SLAM_VY; slamGhosts=[]; playSfx('sfx_rwhoosh',1.0); }
   } else if(_zWasDown){ _zWasDown=false;
     if(_zAir && !_zHeld && !p.onGround && performance.now()-_zT<ACT_HOLD_MS) diveReq={dir:0,t:performance.now()}; }
+  // Top button (KeyC): tap = swap character/lead ; hold = toggle Dual mode
+  if (keys['KeyC'] && !p.dead && !p.won && !p.winning){
+    if(!_cWasDown){ _cWasDown=true; _cT=performance.now(); _cHeld=false; }
+    else if(!_cHeld && performance.now()-_cT>=ACT_HOLD_MS){ _cHeld=true; toggleDual(); }
+  } else if(_cWasDown){ _cWasDown=false; if(!_cHeld){ if(dualMode) swapLead(); else swapChar(); } }
   if (p.attackT>0){
     p.attackT-=dt;
     if (isDing(chosen)){
@@ -1717,6 +1797,7 @@ function update(dt){
   updateFlameWaves(dt*efr);
   updateHazards(dt*efr);
   updateZbits(dt);
+  updatePal(dt);
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
   const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
   camY+=(_cty-camY)*Math.min(1,dt*7);
@@ -3266,6 +3347,7 @@ function draw(){
   drawFluoriteAura('back');
   drawRubyBackOrbs();
   drawChaosBack();
+  drawPal();
   drawPlayerLayer();
   drawSlamFx();
   drawPower();
