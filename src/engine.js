@@ -1,4 +1,4 @@
-const ASSET_VER='1781660000';
+const ASSET_VER='1781670000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -379,7 +379,7 @@ function _joyClear(){ for(const c of _joy.codes) release(c); _joy.codes=new Set(
 (function(){
   const zone=document.getElementById('joyzone'), base=document.getElementById('joybase'), knob=document.getElementById('joyknob');
   if(!zone) return;
-  zone.addEventListener('pointerdown',e=>{ if(mode!=='play')return; e.preventDefault(); _joy.active=true; _joy.id=e.pointerId; _joy.ox=e.clientX; _joy.oy=e.clientY; base.style.left=knob.style.left=e.clientX+'px'; base.style.top=knob.style.top=e.clientY+'px'; base.style.display=knob.style.display='block'; try{zone.setPointerCapture(e.pointerId);}catch(_){} });
+  zone.addEventListener('pointerdown',e=>{ if(mode!=='play')return; const _cv=document.getElementById('c'); if(_cv){ const _r=_cv.getBoundingClientRect(), _sx=_r.width/_cv.width, _sy=_r.height/_cv.height; if(e.clientX>=_r.left+(PB.x-8)*_sx && e.clientX<=_r.left+(PB.x+PB.w+8)*_sx && e.clientY>=_r.top+(PB.y-8)*_sy && e.clientY<=_r.top+(PB.y+PB.h+8)*_sy){ if(p&&!p.dead&&!p.won&&!p.winning){ paused=true; playSfx('sfx_mtog'); } return; } } e.preventDefault(); _joy.active=true; _joy.id=e.pointerId; _joy.ox=e.clientX; _joy.oy=e.clientY; base.style.left=knob.style.left=e.clientX+'px'; base.style.top=knob.style.top=e.clientY+'px'; base.style.display=knob.style.display='block'; try{zone.setPointerCapture(e.pointerId);}catch(_){} });
   zone.addEventListener('pointermove',e=>{ if(!_joy.active||e.pointerId!==_joy.id)return; e.preventDefault(); const dx=e.clientX-_joy.ox, dy=e.clientY-_joy.oy, dz=16, R=48; const nc=new Set(); if(dx<-dz)nc.add('ArrowLeft'); else if(dx>dz)nc.add('ArrowRight'); if(dy<-dz)nc.add('ArrowUp'); else if(dy>dz)nc.add('ArrowDown'); _joySet(nc); const m=Math.hypot(dx,dy)||1, k=Math.min(1,R/m); knob.style.left=(_joy.ox+dx*k)+'px'; knob.style.top=(_joy.oy+dy*k)+'px'; });
   const end=()=>{ _joy.active=false; _joyClear(); base.style.display=knob.style.display='none'; };
   zone.addEventListener('pointerup',end); zone.addEventListener('pointercancel',end);
@@ -399,12 +399,12 @@ function syncTouchPanel(){ const p=document.getElementById('touchSettings'); if(
   p.querySelectorAll('[data-layout]').forEach(b=>b.classList.toggle('on',b.dataset.layout===btnLayout));
   const sl=document.getElementById('tsSize'); if(sl) sl.value=btnScale;
 }
-function openTouchPanel(){ const p=document.getElementById('touchSettings'); if(!p) return; syncTouchPanel(); p.style.display='flex'; }
+function openTouchPanel(){ const p=document.getElementById('touchSettings'); if(!p) return; syncTouchPanel(); p.style.display='flex'; document.body.classList.add('tspanel'); }
 (function(){ const p=document.getElementById('touchSettings'); if(!p) return;
   p.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('click',()=>{ setJoystickMode(b.dataset.move==='joy'); syncTouchPanel(); }));
   p.querySelectorAll('[data-layout]').forEach(b=>b.addEventListener('click',()=>setBtnLayout(b.dataset.layout)));
   const sl=document.getElementById('tsSize'); if(sl) sl.addEventListener('input',()=>setBtnScale(parseFloat(sl.value)));
-  const cl=document.getElementById('tsClose'); if(cl) cl.addEventListener('click',()=>{ p.style.display='none'; });
+  const cl=document.getElementById('tsClose'); if(cl) cl.addEventListener('click',()=>{ p.style.display='none'; document.body.classList.remove('tspanel'); });
 })();
 // --- block mobile zoom gestures (two-finger button presses were triggering a stuck pinch-zoom) ---
 ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
