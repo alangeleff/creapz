@@ -1,4 +1,4 @@
-const ASSET_VER='1781700000';
+const ASSET_VER='1781710000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -330,12 +330,12 @@ addEventListener('keydown', e => {
     if (e.code==='ArrowDown'){ if (selRow===1){ selRow=0; playSfx('sfx_mtog'); } return; }
     if (e.code==='ArrowLeft'||e.code==='ArrowRight'){
       const dd=e.code==='ArrowRight'?1:-1;
-      if (selRow===0){ if(!skinOnly) selFoc=(selFoc+1)%2; }
+      if (selRow===0){ selFoc=(selFoc+1)%2; }
       else if (selFoc===0){ const _o=corder(); const i=_o.indexOf(creaperSkin); creaperSkin=_o[(i+dd+_o.length)%_o.length]; }
       else { const i=DORDER.indexOf(dingSkin); dingSkin=DORDER[(i+dd+DORDER.length)%DORDER.length]; }
       playSfx('sfx_mtog'); return;
     }
-    if (e.code==='Enter'||e.code==='Space'){ playSfx('sfx_msel'); startGame(selFoc===0?creaperSkin:dingSkin); }
+    if (e.code==='Enter'||e.code==='Space'){ playSfx('sfx_msel'); if(skinOnly){ saveProg(); enterWorld(false); } else startGame(selFoc===0?creaperSkin:dingSkin); }
     return;
   }
   if (mode==='world'){
@@ -477,7 +477,8 @@ cv.addEventListener('pointerdown', e=>{
   }
   if (mode==='select'){
     for (const aR of arrowRects){ if (pt.x>aR.x&&pt.x<aR.x+aR.w&&pt.y>aR.y&&pt.y<aR.y+aR.h){ if(aR.who==='d'){ const i=DORDER.indexOf(dingSkin); dingSkin=DORDER[(i+aR.dir+DORDER.length)%DORDER.length]; selFoc=1; } else { const _o=corder(); const i=_o.indexOf(creaperSkin); creaperSkin=_o[(i+aR.dir+_o.length)%_o.length]; selFoc=0; } selRow=1; playSfx('sfx_mtog'); return; } }
-    for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ playSfx('sfx_msel'); startGame(c.key==='creaper'?creaperSkin:dingSkin); break; } }
+    if (selMode==='skin' && selDoneRect){ const d=selDoneRect; if(pt.x>d.x&&pt.x<d.x+d.w&&pt.y>d.y&&pt.y<d.y+d.h){ playSfx('sfx_msel'); saveProg(); enterWorld(false); return; } }
+    for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ if(selMode==='skin'){ selFoc=(c.key==='creaper')?0:1; selRow=1; playSfx('sfx_mtog'); } else { playSfx('sfx_msel'); startGame(c.key==='creaper'?creaperSkin:dingSkin); } break; } }
     return;
   }
   if (mode!=='play') return;
@@ -644,7 +645,7 @@ function drawControls(){
   ctx.fillStyle='rgba(63,191,106,.22)'; roundRect(rx+rw/2+8,y,rw/2-8,38,10); ctx.fill(); ctx.fillStyle='#a8f0c0'; ctx.fillText('Done', rx+rw/2+8+(rw/2-8)/2, y+24); ctrlRects.push({x:rx+rw/2+8,y:y,w:rw/2-8,h:38,act:'__done'});
   ctx.textAlign='left';
 }
-let slotSel=0, slotConfirm=-1, confSel=1, selMode='new', slotRects=[], delRects=[], confRects=[];
+let slotSel=0, slotConfirm=-1, confSel=1, selMode='new', slotRects=[], delRects=[], confRects=[], selDoneRect=null;
 let TIMG=null;
 const TITLEBG=new Image(); TITLEBG.src='./assets/title_keyart.png?v='+ASSET_VER;
 const FLAME_FX=new Image(); FLAME_FX.src='./assets/fx_flame.png?v='+ASSET_VER; const FLAME_N=6;
@@ -880,7 +881,7 @@ function drawTally(){
     } else {
       const bw2=170, bh2=40, by2=ty+44;
       if (panelSel>=2) panelSel=0;
-      [['Replay Act',()=>{ loadStage(stageIdx); }],['Characters',()=>{ mode='select'; }]].forEach((it,k)=>{
+      [['Replay Act',()=>{ loadStage(stageIdx); }],['Skins',()=>{ selMode='skin'; selRow=1; selFoc=isDing(chosen)?1:0; mode='select'; }]].forEach((it,k)=>{
         const bx2=W/2-bw2-12+k*(bw2+24);
         const hot=(k===panelSel);
         ctx.fillStyle=hot?'rgba(200,251,80,.16)':'rgba(155,140,255,.16)'; roundRect(bx2,by2,bw2,bh2,10); ctx.fill();
@@ -948,7 +949,7 @@ function startGame(ck){
 function activateSlot(i){
   const sl=saves.slots[i];
   if (sl){ bindSlot(i); playSfx('sfx_msel'); bootIntoWorld(); }
-  else { slotIdx=i; selMode='new'; selFoc=0; selRow=0; mode='select'; playSfx('sfx_msel'); }
+  else { slotIdx=i; saves.slots[i]={chosen:'default',acts:{},heroAt:'cem',soulz:0,created:Date.now(),played:Date.now()}; bindSlot(i); saveAll(); playSfx('sfx_msel'); bootIntoWorld(); }
 }
 function reset(keep){
   const sx = keep && p ? p.spawn : 90;
@@ -2493,15 +2494,15 @@ function drawSelect(){
   drawFence();
   ctx.fillStyle='#1d1730'; ctx.fillRect(0,GROUND,W,H-GROUND); ctx.fillStyle='#5a4499'; ctx.fillRect(0,GROUND,W,8);
   ctx.textAlign='center';
-  ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText(selMode==='skin'?'Choose your Skin':'Choose your Creap', W/2, 56);
+  ctx.fillStyle='#eae6ff'; ctx.font='bold 30px sans-serif'; ctx.fillText(selMode==='skin'?'Character Skins':'Choose your Creap', W/2, 56);
   ctx.fillStyle='#9b8cff'; ctx.font='15px sans-serif';
-  ctx.fillText(selMode==='skin'?'your character is bound to this story — colors only  ·  Esc returns to the realm':'tap a character to begin  ·  ◀ ▶ change the skin  ·  or arrow keys + space', W/2, 82);
+  ctx.fillText(selMode==='skin'?'tap a character, then ◀ ▶ to set its skin  ·  used in gameplay':'tap a character to begin  ·  ◀ ▶ change the skin  ·  or arrow keys + space', W/2, 82);
   const cw=250, gap=(W-2*cw)/3, cardY=104, cardH=246;
-  cardRects=[]; arrowRects=[];
+  cardRects=[]; arrowRects=[]; selDoneRect=null;
   const roster=[{key:'creaper', label:'cReaper', ck:creaperSkin},{key:'dingbat', label:'Dingbat', ck:dingSkin}];
   for (let i=0;i<2;i++){
     const it=roster[i], cardX=gap+i*(cw+gap);
-    const storyLocked = selMode==='skin' && ((it.key==='creaper')===isDing(chosen));
+    const storyLocked = false;   // dual-play: both cReaper & Dingbat skins editable
     if (storyLocked) ctx.globalAlpha=0.32;
     else cardRects.push({x:cardX,y:cardY,w:cw,h:cardH,key:it.key});
     ctx.fillStyle='rgba(20,16,40,.55)';
@@ -2547,6 +2548,13 @@ function drawSelect(){
         ctx.closePath(); ctx.fill();
       }
     }
+  }
+  if (selMode==='skin'){
+    const dw=160,dh=38,dx=(W-dw)/2,dy=cardY+cardH+18;
+    selDoneRect={x:dx,y:dy,w:dw,h:dh};
+    ctx.fillStyle='rgba(20,16,40,.7)'; roundRect(dx,dy,dw,dh,10); ctx.fill();
+    ctx.strokeStyle='rgba(200,251,80,'+(0.55+0.45*Math.sin(gt*4)).toFixed(2)+')'; ctx.lineWidth=2; roundRect(dx,dy,dw,dh,10); ctx.stroke();
+    ctx.fillStyle='#eae6ff'; ctx.font='bold 17px sans-serif'; ctx.textAlign='center'; ctx.fillText('Done', W/2, dy+25);
   }
   ctx.textAlign='left';
 }
