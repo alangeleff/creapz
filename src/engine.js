@@ -1,4 +1,4 @@
-const ASSET_VER='1781740000';
+const ASSET_VER='1781750000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -437,7 +437,7 @@ addEventListener('keydown', e => {
     else if(e.code==='Enter'||e.code==='Space'){ confirmStone(); }
     return; }
   if (mode==='controls'){ if(e.code==='Escape') ctrlDone(); return; }
-  if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; panelSel=0; playSfx('sfx_mtog'); } return; }
+  if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; panelSel=0; pauseSub=null; playSfx('sfx_mtog'); } return; }
   if (e.code==='KeyR'&&mode==='play'){ paused=false; onReset(); return; }
   if (mode==='play' && p && p.won && tally){
     if (e.code==='Enter'||e.code==='Space'){
@@ -452,6 +452,7 @@ addEventListener('keydown', e => {
   if (mode==='play' && p && menuOpen()){
     if (e.code==='ArrowUp'||e.code==='ArrowDown'){ const n2=menuRects.length||1; panelSel=(panelSel+(e.code==='ArrowDown'?1:n2-1))%n2; playSfx('sfx_mtog'); }
     else if ((e.code==='Enter'||e.code==='Space') && menuRects[panelSel]){ playSfx('sfx_msel'); menuRects[panelSel].action(); }
+    else if ((e.code==='ArrowLeft'||e.code==='ArrowRight') && menuRects[panelSel] && menuRects[panelSel].adjust){ menuRects[panelSel].adjust(e.code==='ArrowRight'?1:-1); playSfx('sfx_mtog'); }
     return;
   }
   press(e.code);
@@ -676,11 +677,11 @@ let musicVol=1, sfxVol=1;
 try{ musicVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_mvol')??'1'))); sfxVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_svol')??'1'))); }catch(e){}
 function saveVols(){ try{ localStorage.setItem('creapz_mvol',musicVol); localStorage.setItem('creapz_svol',sfxVol); }catch(e){} }
 let menuShown=false, optionsOpen=false, cryptOpen=false, titleFade=0;
-let menuSel=0, optSel=0, selFoc=0, selRow=0, panelSel=0;   // keyboard nav cursors
+let menuSel=0, optSel=0, selFoc=0, selRow=0, panelSel=0, pauseSub=null;   // keyboard nav cursors
 // ---- gamepad mapping ----
-const GP_ACTIONS=[['jump','Jump'],['attack','Attack'],['cast','Cast'],['left','Move Left'],['right','Move Right'],['down','Crouch / Down'],['pause','Pause']];
-const GP_CODE={left:'ArrowLeft',right:'ArrowRight',down:'ArrowDown',jump:'Space',attack:'KeyZ',cast:'KeyX'};
-const GP_DEFAULT={jump:0,attack:2,cast:3,left:14,right:15,down:13,pause:9};
+const GP_ACTIONS=[['jump','Jump'],['attack','Attack'],['cast','Cast'],['swap','Swap / Dual'],['left','Move Left'],['right','Move Right'],['down','Crouch / Down'],['pause','Pause']];
+const GP_CODE={left:'ArrowLeft',right:'ArrowRight',down:'ArrowDown',jump:'Space',attack:'KeyZ',cast:'KeyX',swap:'KeyC'};
+const GP_DEFAULT={jump:0,attack:2,cast:3,swap:5,left:14,right:15,down:13,pause:9};
 function loadPadMap(){ try{ const j=JSON.parse(localStorage.getItem('creapz_padmap')); if(j) return Object.assign({},GP_DEFAULT,j); }catch(e){} return Object.assign({},GP_DEFAULT); }
 let padMap=loadPadMap(), padPrev={}, padRepeat={}, gpListen=null, gpConnected=false, ctrlReturn='title', ctrlRects=[];
 function savePadMap(){ try{ localStorage.setItem('creapz_padmap',JSON.stringify(padMap)); }catch(e){} }
@@ -696,9 +697,9 @@ function pollGamepad(){
     for(let i=0;i<gp.buttons.length;i++) padPrev['b'+i]=gp.buttons[i].pressed; return;
   }
   if(mode==='play' && !menuOpen() && !(p&&p.winning)){
-    const st={ left:bp(padMap.left)||ax(0)<-0.45, right:bp(padMap.right)||ax(0)>0.45, down:bp(padMap.down)||ax(1)>0.5, jump:bp(padMap.jump), attack:bp(padMap.attack), cast:bp(padMap.cast) };
+    const st={ left:bp(padMap.left)||ax(0)<-0.45, right:bp(padMap.right)||ax(0)>0.45, down:bp(padMap.down)||ax(1)>0.5, jump:bp(padMap.jump), attack:bp(padMap.attack), cast:bp(padMap.cast), swap:bp(padMap.swap) };
     for(const a in GP_CODE){ if(st[a]&&!padPrev[a]) press(GP_CODE[a]); else if(!st[a]&&padPrev[a]) release(GP_CODE[a]); padPrev[a]=st[a]; }
-    const pz=bp(padMap.pause); if(pz&&!padPrev.pause && p && !p.dead && !p.won && !p.winning){ paused=!paused; panelSel=0; playSfx('sfx_mtog'); } padPrev.pause=pz;
+    const pz=bp(padMap.pause); if(pz&&!padPrev.pause && p && !p.dead && !p.won && !p.winning){ paused=!paused; panelSel=0; pauseSub=null; playSfx('sfx_mtog'); } padPrev.pause=pz;
     return;
   }
   // any menu / paused / overlay: drive the same keyboard nav every menu already listens to
@@ -719,16 +720,16 @@ function drawControls(){
   ctx.setTransform(RS,0,0,RS,0,0); ctx.fillStyle='#0c0a18'; ctx.fillRect(0,0,W,H);
   ctx.textAlign='center'; ctx.fillStyle='#eae6ff'; ctx.font='bold 26px sans-serif'; ctx.fillText('Controller Mapping', W/2, 48);
   ctx.font='13px sans-serif'; ctx.fillStyle=gpConnected?'#7fe0ff':'#ff9a9a'; ctx.fillText(gpConnected?'controller connected \u00b7 tap a row, then press a button to bind':'no controller detected \u2014 connect one & press any button', W/2, 72);
-  ctrlRects=[]; const rw=440, rx=W/2-rw/2; let y=92;
+  ctrlRects=[]; const rw=440, rx=W/2-rw/2; let y=84;
   for(let i=0;i<GP_ACTIONS.length;i++){ const act=GP_ACTIONS[i][0], label=GP_ACTIONS[i][1], lis=(gpListen===act);
-    ctx.fillStyle=lis?'rgba(200,251,80,.16)':'rgba(155,140,255,.10)'; roundRect(rx,y,rw,34,8); ctx.fill();
-    if(lis){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; roundRect(rx,y,rw,34,8); ctx.stroke(); }
-    ctx.textAlign='left'; ctx.fillStyle='#cfd0e8'; ctx.font='600 15px sans-serif'; ctx.fillText(label, rx+16, y+22);
-    ctx.textAlign='right'; ctx.fillStyle=lis?'#c8fb50':'#9bd0ff'; ctx.font='bold 14px sans-serif'; ctx.fillText(lis?'press a button\u2026':gpBtnName(padMap[act]), rx+rw-16, y+22);
-    ctrlRects.push({x:rx,y:y,w:rw,h:34,act}); y+=40; }
-  y+=6; ctx.textAlign='center'; ctx.font='600 15px sans-serif';
-  ctx.fillStyle='rgba(155,140,255,.16)'; roundRect(rx,y,rw/2-8,38,10); ctx.fill(); ctx.fillStyle='#cdbbe6'; ctx.fillText('Reset to Default', rx+(rw/2-8)/2, y+24); ctrlRects.push({x:rx,y:y,w:rw/2-8,h:38,act:'__reset'});
-  ctx.fillStyle='rgba(63,191,106,.22)'; roundRect(rx+rw/2+8,y,rw/2-8,38,10); ctx.fill(); ctx.fillStyle='#a8f0c0'; ctx.fillText('Done', rx+rw/2+8+(rw/2-8)/2, y+24); ctrlRects.push({x:rx+rw/2+8,y:y,w:rw/2-8,h:38,act:'__done'});
+    ctx.fillStyle=lis?'rgba(200,251,80,.16)':'rgba(155,140,255,.10)'; roundRect(rx,y,rw,30,8); ctx.fill();
+    if(lis){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; roundRect(rx,y,rw,30,8); ctx.stroke(); }
+    ctx.textAlign='left'; ctx.fillStyle='#cfd0e8'; ctx.font='600 15px sans-serif'; ctx.fillText(label, rx+16, y+20);
+    ctx.textAlign='right'; ctx.fillStyle=lis?'#c8fb50':'#9bd0ff'; ctx.font='bold 14px sans-serif'; ctx.fillText(lis?'press a button\u2026':gpBtnName(padMap[act]), rx+rw-16, y+20);
+    ctrlRects.push({x:rx,y:y,w:rw,h:30,act}); y+=35; }
+  y+=8; ctx.textAlign='center'; ctx.font='600 15px sans-serif';
+  ctx.fillStyle='rgba(155,140,255,.16)'; roundRect(rx,y,rw/2-8,34,10); ctx.fill(); ctx.fillStyle='#cdbbe6'; ctx.fillText('Reset to Default', rx+(rw/2-8)/2, y+22); ctrlRects.push({x:rx,y:y,w:rw/2-8,h:34,act:'__reset'});
+  ctx.fillStyle='rgba(63,191,106,.22)'; roundRect(rx+rw/2+8,y,rw/2-8,34,10); ctx.fill(); ctx.fillStyle='#a8f0c0'; ctx.fillText('Done', rx+rw/2+8+(rw/2-8)/2, y+22); ctrlRects.push({x:rx+rw/2+8,y:y,w:rw/2-8,h:34,act:'__done'});
   ctx.textAlign='left';
 }
 let slotSel=0, slotConfirm=-1, confSel=1, selMode='new', slotRects=[], delRects=[], confRects=[], selDoneRect=null;
@@ -913,7 +914,7 @@ function menuPanel(title, items, sub, titleColor){
     ctx.strokeStyle=hot?'#c8fb50':'rgba(155,140,255,.45)'; ctx.lineWidth=hot?2:1; ctx.stroke();
     ctx.fillStyle='#e8e6f5'; ctx.font='600 18px sans-serif';
     ctx.fillText(it.label, W/2, by+30);
-    menuRects.push({x:mx+26,y:by,w:mw-52,h:ih,action:it.action});
+    menuRects.push({x:mx+26,y:by,w:mw-52,h:ih,action:it.action,adjust:it.adjust});
   });
   if (sub){ ctx.fillStyle='rgba(200,190,255,.6)'; ctx.font='13px sans-serif'; ctx.fillText(sub, W/2, my+mh-16); }
   ctx.textAlign='left';
@@ -3538,13 +3539,28 @@ function draw(){
   } else if (p.won){
     drawTally();
   } else if (paused){
-    menuPanel('Paused', [
-      {label:'Artifacts', action:()=>{ openArtifacts(); }},
-      {label:'Return to Overworld', action:()=>{ enterWorld(true); }},
-      {label:'Restart Act', action:()=>{ paused=false; loadStage(stageIdx); }},
-      {label:'Controller', action:()=>{ ctrlReturn='play'; gpListen=null; mode='controls'; }},
-      {label:'Close', action:()=>{ paused=false; }},
-    ]);
+    if (pauseSub==='options'){
+      const vstep=(cur,d)=>Math.max(0,Math.min(1,Math.round((cur+d*0.1)*10)/10));
+      menuPanel('Options', [
+        {label:'Music   '+Math.round(musicVol*100)+'%',
+          action:()=>{ musicVol=musicVol<=0.001?1:vstep(musicVol,-2); saveVols(); },
+          adjust:(d)=>{ musicVol=vstep(musicVol,d); saveVols(); }},
+        {label:'Sound   '+Math.round(sfxVol*100)+'%',
+          action:()=>{ sfxVol=sfxVol<=0.001?1:vstep(sfxVol,-2); saveVols(); if(sfxGain) sfxGain.gain.value=0.45*sfxVol; },
+          adjust:(d)=>{ sfxVol=vstep(sfxVol,d); saveVols(); if(sfxGain) sfxGain.gain.value=0.45*sfxVol; }},
+        {label:'Touch Controls', action:()=>{ openTouchPanel(); }},
+        {label:'Controller', action:()=>{ ctrlReturn='play'; gpListen=null; mode='controls'; }},
+        {label:'Back', action:()=>{ pauseSub=null; panelSel=0; }},
+      ], '\u25c0 \u25b6 adjust  \u00b7  select to change');
+    } else {
+      menuPanel('Paused', [
+        {label:'Artifacts', action:()=>{ openArtifacts(); }},
+        {label:'Return to Overworld', action:()=>{ enterWorld(true); }},
+        {label:'Restart Act', action:()=>{ paused=false; loadStage(stageIdx); }},
+        {label:'Options', action:()=>{ pauseSub='options'; panelSel=0; }},
+        {label:'Close', action:()=>{ paused=false; pauseSub=null; }},
+      ]);
+    }
   }
   drawTitleCard();
   if (fading>0){ ctx.fillStyle='rgba(5,3,12,'+Math.min(1,fading/0.6).toFixed(2)+')'; ctx.fillRect(0,0,W,H); }
