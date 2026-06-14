@@ -1,4 +1,4 @@
-const ASSET_VER='1781710000';
+const ASSET_VER='1781720000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -70,6 +70,8 @@ function swapChar(){
   saveProg();                                              // saved profile reflects the latest character played
   playSfx('sfx_mtog');
 }
+// Leaving the Skins screen: make the character you're currently playing show its assigned skin.
+function exitSkins(){ chosen = isDing(chosen) ? (dingSkin||'dingbat') : (creaperSkin||'default'); saveProg(); enterWorld(false); }
 function cycleSkin(dir){ const list=isDing(chosen)?DORDER:corder(); let i=list.indexOf(chosen); if(i<0)i=0; chosen=list[(i+dir+list.length)%list.length]; if(isDing(chosen))dingSkin=chosen; else creaperSkin=chosen; try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
@@ -321,7 +323,7 @@ addEventListener('keydown', e => {
     const skinOnly=(selMode==='skin');
     if (e.code==='Escape'){
       playSfx('sfx_mtog');
-      if (skinOnly){ saveProg(); enterWorld(false); } else { mode='slots'; }
+      if (skinOnly){ exitSkins(); } else { mode='slots'; }
       return;
     }
     if (!skinOnly && e.key==='1'){ playSfx('sfx_msel'); startGame(creaperSkin); return; }
@@ -335,7 +337,7 @@ addEventListener('keydown', e => {
       else { const i=DORDER.indexOf(dingSkin); dingSkin=DORDER[(i+dd+DORDER.length)%DORDER.length]; }
       playSfx('sfx_mtog'); return;
     }
-    if (e.code==='Enter'||e.code==='Space'){ playSfx('sfx_msel'); if(skinOnly){ saveProg(); enterWorld(false); } else startGame(selFoc===0?creaperSkin:dingSkin); }
+    if (e.code==='Enter'||e.code==='Space'){ playSfx('sfx_msel'); if(skinOnly){ exitSkins(); } else startGame(selFoc===0?creaperSkin:dingSkin); }
     return;
   }
   if (mode==='world'){
@@ -390,7 +392,7 @@ function _joyClear(){ for(const c of _joy.codes) release(c); _joy.codes=new Set(
 (function(){
   const zone=document.getElementById('joyzone'), base=document.getElementById('joybase'), knob=document.getElementById('joyknob');
   if(!zone) return;
-  zone.addEventListener('pointerdown',e=>{ if(mode!=='play')return; const _cv=document.getElementById('c'); if(_cv){ const _r=_cv.getBoundingClientRect(), _sx=_r.width/_cv.width, _sy=_r.height/_cv.height; if(e.clientX>=_r.left+(PB.x-8)*_sx && e.clientX<=_r.left+(PB.x+PB.w+8)*_sx && e.clientY>=_r.top+(PB.y-8)*_sy && e.clientY<=_r.top+(PB.y+PB.h+8)*_sy){ if(p&&!p.dead&&!p.won&&!p.winning){ paused=true; playSfx('sfx_mtog'); } return; } } e.preventDefault(); _joy.active=true; _joy.id=e.pointerId; _joy.ox=e.clientX; _joy.oy=e.clientY; base.style.left=knob.style.left=e.clientX+'px'; base.style.top=knob.style.top=e.clientY+'px'; base.style.display=knob.style.display='block'; try{zone.setPointerCapture(e.pointerId);}catch(_){} });
+  zone.addEventListener('pointerdown',e=>{ if(mode!=='play')return; const _cv=document.getElementById('c'); if(_cv){ const _r=_cv.getBoundingClientRect(), _lx=(e.clientX-_r.left)/_r.width*W, _ly=(e.clientY-_r.top)/_r.height*H; if(_lx>PB.x-12 && _lx<PB.x+PB.w+12 && _ly>PB.y-12 && _ly<PB.y+PB.h+12){ if(p&&!p.dead&&!p.won&&!p.winning){ paused=true; playSfx('sfx_mtog'); } return; } } e.preventDefault(); _joy.active=true; _joy.id=e.pointerId; _joy.ox=e.clientX; _joy.oy=e.clientY; base.style.left=knob.style.left=e.clientX+'px'; base.style.top=knob.style.top=e.clientY+'px'; base.style.display=knob.style.display='block'; try{zone.setPointerCapture(e.pointerId);}catch(_){} });
   zone.addEventListener('pointermove',e=>{ if(!_joy.active||e.pointerId!==_joy.id)return; e.preventDefault(); const dx=e.clientX-_joy.ox, dy=e.clientY-_joy.oy, dz=16, R=48; const nc=new Set(); if(dx<-dz)nc.add('ArrowLeft'); else if(dx>dz)nc.add('ArrowRight'); if(dy<-dz)nc.add('ArrowUp'); else if(dy>dz)nc.add('ArrowDown'); _joySet(nc); const m=Math.hypot(dx,dy)||1, k=Math.min(1,R/m); knob.style.left=(_joy.ox+dx*k)+'px'; knob.style.top=(_joy.oy+dy*k)+'px'; });
   const end=()=>{ _joy.active=false; _joyClear(); base.style.display=knob.style.display='none'; };
   zone.addEventListener('pointerup',end); zone.addEventListener('pointercancel',end);
@@ -477,7 +479,7 @@ cv.addEventListener('pointerdown', e=>{
   }
   if (mode==='select'){
     for (const aR of arrowRects){ if (pt.x>aR.x&&pt.x<aR.x+aR.w&&pt.y>aR.y&&pt.y<aR.y+aR.h){ if(aR.who==='d'){ const i=DORDER.indexOf(dingSkin); dingSkin=DORDER[(i+aR.dir+DORDER.length)%DORDER.length]; selFoc=1; } else { const _o=corder(); const i=_o.indexOf(creaperSkin); creaperSkin=_o[(i+aR.dir+_o.length)%_o.length]; selFoc=0; } selRow=1; playSfx('sfx_mtog'); return; } }
-    if (selMode==='skin' && selDoneRect){ const d=selDoneRect; if(pt.x>d.x&&pt.x<d.x+d.w&&pt.y>d.y&&pt.y<d.y+d.h){ playSfx('sfx_msel'); saveProg(); enterWorld(false); return; } }
+    if (selMode==='skin' && selDoneRect){ const d=selDoneRect; if(pt.x>d.x&&pt.x<d.x+d.w&&pt.y>d.y&&pt.y<d.y+d.h){ playSfx('sfx_msel'); exitSkins(); return; } }
     for (const c of cardRects){ if (pt.x>c.x&&pt.x<c.x+c.w&&pt.y>c.y&&pt.y<c.y+c.h){ if(selMode==='skin'){ selFoc=(c.key==='creaper')?0:1; selRow=1; playSfx('sfx_mtog'); } else { playSfx('sfx_msel'); startGame(c.key==='creaper'?creaperSkin:dingSkin); } break; } }
     return;
   }
