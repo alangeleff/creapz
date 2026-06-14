@@ -1,4 +1,4 @@
-const ASSET_VER='1781690000';
+const ASSET_VER='1781700000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -58,6 +58,18 @@ function activatePower(){ powerActive=true; powerDur=10; powerT=powerDur; transf
 function confirmStone(){ equippedStone=(PICK_STONES[stonePickSel]==='none')?null:PICK_STONES[stonePickSel]; playSfx('sfx_msel'); document.querySelector('.touch').classList.toggle('ding', isDing(chosen)); try{ poweredImg(); }catch(e){} mode='play'; loadStage(pendingStage); }
 function prettySkin(id){ const m={'default':'Classic','green':'Emerald','blue':'Ruby','red':'Corruption','wraith':'Umbra','gilded':'Shadow','bone':'Wine','crimson':'Glitch','dingbat':'Classic','ding_swamp':'Swamp','ding_azure':'Azure','ding_blood':'Blood','ding_magic':'Magic','ding_mystic':'Mystic','ding_wisp':'Wisp','ding_news':'Newspaper','ding_noir':'Noir'}; return m[id]||(id.charAt(0).toUpperCase()+id.slice(1)); }
 function toggleChar(){ chosen=isDing(chosen)?(creaperSkin||'default'):(dingSkin||'dingbat'); try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
+// In-play hot-swap between cReaper-family and Dingbat-family (top diamond btn / KeyC). Position+momentum stay on p.
+function swapChar(){
+  if(mode!=='play'||!p||p.dead||p.won||p.winning) return;
+  if(chosen==='fusion'||chosen==='son') return;            // special forms don't pair-swap
+  chosen = isDing(chosen) ? (creaperSkin||'default') : (dingSkin||'dingbat');
+  if(isDing(chosen)) dingSkin=chosen; else creaperSkin=chosen;
+  p.attackT=0; p.castT=0; p.castFired=true; p.diveT=0; p.slamT=0;   // cancel transients so frame indices stay valid
+  p.swapFlash=performance.now();
+  try{poweredImg();}catch(e){}
+  saveProg();                                              // saved profile reflects the latest character played
+  playSfx('sfx_mtog');
+}
 function cycleSkin(dir){ const list=isDing(chosen)?DORDER:corder(); let i=list.indexOf(chosen); if(i<0)i=0; chosen=list[(i+dir+list.length)%list.length]; if(isDing(chosen))dingSkin=chosen; else creaperSkin=chosen; try{poweredImg();}catch(e){} playSfx('sfx_mtog'); }
 const CAVECEIL_IMG=new Image(); CAVECEIL_IMG.src='./assets/caveceil2.png?v='+ASSET_VER;
 const CAVEGND_IMG=new Image(); CAVEGND_IMG.src='./assets/caveground_dirt1.png?v='+ASSET_VER;
@@ -253,6 +265,7 @@ function press(code){
   }
   if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && equippedStone && stoneCharge>=PMETER && !powerActive) activatePower();
   if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && chosen==='fusion' && (!p.onGround || p.flying)){ p.flying=!p.flying; if(p.flying){ p.vx=0; p.vy=0; flyGhosts=[]; playSfx('sfx_rwhoosh',0.9); } else { playSfx('sfx_jump',0.5); } }
+  if (code==='KeyC' && mode==='play') swapChar();
   keys[code]=true;
 }
 function release(code){
@@ -391,7 +404,7 @@ function applyBtnScale(){ document.documentElement.style.setProperty('--bs', btn
 function setBtnScale(v){ btnScale=v; try{ localStorage.setItem('creapz_btnscale',String(v)); }catch(e){} applyBtnScale(); }
 applyBtnLayout(); applyBtnScale();
 (function(){ const t=('ontouchstart' in window)||navigator.maxTouchPoints>0; document.body.classList.toggle('desktop', !t); })();
-bindBtn('bDB','Space'); bindBtn('bDR','KeyX'); bindBtn('bDL','KeyZ');   // diamond: bottom=jump, right=bolt, left=melee; bDT(top)=placeholder
+bindBtn('bDB','Space'); bindBtn('bDR','KeyX'); bindBtn('bDL','KeyZ'); bindBtn('bDT','KeyC');   // diamond: bottom=jump, right=bolt, left=melee, top=swap character
 function syncTouchPanel(){ const p=document.getElementById('touchSettings'); if(!p) return;
   p.querySelectorAll('[data-move]').forEach(b=>b.classList.toggle('on',(b.dataset.move==='joy')===joystickMode));
   p.querySelectorAll('[data-layout]').forEach(b=>b.classList.toggle('on',b.dataset.layout===btnLayout));
@@ -3093,6 +3106,7 @@ function renderCrushDeath(sx, gt){
 function drawPlayerLayer(){
   if (p.won) return;
   const sx=p.x-camX;
+  { const _sf=p.swapFlash?(performance.now()-p.swapFlash):1e9; if(_sf<300){ const k=_sf/300; ctx.save(); ctx.globalAlpha=(1-k)*0.85; ctx.strokeStyle='rgba(222,182,255,1)'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(sx,p.y-46,Math.max(0,12+k*56),0,Math.PI*2); ctx.stroke(); ctx.restore(); } }
   if (p.flying && !p.dead && !p.winning){
     ctx.save(); ctx.strokeStyle='rgba(198,150,255,0.5)'; ctx.lineWidth=2;
     for(let i=0;i<8;i++){ const ly=p.y-130+Math.random()*108, lx=sx-p.facing*(18+Math.random()*46), ln=44+Math.random()*80; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx-p.facing*ln,ly); ctx.stroke(); }
