@@ -1,4 +1,4 @@
-const ASSET_VER='1781670000';
+const ASSET_VER='1781680000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -245,15 +245,13 @@ let diveReq=null, diveGhosts=[], sapTrail=[], chaosPile=[], chaosAmmo=0, chaosGl
 let flyGhosts=[];   // Power Dive trail + Sapphire after-image trail
 let maxHPShown=4, hpGrowPending=0, vigorFlash=0;   // Vigor HP-slot grow animation
 let slamReq=null, slamGhosts=[], slamFx=[], zapFx=[];   // Crush Drop + Topaz dash-impact white flashes
+let _xWasDown=false,_xT=0,_xHeld=false,_zWasDown=false,_zT=0,_zHeld=false,_zAir=false; const ACT_HOLD_MS=200;
 let shakeT=0, shakeMag=0;
 function press(code){
   if (code==='ArrowLeft'||code==='ArrowRight'){
     if (keys[code]) return; runHeld[code]=(performance.now()-lastRelease[code])<DOUBLE_TAP;
   }
-  // Aerial attack: melee button midair -> Power Dive (Dingbat) / Scythe Bash (cReaper)
-  if (code==='KeyZ' && !keys[code] && mode==='play' && p && !p.dead && !p.onGround)
-    diveReq={dir:0, t:performance.now()};   // dir resolved at trigger (held dir, else facing)
-  if ((code==='Space'||code==='ArrowUp') && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && equippedStone && stoneCharge>=PMETER && !powerActive) activatePower();
+  if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && equippedStone && stoneCharge>=PMETER && !powerActive) activatePower();
   if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && chosen==='fusion' && (!p.onGround || p.flying)){ p.flying=!p.flying; if(p.flying){ p.vx=0; p.vy=0; flyGhosts=[]; playSfx('sfx_rwhoosh',0.9); } else { playSfx('sfx_jump',0.5); } }
   keys[code]=true;
 }
@@ -947,7 +945,7 @@ function reset(keep){
   camX=Math.max(0,Math.min(WORLD-W,sx-W*0.38));
   camY=Math.max(0,Math.min(WORLDH-H,sy-H*0.62));
   for(const bo of (bolts||[])){ if(bo.hum){ stopLoop(bo.hum); bo.hum=null; } }
-  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; curses=[]; flameWaves=[]; flyGhosts=[]; shakeT=0; shakeMag=0; maxHPShown=curMaxHP(); hpGrowPending=0; vigorFlash=0;
+  zbits=[]; bolts=[]; impacts=[]; chkFx=[]; slamGhosts=[]; slamFx=[]; zapFx=[]; curses=[]; flameWaves=[]; flyGhosts=[]; _xWasDown=false; _zWasDown=false; _xHeld=false; _zHeld=false; shakeT=0; shakeMag=0; maxHPShown=curMaxHP(); hpGrowPending=0; vigorFlash=0;
   if (!keep){
     soulCount=0; soulOrbGot=0; chkOn=CHK.map(()=>false);
     souls = SOUL_POS.map((s,i)=>({x:s[0],y:s[1],val:(s[2]||1),got:false,pop:0,ph:i*0.31}));
@@ -1229,9 +1227,6 @@ function update(dt){
   if (p.diveRec>0){ p.diveRec-=dt; p.vx=0; }
   if (p.diveT>0){ diveGhosts.push({x:p.x,y:p.y}); if(diveGhosts.length>9) diveGhosts.shift(); }
   else if (diveGhosts.length) diveGhosts.shift();
-  { const _down=(keys['ArrowDown']||keys['KeyS']);
-    if (_down && !p._downPrev && !p.onGround && !keys['KeyX'] && !p.dead && !p.won && !p.winning && p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ p.slamT=1; p.vx=0; p.vy=SLAM_VY; slamGhosts=[]; playSfx('sfx_rwhoosh',1.0); }
-    p._downPrev=_down; }
   if (p.slamRec>0){ p.slamRec-=dt; p.vx=0; }
   if (p.slamT>0){ slamGhosts.push({x:p.x,y:p.y}); if(slamGhosts.length>9) slamGhosts.shift(); p.vx=0; }
   else if (slamGhosts.length) slamGhosts.shift();
@@ -1247,11 +1242,22 @@ function update(dt){
   if(p.inv<=0){ for(const z of GHURT){ if(p.x+26>z.l && p.x-26<z.r && p.y>z.top && (p.y-PH)<z.bot){ hurtPlayer((z.l+z.r)/2,1); break; } } }
   const speed=(running?RUN:WALK)*(inTar?0.4:1)*((powerActive&&equippedStone==='topaz')?1.7:1);
   if (p.flying){ p.vx=dir*FLYSPD; if(dir!==0) p.facing=dir; } else if (p.diveT<=0 && p.diveRec<=0 && p.slamT<=0 && p.slamRec<=0){ if (dir!==0){ p.vx=dir*speed; p.facing=dir; } else p.vx=0; }
-  if (!kneeling && !p.flying && p.diveRec<=0 && p.slamRec<=0 && (keys['Space']||keys['ArrowUp'])&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
-  if (keys['KeyZ']&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamRec<=0&&p.onGround&&SPR.chars[chosen].attack.weapon){
-    p.attackT=SPR.chars[chosen].attack.frames/pfps('attack');
-    playSfx(isDing(chosen)?'sfx_wing':'sfx_slash');
-  }
+  if (!kneeling && !p.flying && p.diveRec<=0 && p.slamRec<=0 && keys['Space']&&p.onGround){ p.vy=JUMP*(inTar?0.78:1); p.onGround=false; playSfx('sfx_jump',0.55); }
+  // --- Tap/hold buttons (touch+keyboard): X tap=bolt / hold=pray ; Z ground-tap=attack / air-tap=dive / air-hold=crush slam ---
+  if (keys['KeyX'] && !p.dead && !p.won && !p.winning){
+    if(!_xWasDown){ _xWasDown=true; _xT=performance.now(); _xHeld=false; }
+    else if(!_xHeld && performance.now()-_xT>=ACT_HOLD_MS && p.castT<=0&&p.castCd<=0&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamT<=0&&p.slamRec<=0){
+      _xHeld=true; p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false; p.castUp=!(powerActive && (equippedStone==='obsidian'||equippedStone==='fluorite'||equippedStone==='chaos')); }
+  } else if(_xWasDown){ _xWasDown=false;
+    if(!_xHeld && p.castT<=0&&p.castCd<=0&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamT<=0&&p.slamRec<=0){
+      p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false; p.castUp=false; } }
+  if (keys['KeyZ'] && !p.dead && !p.won && !p.winning){
+    if(!_zWasDown){ _zWasDown=true; _zT=performance.now(); _zHeld=false; _zAir=!p.onGround;
+      if(p.onGround && p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamRec<=0 && SPR.chars[chosen].attack.weapon){ p.attackT=SPR.chars[chosen].attack.frames/pfps('attack'); playSfx(isDing(chosen)?'sfx_wing':'sfx_slash'); } }
+    else if(!_zHeld && _zAir && !p.onGround && performance.now()-_zT>=ACT_HOLD_MS && p.slamT<=0&&p.slamRec<=0&&p.diveT<=0&&p.diveRec<=0){
+      _zHeld=true; p.slamT=1; p.vx=0; p.vy=SLAM_VY; slamGhosts=[]; playSfx('sfx_rwhoosh',1.0); }
+  } else if(_zWasDown){ _zWasDown=false;
+    if(_zAir && !_zHeld && !p.onGround && performance.now()-_zT<ACT_HOLD_MS) diveReq={dir:0,t:performance.now()}; }
   if (p.attackT>0){
     p.attackT-=dt;
     if (isDing(chosen)){
@@ -1261,9 +1267,6 @@ function update(dt){
   }
   if (p.castCd>0) p.castCd-=dt;
   if (p.muzzleT>0) p.muzzleT-=dt;
-  if (keys['KeyX']&&p.castT<=0&&p.castCd<=0&&p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamT<=0&&p.slamRec<=0){
-    p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false; p.castUp = (keys['ArrowDown']||keys['KeyS']) && !(powerActive && (equippedStone==='obsidian'||equippedStone==='fluorite'||equippedStone==='chaos'));
-  }
   if (p.castT>0){
     p.castT-=dt;
     const cf0=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast'));
