@@ -99,21 +99,27 @@ function canMoveTo(nx){
   }
   return true;
 }
+function floorBetween(x,y0,y1){ const cs=crossings(x); let best=null;
+  for(let i=0;i<cs.length;i+=2){ const cy=cs[i].y; if(cy>=y0-2 && cy<=y1+0.5 && (best===null||cy<best.y)) best=cs[i]; }
+  return best; }
 function step(){
   let dir=0; if(keyL)dir=-1; else if(keyR)dir=1;
   if(dir!==0){ const nx=Math.max(20,Math.min(WORLDW-20,player.x+dir*MOVE)); if(canMoveTo(nx)){ player.x=nx; player.facing=dir; } }
   if(player.onG){
-    const f=groundUnder(player.x,player.y);
-    if(jumpEdge){ player.vy=JUMP; player.onG=false; player.y+=player.vy; }
-    else if(f && (f.y-player.y)<=maxSlope*MOVE+6){ player.y=f.y; player.vy=0; }   // follow surface up/gentle-down
-    else { player.onG=false; player.vy=0; }                                       // ledge / steep drop -> fall
+    if(jumpEdge){ player.vy=JUMP; player.onG=false; }
+    else { const f=groundUnder(player.x,player.y);
+      if(f && (f.y-player.y)<=maxSlope*MOVE+8){ player.y=f.y; player.vy=0; }
+      else { player.onG=false; player.vy=0; }
+    }
   }
   if(!player.onG){
-    player.vy=Math.min(player.vy+GRAV,19); player.y+=player.vy;
-    if(player.vy<0){ const c=ceilingAbove(player.x,player.y-PH); if(c && (player.y-PH)<c.y){ player.y=c.y+PH; player.vy=0; } }  // bonk overhang
-    if(player.vy>=0){ const f=groundUnder(player.x,player.y); if(f && player.y>=f.y){ player.y=f.y; player.vy=0; player.onG=true; } }
+    player.vy=Math.min(player.vy+GRAV,18);
+    const ny=player.y+player.vy;
+    if(player.vy<0){ const c=ceilingAbove(player.x,ny-PH); if(c && (ny-PH)<c.y){ player.y=c.y+PH; player.vy=0; } else player.y=ny; }
+    else { const f=floorBetween(player.x,player.y,ny); if(f){ player.y=f.y; player.vy=0; player.onG=true; } else player.y=ny; }
   }
   jumpEdge=false;
+  if(player.y>H+500) resetPlayer();
   camX += ((player.x - W*0.4) - camX)*0.12; camX=Math.max(0,Math.min(WORLDW-W,camX));
 }
 
