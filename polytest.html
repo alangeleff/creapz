@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>cReapZ — Polyline Terrain Tester</title>
+<style>
+  :root{--bg:#0d0a18;--ink:#e8e6f5;--lime:#c8fb50;--line:#3a3360;--rock:#6a5aa6;--wall:#e2563b;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;overflow:hidden}
+  #wrap{position:fixed;inset:0;display:flex;flex-direction:column}
+  #bar{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#161030;border-bottom:1px solid var(--line);align-items:center}
+  .btn{background:#241d44;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 11px;font-size:13px;cursor:pointer;font-weight:600}
+  .btn.warn{background:#3a1620;border-color:#e23b3b;color:#ff9a9a}
+  label{font-size:12px;opacity:.85;display:flex;align-items:center;gap:6px}
+  #cv{flex:1;display:block;touch-action:none}
+  #hint{position:absolute;left:10px;bottom:80px;font-size:12px;opacity:.55;max-width:62%;line-height:1.45;pointer-events:none}
+  #pad{position:absolute;right:10px;bottom:12px;display:flex;gap:8px}
+  .pb{width:60px;height:60px;border-radius:13px;background:rgba(36,29,68,.85);border:1px solid var(--line);color:var(--ink);font-size:24px;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none}
+  .pb:active{background:var(--lime);color:#15121f}
+</style></head>
+<body><div id="wrap">
+  <div id="bar">
+    <strong style="color:var(--lime);font-size:14px">Polyline Terrain</strong>
+    <label>Walkable angle <input id="steep" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:100px"></label>
+    <button class="btn" id="bReset">↺ Terrain</button>
+    <button class="btn" id="bSpawn">⟲ Player</button>
+    <span id="info" style="font-size:12px;opacity:.7"></span>
+  </div>
+  <canvas id="cv"></canvas>
+  <div id="hint">Tap empty space = add node · drag = shape it · tap a node = toggle round⟷point · double-tap a node = delete. Red = too steep to climb (acts as a wall). Walk with ← → and ⤒, or arrow keys + Space.</div>
+  <div id="pad"><div class="pb" id="pL">◀</div><div class="pb" id="pJ">⤒</div><div class="pb" id="pR">▶</div></div>
+</div>
+<script>
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let DPR=1, W=0, H=0, camX=0;
+const WORLDW=2800;
+let nodes=[], samples=[];
+let maxSlope=1.3;
+
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  const r=cv.getBoundingClientRect(); W=r.width; H=r.height;
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(!nodes.length) initNodes();
+  buildSamples();
+  if(!player.placed) resetPlayer();
+}
+function initNodes(){
+  const by=Math.min(H*0.62, H-90); nodes=[]; const n=7;
+  for(let i=0;i<n;i++) nodes.push({x:i*(WORLDW/(n-1)), y:by, corner:false});
+}
+
+/* ---- curve sampling: Catmull-Rom, a 'corner' node forces a sharp vertex ---- */
+function catmull(p0,p1,p2,p3,t){
+  const t2=t*t,t3=t2*t;
+  return {
+    x:0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+    y:0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)
+  };
+}
+function buildSamples(){
+  nodes.sort((a,b)=>a.x-b.x);
+  samples=[];
+  if(nodes.length===1){ samples=[{x:nodes[0].x,y:nodes[0].y}]; return; }
+  for(let i=0;i<nodes.length-1;i++){
+    const A=nodes[i], B=nodes[i+1];
+    const p0=(i-1>=0 && !A.corner)?nodes[i-1]:A;
+    const p3=(i+2<nodes.length && !B.corner)?nodes[i+2]:B;
+    const steps=Math.max(2,Math.min(140,Math.round(Math.abs(B.x-A.x)/4)));
+    for(let s=(i===0?0:1);s<=steps;s++){ samples.push(catmull(p0,A,B,p3,s/steps)); }
+  }
+  samples.sort((a,b)=>a.x-b.x);
+}
+function surfaceY(x){
+  if(!samples.length) return H*0.7;
+  if(x<=samples[0].x) return samples[0].y;
+  const last=samples[samples.length-1];
+  if(x>=last.x) return last.y;
+  let lo=0,hi=samples.length-1;
+  while(hi-lo>1){ const m=(lo+hi)>>1; if(samples[m].x<x)lo=m; else hi=m; }
+  const a=samples[lo],b=samples[hi], t=(x-a.x)/((b.x-a.x)||1);
+  return a.y+(b.y-a.y)*t;
+}
+
+/* ---- player ---- */
+const PH=46, PW=26, GRAV=0.8, MOVE=3.7, JUMP=-13.5;
+const player={x:300,y:0,vy:0,onG:false,facing:1,placed:false};
+function resetPlayer(){ player.x=camX+W*0.4; player.y=surfaceY(player.x); player.vy=0; player.onG=true; player.placed=true; }
+let keyL=false,keyR=false,jumpEdge=false;
+
+function step(){
+  let dir=0; if(keyL)dir=-1; else if(keyR)dir=1;
+  if(dir!==0){
+    const nx=Math.max(20,Math.min(WORLDW-20,player.x+dir*MOVE));
+    const y0=surfaceY(player.x), y1=surfaceY(nx);
+    const slope=Math.abs((y1-y0)/((nx-player.x)||1));
+    const uphill=(y1<y0-0.5);
+    if(player.onG && uphill && slope>maxSlope){ /* wall: blocked */ }
+    else { player.x=nx; player.facing=dir; }
+  }
+  const gY=surfaceY(player.x);
+  if(player.onG){
+    if(jumpEdge){ player.vy=JUMP; player.onG=false; }
+    else { player.y=gY; player.vy=0; }
+  }
+  if(!player.onG){
+    player.vy+=GRAV; player.y+=player.vy;
+    if(player.vy>=0 && player.y>=gY){ player.y=gY; player.vy=0; player.onG=true; }
+  }
+  jumpEdge=false;
+  camX += ((player.x - W*0.4) - camX)*0.12;
+  camX=Math.max(0,Math.min(WORLDW-W,camX));
+}
+
+/* ---- render ---- */
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#1a1430'); g.addColorStop(1,'#0d0a18');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='rgba(120,110,180,.07)'; ctx.lineWidth=1;
+  for(let gx=-(camX%80); gx<W; gx+=80){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke(); }
+  // terrain fill
+  ctx.beginPath();
+  let started=false;
+  for(const s of samples){ const sx=s.x-camX; if(sx<-40||sx>W+40){ if(!started)continue; } if(!started){ctx.moveTo(sx,s.y);started=true;} else ctx.lineTo(sx,s.y); }
+  ctx.lineTo(W+40,H+40); ctx.lineTo(-40,H+40); ctx.closePath();
+  const tg=ctx.createLinearGradient(0,H*0.4,0,H); tg.addColorStop(0,'#3a2f63'); tg.addColorStop(1,'#241d44');
+  ctx.fillStyle=tg; ctx.fill();
+  // surface stroke, red where too steep
+  ctx.lineWidth=4; ctx.lineCap='round';
+  for(let i=1;i<samples.length;i++){
+    const a=samples[i-1], b=samples[i];
+    const ax=a.x-camX, bx=b.x-camX; if(bx<-10||ax>W+10) continue;
+    const slope=Math.abs((b.y-a.y)/((b.x-a.x)||1));
+    ctx.strokeStyle = slope>maxSlope ? '#e2563b' : '#9d8ce0';
+    ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke();
+  }
+  // nodes
+  for(const n of nodes){
+    const nx=n.x-camX; if(nx<-20||nx>W+20) continue;
+    ctx.fillStyle=n.corner?'#ffd24a':'#c8fb50'; ctx.strokeStyle='#15121f'; ctx.lineWidth=2;
+    if(n.corner){ ctx.beginPath(); ctx.moveTo(nx,n.y-8); ctx.lineTo(nx+8,n.y); ctx.lineTo(nx,n.y+8); ctx.lineTo(nx-8,n.y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(nx,n.y,6.5,0,7); ctx.fill(); ctx.stroke(); }
+  }
+  // player (gray-box reaper)
+  const px=player.x-camX, py=player.y;
+  ctx.save(); ctx.translate(px,py);
+  ctx.fillStyle='#bdb6e6'; roundRect(-PW/2,-PH,PW,PH,7); ctx.fill();
+  ctx.fillStyle='#15121f'; const eo=player.facing>0?3:-3;
+  ctx.beginPath(); ctx.arc(eo-5,-PH+15,3,0,7); ctx.arc(eo+5,-PH+15,3,0,7); ctx.fill();
+  ctx.restore();
+  // info
+  document.getElementById('info').textContent=nodes.length+' nodes · wall > '+(Math.atan(maxSlope)*180/Math.PI|0)+'°';
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+function loop(){ step(); draw(); requestAnimationFrame(loop); }
+
+/* ---- editing input ---- */
+let drag=null, dragMoved=false, lastTapNode=null, lastTapT=0;
+function worldPt(e){ const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)+camX, y:(e.clientY-r.top)}; }
+function nodeAt(p){ let best=null,bd=16; for(const n of nodes){ const d=Math.hypot(n.x-p.x,n.y-p.y); if(d<bd){bd=d;best=n;} } return best; }
+cv.addEventListener('pointerdown',e=>{
+  e.preventDefault(); cv.setPointerCapture(e.pointerId);
+  const p=worldPt(e); const hit=nodeAt(p);
+  if(hit){
+    const now=performance.now();
+    if(hit===lastTapNode && now-lastTapT<350){ if(nodes.length>2){ nodes.splice(nodes.indexOf(hit),1); buildSamples(); } lastTapNode=null; drag=null; return; }
+    lastTapNode=hit; lastTapT=now; drag=hit; dragMoved=false;
+  } else {
+    const n={x:Math.max(0,Math.min(WORLDW,p.x)), y:p.y, corner:false}; nodes.push(n); buildSamples(); drag=n; dragMoved=false; lastTapNode=null;
+  }
+});
+cv.addEventListener('pointermove',e=>{
+  if(!drag) return; e.preventDefault(); const p=worldPt(e);
+  const i=nodes.indexOf(drag);
+  const lo=(i>0)?nodes[i-1].x+3:0, hi=(i<nodes.length-1)?nodes[i+1].x-3:WORLDW;
+  drag.x=Math.max(lo,Math.min(hi,p.x)); drag.y=Math.max(20,Math.min(H-12,p.y));
+  dragMoved=true; buildSamples();
+});
+cv.addEventListener('pointerup',e=>{
+  if(drag && !dragMoved){ drag.corner=!drag.corner; buildSamples(); }
+  drag=null;
+});
+
+/* ---- walk controls ---- */
+addEventListener('keydown',e=>{ if(e.code==='ArrowLeft')keyL=true; else if(e.code==='ArrowRight')keyR=true; else if(e.code==='Space'){ if(player.onG)jumpEdge=true; } });
+addEventListener('keyup',e=>{ if(e.code==='ArrowLeft')keyL=false; else if(e.code==='ArrowRight')keyR=false; });
+function bind(id,on,off){ const el=document.getElementById(id); el.addEventListener('pointerdown',e=>{e.preventDefault();on();}); el.addEventListener('pointerup',e=>{e.preventDefault();off&&off();}); el.addEventListener('pointerleave',e=>{off&&off();}); el.addEventListener('pointercancel',e=>{off&&off();}); }
+bind('pL',()=>keyL=true,()=>keyL=false); bind('pR',()=>keyR=true,()=>keyR=false); bind('pJ',()=>{ if(player.onG)jumpEdge=true; });
+document.getElementById('steep').addEventListener('input',e=>maxSlope=parseFloat(e.target.value));
+document.getElementById('bReset').onclick=()=>{ nodes=[]; initNodes(); buildSamples(); };
+document.getElementById('bSpawn').onclick=()=>{ player.placed=false; resize(); };
+
+addEventListener('resize',resize); resize(); loop();
+</script>
+</body></html>
