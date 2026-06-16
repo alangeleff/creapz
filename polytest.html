@@ -2,7 +2,7 @@
 <html lang="en"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>cReapZ — Polyline Terrain Tester (Solid + Overhangs)</title>
+<title>cReapZ — Polyline Terrain Tester</title>
 <style>
   :root{--bg:#0d0a18;--ink:#e8e6f5;--lime:#c8fb50;--line:#3a3360;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -10,24 +10,26 @@
   #wrap{position:fixed;inset:0;display:flex;flex-direction:column}
   #bar{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#161030;border-bottom:1px solid var(--line);align-items:center}
   .btn{background:#241d44;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 11px;font-size:13px;cursor:pointer;font-weight:600}
+  .btn.on{background:var(--lime);color:#15121f;border-color:var(--lime)}
   label{font-size:12px;opacity:.85;display:flex;align-items:center;gap:6px}
   #cv{flex:1;display:block;touch-action:none}
-  #hint{position:absolute;left:10px;bottom:82px;font-size:12px;opacity:.55;max-width:62%;line-height:1.45;pointer-events:none}
+  #hint{position:absolute;left:10px;bottom:82px;font-size:12px;opacity:.6;max-width:64%;line-height:1.45;pointer-events:none}
   #pad{position:absolute;right:10px;bottom:12px;display:flex;gap:8px}
   .pb{width:60px;height:60px;border-radius:13px;background:rgba(36,29,68,.85);border:1px solid var(--line);color:var(--ink);font-size:24px;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none}
   .pb:active{background:var(--lime);color:#15121f}
 </style></head>
 <body><div id="wrap">
   <div id="bar">
-    <strong style="color:var(--lime);font-size:14px">Solid Terrain + Overhangs</strong>
-    <label>Walkable angle <input id="steep" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:100px"></label>
+    <strong style="color:var(--lime);font-size:14px">Solid Terrain</strong>
+    <button class="btn" id="mWall">🧱 Paint walls: off</button>
+    <label>Auto-wall angle <input id="steep" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:90px"></label>
     <button class="btn" id="bReset">↺ Terrain</button>
-    <button class="btn" id="bArch">⌒ Demo overhang</button>
+    <button class="btn" id="bArch">⌒ Overhang</button>
     <button class="btn" id="bSpawn">⟲ Player</button>
     <span id="info" style="font-size:12px;opacity:.7"></span>
   </div>
   <canvas id="cv"></canvas>
-  <div id="hint">Tap empty space = add node (on the nearest part of the line) · drag = shape it freely, even back over itself to make an overhang · tap a node = round⟷point · double-tap = delete. Red = too steep (wall). Walk: ← → ⤒ or arrows + Space.</div>
+  <div id="hint">Shape mode: tap = add node · drag = shape (curve back over itself for overhangs) · tap node = round⟷point · double-tap = delete. Paint-walls mode: tap a line segment to cycle auto → wall → walkable. Red = wall (solid barrier). Walk: ← → ⤒ / arrows + Space.</div>
   <div id="pad"><div class="pb" id="pL">◀</div><div class="pb" id="pJ">⤒</div><div class="pb" id="pR">▶</div></div>
 </div>
 <script>
@@ -35,89 +37,87 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let DPR=1, W=0, H=0, camX=0;
 const WORLDW=2800;
 let nodes=[], samples=[];
-let maxSlope=1.3;
+let maxSlope=1.3, wallMode=false;
 const PH=46, PW=26, GRAV=0.8, MOVE=3.7, JUMP=-13.5, STEPUP=15;
 
 function resize(){
   DPR=Math.min(2,window.devicePixelRatio||1);
   const r=cv.getBoundingClientRect(); W=r.width; H=r.height;
   cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
-  if(!nodes.length) initNodes();
-  buildSamples();
-  if(!player.placed) resetPlayer();
+  if(!nodes.length) initNodes(); buildSamples(); if(!player.placed) resetPlayer();
 }
-function initNodes(){ const by=Math.min(H*0.62,H-90); nodes=[]; const n=7; for(let i=0;i<n;i++) nodes.push({x:i*(WORLDW/(n-1)),y:by,corner:false}); }
+function initNodes(){ const by=Math.min(H*0.62,H-90); nodes=[]; const n=7; for(let i=0;i<n;i++) nodes.push({x:i*(WORLDW/(n-1)),y:by,corner:false,wn:'auto'}); }
 
-/* ---- curve sampling (path order; a 'corner' node = sharp vertex) ---- */
 function catmull(p0,p1,p2,p3,t){ const t2=t*t,t3=t2*t; return {
   x:0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
   y:0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3) }; }
 function buildSamples(){
   samples=[];
-  if(nodes.length<2){ if(nodes.length) samples=[{x:nodes[0].x,y:nodes[0].y}]; return; }
+  if(nodes.length<2){ if(nodes.length) samples=[{x:nodes[0].x,y:nodes[0].y,seg:0}]; return; }
   for(let i=0;i<nodes.length-1;i++){
     const A=nodes[i],B=nodes[i+1];
     const p0=(i-1>=0 && !A.corner)?nodes[i-1]:A;
     const p3=(i+2<nodes.length && !B.corner)?nodes[i+2]:B;
     const steps=Math.max(2,Math.min(150,Math.round(Math.hypot(B.x-A.x,B.y-A.y)/4)));
-    for(let s=(i===0?0:1);s<=steps;s++) samples.push(catmull(p0,A,B,p3,s/steps));
+    for(let s=(i===0?0:1);s<=steps;s++){ const q=catmull(p0,A,B,p3,s/steps); q.seg=i; samples.push(q); }
   }
 }
+// is the sample-edge a wall? manual override per node-segment, else auto by local steepness
+function edgeWall(a,b){ const nd=nodes[a.seg]; const c=(nd&&nd.wn)||'auto';
+  if(c==='wall') return true; if(c==='ground') return false;
+  return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>maxSlope; }
 
-/* ---- solid model: vertical ray at column x crosses the surface; even-odd = inside solid ---- */
-function crossings(x){
-  const out=[];
-  for(let i=1;i<samples.length;i++){
-    const a=samples[i-1], b=samples[i];
-    if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){
-      const t=(x-a.x)/((b.x-a.x)||1e-6);
-      out.push({y:a.y+(b.y-a.y)*t});
-    }
-  }
-  out.sort((p,q)=>p.y-q.y);
-  return out;
-}
+function crossings(x){ const out=[];
+  for(let i=1;i<samples.length;i++){ const a=samples[i-1],b=samples[i];
+    if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t}); } }
+  out.sort((p,q)=>p.y-q.y); return out; }
 function solidAt(x,y){ const cs=crossings(x); let c=0; for(const k of cs) if(k.y<y) c++; return (c&1)===1; }
-// highest solid-top at/just-below the feet (even-index crossings are solid tops)
 function groundUnder(x,fy){ const cs=crossings(x); for(let i=0;i<cs.length;i+=2){ if(cs[i].y>=fy-STEPUP) return cs[i]; } return null; }
-// lowest overhang underside above the head (odd-index crossings are undersides)
 function ceilingAbove(x,hy){ const cs=crossings(x); let c=null; for(let i=1;i<cs.length;i+=2){ if(cs[i].y<=hy+2) c=cs[i]; else break; } return c; }
+function floorBetween(x,y0,y1){ const cs=crossings(x); let best=null;
+  for(let i=0;i<cs.length;i+=2){ const cy=cs[i].y; if(cy>=y0-2 && cy<=y1+0.5 && (best===null||cy<best.y)) best=cs[i]; } return best; }
 
 const player={x:300,y:0,vy:0,onG:false,facing:1,placed:false};
 function resetPlayer(){ player.x=Math.max(40,Math.min(WORLDW-40,camX+W*0.4)); const f=groundUnder(player.x,-1e9); player.y=f?f.y:H*0.5; player.vy=0; player.onG=true; player.placed=true; }
 let keyL=false,keyR=false,jumpEdge=false;
 
 function canMoveTo(nx){
-  const dir=Math.sign(nx-player.x)||player.facing;
-  const edgeX=nx+dir*(PW/2);
+  const dir=Math.sign(nx-player.x)||player.facing; const edgeX=nx+dir*(PW/2);
   for(const hyc of [player.y-5, player.y-PH*0.5, player.y-PH+7]){
-    if(solidAt(edgeX,hyc)){
-      const f=groundUnder(edgeX,player.y);
-      if(f && (player.y-f.y)<=STEPUP) return true;   // gentle step up is OK
-      return false;                                  // wall
-    }
+    if(solidAt(edgeX,hyc)){ const f=groundUnder(edgeX,player.y); if(f && (player.y-f.y)<=STEPUP) return true; return false; }
   }
   return true;
 }
-function floorBetween(x,y0,y1){ const cs=crossings(x); let best=null;
-  for(let i=0;i<cs.length;i+=2){ const cy=cs[i].y; if(cy>=y0-2 && cy<=y1+0.5 && (best===null||cy<best.y)) best=cs[i]; }
-  return best; }
+// push the player out of any WALL-classified surface segment (true solid barrier, any direction)
+function resolveWalls(){
+  const hx=PW/2-1, hy=PH/2-1;
+  for(let pass=0;pass<3;pass++){
+    let cx=player.x, cy=player.y-PH/2;
+    for(let i=1;i<samples.length;i++){ const a=samples[i-1],b=samples[i]; if(!edgeWall(a,b)) continue;
+      const vx=b.x-a.x, vy=b.y-a.y, L=vx*vx+vy*vy; if(L<0.01) continue;
+      let t=((cx-a.x)*vx+(cy-a.y)*vy)/L; t=Math.max(0,Math.min(1,t));
+      const pxp=a.x+t*vx, pyp=a.y+t*vy; let dx=cx-pxp, dy=cy-pyp, dist=Math.hypot(dx,dy);
+      if(dist<0.001){ dx=-vy; dy=vx; dist=Math.hypot(dx,dy)||1; }
+      const ndx=dx/dist, ndy=dy/dist, reach=Math.abs(ndx)*hx+Math.abs(ndy)*hy, pen=reach-dist;
+      if(pen>0.01){ player.x+=ndx*pen; player.y+=ndy*pen; cx=player.x; cy=player.y-PH/2;
+        if(ndy<-0.4){ if(player.vy>0)player.vy=0; player.onG=true; } else if(ndy>0.4){ if(player.vy<0)player.vy=0; } }
+    }
+  }
+}
 function step(){
   let dir=0; if(keyL)dir=-1; else if(keyR)dir=1;
   if(dir!==0){ const nx=Math.max(20,Math.min(WORLDW-20,player.x+dir*MOVE)); if(canMoveTo(nx)){ player.x=nx; player.facing=dir; } }
   if(player.onG){
     if(jumpEdge){ player.vy=JUMP; player.onG=false; }
     else { const f=groundUnder(player.x,player.y);
-      if(f && (f.y-player.y)<=maxSlope*MOVE+8){ player.y=f.y; player.vy=0; }
-      else { player.onG=false; player.vy=0; }
-    }
+      if(f && (f.y-player.y)<=maxSlope*MOVE+8){ player.y=f.y; player.vy=0; } else { player.onG=false; player.vy=0; } }
   }
   if(!player.onG){
-    player.vy=Math.min(player.vy+GRAV,18);
-    const ny=player.y+player.vy;
+    player.vy=Math.min(player.vy+GRAV,18); const ny=player.y+player.vy;
     if(player.vy<0){ const c=ceilingAbove(player.x,ny-PH); if(c && (ny-PH)<c.y){ player.y=c.y+PH; player.vy=0; } else player.y=ny; }
     else { const f=floorBetween(player.x,player.y,ny); if(f){ player.y=f.y; player.vy=0; player.onG=true; } else player.y=ny; }
   }
+  resolveWalls();
   jumpEdge=false;
   if(player.y>H+500) resetPlayer();
   camX += ((player.x - W*0.4) - camX)*0.12; camX=Math.max(0,Math.min(WORLDW-W,camX));
@@ -129,49 +129,43 @@ function draw(){
   ctx.strokeStyle='rgba(120,110,180,.07)'; ctx.lineWidth=1;
   for(let gx=-(((camX%80)+80)%80); gx<W; gx+=80){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke(); }
   if(samples.length>1){
-    // solid fill (closed to a baseline; even-odd so overhangs/caves carve correctly)
-    ctx.beginPath();
-    ctx.moveTo(samples[0].x-camX,samples[0].y);
+    ctx.beginPath(); ctx.moveTo(samples[0].x-camX,samples[0].y);
     for(let i=1;i<samples.length;i++) ctx.lineTo(samples[i].x-camX,samples[i].y);
-    const baseY=H+260;
-    ctx.lineTo(samples[samples.length-1].x-camX,baseY); ctx.lineTo(samples[0].x-camX,baseY); ctx.closePath();
+    const baseY=H+260; ctx.lineTo(samples[samples.length-1].x-camX,baseY); ctx.lineTo(samples[0].x-camX,baseY); ctx.closePath();
     const tg=ctx.createLinearGradient(0,H*0.35,0,H); tg.addColorStop(0,'#3a2f63'); tg.addColorStop(1,'#241d44'); ctx.fillStyle=tg; ctx.fill('evenodd');
-    // surface stroke, red where too steep
     ctx.lineWidth=4; ctx.lineCap='round';
     for(let i=1;i<samples.length;i++){ const a=samples[i-1],b=samples[i]; const ax=a.x-camX,bx=b.x-camX; if((ax<-12&&bx<-12)||(ax>W+12&&bx>W+12)) continue;
-      const slope=Math.abs((b.y-a.y)/((b.x-a.x)||0.0001));
-      ctx.strokeStyle = slope>maxSlope ? '#e2563b' : '#9d8ce0';
+      ctx.strokeStyle = edgeWall(a,b) ? '#e2563b' : '#9d8ce0';
       ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke(); }
   }
   for(const n of nodes){ const nx=n.x-camX; if(nx<-20||nx>W+20) continue;
     ctx.fillStyle=n.corner?'#ffd24a':'#c8fb50'; ctx.strokeStyle='#15121f'; ctx.lineWidth=2;
     if(n.corner){ ctx.beginPath(); ctx.moveTo(nx,n.y-8); ctx.lineTo(nx+8,n.y); ctx.lineTo(nx,n.y+8); ctx.lineTo(nx-8,n.y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     else { ctx.beginPath(); ctx.arc(nx,n.y,6.5,0,7); ctx.fill(); ctx.stroke(); } }
-  const px=player.x-camX, py=player.y;
-  ctx.save(); ctx.translate(px,py);
+  const px=player.x-camX, py=player.y; ctx.save(); ctx.translate(px,py);
   ctx.fillStyle='#bdb6e6'; roundRect(-PW/2,-PH,PW,PH,7); ctx.fill();
-  ctx.fillStyle='#15121f'; const eo=player.facing>0?3:-3; ctx.beginPath(); ctx.arc(eo-5,-PH+15,3,0,7); ctx.arc(eo+5,-PH+15,3,0,7); ctx.fill();
-  ctx.restore();
-  document.getElementById('info').textContent=nodes.length+' nodes · wall > '+(Math.atan(maxSlope)*180/Math.PI|0)+'° · '+(player.onG?'grounded':'air');
+  ctx.fillStyle='#15121f'; const eo=player.facing>0?3:-3; ctx.beginPath(); ctx.arc(eo-5,-PH+15,3,0,7); ctx.arc(eo+5,-PH+15,3,0,7); ctx.fill(); ctx.restore();
+  document.getElementById('info').textContent=nodes.length+' nodes · auto-wall > '+(Math.atan(maxSlope)*180/Math.PI|0)+'°'+(wallMode?' · PAINT WALLS':'');
 }
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function loop(){ step(); draw(); requestAnimationFrame(loop); }
 
-/* ---- editing ---- */
 let drag=null, dragMoved=false, lastTapNode=null, lastTapT=0;
 function worldPt(e){ const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)+camX, y:(e.clientY-r.top)}; }
 function nodeAt(p){ let best=null,bd=16; for(const n of nodes){ const d=Math.hypot(n.x-p.x,n.y-p.y); if(d<bd){bd=d;best=n;} } return best; }
 function distToSeg(p,a,b){ const vx=b.x-a.x,vy=b.y-a.y,wx=p.x-a.x,wy=p.y-a.y,L=vx*vx+vy*vy||1; let t=Math.max(0,Math.min(1,(wx*vx+wy*vy)/L)); return Math.hypot(p.x-(a.x+t*vx),p.y-(a.y+t*vy)); }
+function nearestEdgeSeg(p){ let bs=-1,bd=12; for(let i=1;i<samples.length;i++){ const d=distToSeg(p,samples[i-1],samples[i]); if(d<bd){bd=d;bs=samples[i].seg;} } return bs; }
 function addNode(p){
-  if(nodes.length<2){ nodes.push({x:p.x,y:p.y,corner:false}); return nodes[nodes.length-1]; }
+  if(nodes.length<2){ nodes.push({x:p.x,y:p.y,corner:false,wn:'auto'}); return nodes[nodes.length-1]; }
   let bi=-1,bd=1e9; for(let i=0;i<nodes.length-1;i++){ const d=distToSeg(p,nodes[i],nodes[i+1]); if(d<bd){bd=d;bi=i;} }
   const d0=Math.hypot(p.x-nodes[0].x,p.y-nodes[0].y), dN=Math.hypot(p.x-nodes[nodes.length-1].x,p.y-nodes[nodes.length-1].y);
-  if(d0<bd && d0<=dN){ nodes.unshift({x:p.x,y:p.y,corner:false}); return nodes[0]; }
-  if(dN<bd){ nodes.push({x:p.x,y:p.y,corner:false}); return nodes[nodes.length-1]; }
-  const n={x:p.x,y:p.y,corner:false}; nodes.splice(bi+1,0,n); return n;
+  if(d0<bd && d0<=dN){ nodes.unshift({x:p.x,y:p.y,corner:false,wn:'auto'}); return nodes[0]; }
+  if(dN<bd){ nodes.push({x:p.x,y:p.y,corner:false,wn:'auto'}); return nodes[nodes.length-1]; }
+  const n={x:p.x,y:p.y,corner:false,wn:'auto'}; nodes.splice(bi+1,0,n); return n;
 }
-cv.addEventListener('pointerdown',e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId);
-  const p=worldPt(e), hit=nodeAt(p);
+cv.addEventListener('pointerdown',e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); const p=worldPt(e);
+  if(wallMode){ const seg=nearestEdgeSeg(p); if(seg>=0){ const nd=nodes[seg]; nd.wn = nd.wn==='wall'?'ground':(nd.wn==='ground'?'auto':'wall'); buildSamples(); } drag=null; return; }
+  const hit=nodeAt(p);
   if(hit){ const now=performance.now();
     if(hit===lastTapNode && now-lastTapT<350){ if(nodes.length>2) nodes.splice(nodes.indexOf(hit),1); buildSamples(); lastTapNode=null; drag=null; return; }
     lastTapNode=hit; lastTapT=now; drag=hit; dragMoved=false;
@@ -186,16 +180,14 @@ addEventListener('keyup',e=>{ if(e.code==='ArrowLeft')keyL=false; else if(e.code
 function bind(id,on,off){ const el=document.getElementById(id); el.addEventListener('pointerdown',e=>{e.preventDefault();on();}); el.addEventListener('pointerup',e=>{e.preventDefault();off&&off();}); el.addEventListener('pointerleave',()=>off&&off()); el.addEventListener('pointercancel',()=>off&&off()); }
 bind('pL',()=>keyL=true,()=>keyL=false); bind('pR',()=>keyR=true,()=>keyR=false); bind('pJ',()=>{ if(player.onG)jumpEdge=true; });
 document.getElementById('steep').addEventListener('input',e=>maxSlope=parseFloat(e.target.value));
+document.getElementById('mWall').onclick=function(){ wallMode=!wallMode; this.classList.toggle('on',wallMode); this.textContent='🧱 Paint walls: '+(wallMode?'ON':'off'); };
 document.getElementById('bReset').onclick=()=>{ nodes=[]; initNodes(); buildSamples(); };
 document.getElementById('bSpawn').onclick=()=>{ player.placed=false; resetPlayer(); };
-document.getElementById('bArch').onclick=()=>{ // drop a ready-made overhang ledge near the player to demo
-  const bx=Math.round(player.x+200), by=Math.min(H*0.62,H-90);
-  const seg=[ {x:bx,y:by,corner:false},{x:bx+40,y:by-150,corner:true},{x:bx+150,y:by-150,corner:false},
-              {x:bx+150,y:by-95,corner:true},{x:bx+70,y:by-95,corner:true},{x:bx+95,y:by,corner:false} ];
-  // insert this little curl into the path at the right place (by nearest end of the chain)
+document.getElementById('bArch').onclick=()=>{ const bx=Math.round(player.x+200), by=Math.min(H*0.62,H-90);
+  const seg=[ {x:bx,y:by,corner:false,wn:'auto'},{x:bx+40,y:by-150,corner:true,wn:'wall'},{x:bx+150,y:by-150,corner:false,wn:'auto'},
+              {x:bx+150,y:by-95,corner:true,wn:'wall'},{x:bx+70,y:by-95,corner:true,wn:'wall'},{x:bx+95,y:by,corner:false,wn:'auto'} ];
   let bi=0,bd=1e9; for(let i=0;i<nodes.length-1;i++){ const d=distToSeg({x:bx,y:by},nodes[i],nodes[i+1]); if(d<bd){bd=d;bi=i;} }
-  nodes.splice(bi+1,0,...seg); buildSamples();
-};
+  nodes.splice(bi+1,0,...seg); buildSamples(); };
 addEventListener('resize',resize); resize(); loop();
 </script>
 </body></html>
