@@ -1,4 +1,4 @@
-const ASSET_VER='1781760000';
+const ASSET_VER='1781800000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -20,7 +20,7 @@ const GROUND = 360;
 const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
 const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
 const SLAM_VY = 19.0, SLAM_REC = 0.26, SLAM_IFRAMES = 0.6, SLAM_R = 134;
-const FLYSPD = 10.0;   // fusion supersonic fly speed   // Crush Drop (down-slam)
+const FLYSPD = 14.0;   // fusion (Doomwing) supersonic fly speed — faster than RUN(7.4)
 const BASH_VX = 11.4, BASH_VY = 12.6;   // Scythe Bash (cReaper) — snappier than the dive per Alan
 const OBJ = SPRITES.obst;
 const SPIKE_IMG=new Image(); SPIKE_IMG.src='./assets/haz_spike2.png?v='+ASSET_VER;
@@ -351,7 +351,7 @@ function press(code){
     if (keys[code]) return; runHeld[code]=(performance.now()-lastRelease[code])<DOUBLE_TAP;
   }
   if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && !p.onGround && equippedStone && stoneCharge>=PMETER && !powerActive) activatePower();
-  if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && chosen==='fusion' && (!p.onGround || p.flying)){ p.flying=!p.flying; if(p.flying){ p.vx=0; p.vy=0; flyGhosts=[]; playSfx('sfx_rwhoosh',0.9); } else { playSfx('sfx_jump',0.5); } }
+  if (code==='Space' && mode==='play' && p && !p.dead && !p.won && !p.winning && chosen==='fusion' && (!p.onGround || p.flying)){ p.flying=!p.flying; if(p.flying){ p.vx=0; p.vy=0; p.diveT=0; p.diveRec=0; p.slamT=0; p.slamRec=0; flyGhosts=[]; playSfx('sfx_rwhoosh',0.9); } else { playSfx('sfx_jump',0.5); } }
   keys[code]=true;
 }
 function release(code){
@@ -1355,11 +1355,11 @@ function update(dt){
       p.castT=Math.min(0.5, SPR.chars[chosen].cast.frames/pfps('cast')); p.castCd=0.55; p.castFired=false; p.castUp=false; } }
   if (keys['KeyZ'] && !p.dead && !p.won && !p.winning){
     if(!_zWasDown){ _zWasDown=true; _zT=performance.now(); _zHeld=false; _zAir=!p.onGround;
-      if(p.onGround && p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamRec<=0 && SPR.chars[chosen].attack.weapon){ p.attackT=SPR.chars[chosen].attack.frames/pfps('attack'); playSfx(isDing(chosen)?'sfx_wing':'sfx_slash'); } }
-    else if(!_zHeld && _zAir && !p.onGround && performance.now()-_zT>=ACT_HOLD_MS && p.slamT<=0&&p.slamRec<=0&&p.diveT<=0&&p.diveRec<=0){
+      if((p.onGround||p.flying) && p.attackT<=0&&p.diveT<=0&&p.diveRec<=0&&p.slamRec<=0 && SPR.chars[chosen].attack.weapon){ p.attackT=SPR.chars[chosen].attack.frames/pfps('attack'); playSfx(isDing(chosen)?'sfx_wing':'sfx_slash'); } }
+    else if(!_zHeld && _zAir && !p.onGround && !p.flying && performance.now()-_zT>=ACT_HOLD_MS && p.slamT<=0&&p.slamRec<=0&&p.diveT<=0&&p.diveRec<=0){
       _zHeld=true; p.slamT=1; p.vx=0; p.vy=SLAM_VY; slamGhosts=[]; playSfx('sfx_rwhoosh',1.0); }
   } else if(_zWasDown){ _zWasDown=false;
-    if(_zAir && !_zHeld && !p.onGround && performance.now()-_zT<ACT_HOLD_MS) diveReq={dir:0,t:performance.now()}; }
+    if(_zAir && !_zHeld && !p.onGround && !p.flying && performance.now()-_zT<ACT_HOLD_MS) diveReq={dir:0,t:performance.now()}; }
   // Top button (KeyC): tap = swap character/lead ; hold = toggle Dual mode
   if (keys['KeyC'] && !p.dead && !p.won && !p.winning){
     if(!_cWasDown){ _cWasDown=true; _cT=performance.now(); _cHeld=false; }
@@ -1414,7 +1414,7 @@ function update(dt){
     }
   }
   p.x=nx;
-  const prevFeet=p.y; if (powerActive && equippedStone==='chaos' && chaosSpawnN>0 && !p.dead){ p.vy=0; p.onGround=false; } else if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else if (p.slamT>0) p.vy=SLAM_VY; else if (p.flying){ p.vy=((keys['ArrowDown']||keys['KeyS']?1:0)-(keys['ArrowUp']||keys['KeyW']?1:0))*FLYSPD; } else p.vy+=GRAV; p.y+=p.vy;
+  const prevFeet=p.y; if (powerActive && equippedStone==='chaos' && chaosSpawnN>0 && !p.dead){ p.vy=0; p.onGround=false; } else if (p.flying){ p.vy=((keys['ArrowDown']||keys['KeyS']?1:0)-(keys['ArrowUp']||keys['KeyW']?1:0))*FLYSPD; } else if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else if (p.slamT>0) p.vy=SLAM_VY; else p.vy+=GRAV; p.y+=p.vy;
   if (p.flying){ p.onGround=false; p.standPlat=null; }
   else if (p.vy>=0){
     let cand=[]; for(const fy of segFloorsAt(p.x)) cand.push({t:fy,q:null});
@@ -1469,7 +1469,7 @@ function update(dt){
   if (p.onGround && p.diveT>0){ p.diveT=0; p.diveRec=DIVE_REC; p.vx=0; p.clock=0; playSfx('sfx_meleehit',0.45); }
   if (p.onGround && p.slamT>0){ p.slamT=0; p.slamRec=SLAM_REC; p.vx=0; p.clock=0; p.inv=Math.max(p.inv,SLAM_IFRAMES); slamBoom(p.x, p.y); }
   let st;
-  if (p.flying) st='run';
+  if (p.flying) st=(p.attackT>0?'attack':(p.castT>0?'cast':'run'));
   else if (p.diveT>0) st='dive';
   else if (p.slamT>0||p.slamRec>0) st='kneel';
   else if (p.diveRec>0) st='kneel';
