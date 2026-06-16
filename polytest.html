@@ -89,24 +89,34 @@ const player={x:300,y:0,vy:0,onG:false,facing:1,placed:false};
 function resetPlayer(){ player.x=camX+W*0.4; player.y=surfaceY(player.x); player.vy=0; player.onG=true; player.placed=true; }
 let keyL=false,keyR=false,jumpEdge=false;
 
+// a too-steep rise ahead is a SOLID wall: blocks whether grounded or airborne (no clipping through)
+function canMoveTo(nx){
+  const dir=Math.sign(nx-player.x)||player.facing;
+  const edgeX=Math.max(0,Math.min(WORLDW,nx+dir*(PW/2)));
+  const rise=player.y - surfaceY(edgeX);          // >0 = terrain ahead is above the feet
+  const run=Math.abs(edgeX-player.x)||1;
+  if(rise>2 && (rise/run)>maxSlope) return false; // wall — can only pass by jumping high enough to clear it
+  return true;
+}
 function step(){
   let dir=0; if(keyL)dir=-1; else if(keyR)dir=1;
   if(dir!==0){
     const nx=Math.max(20,Math.min(WORLDW-20,player.x+dir*MOVE));
-    const y0=surfaceY(player.x), y1=surfaceY(nx);
-    const slope=Math.abs((y1-y0)/((nx-player.x)||1));
-    const uphill=(y1<y0-0.5);
-    if(player.onG && uphill && slope>maxSlope){ /* wall: blocked */ }
-    else { player.x=nx; player.facing=dir; }
+    if(canMoveTo(nx)){ player.x=nx; player.facing=dir; }
   }
   const gY=surfaceY(player.x);
   if(player.onG){
-    if(jumpEdge){ player.vy=JUMP; player.onG=false; }
-    else { player.y=gY; player.vy=0; }
+    if(jumpEdge){ player.vy=JUMP; player.onG=false; player.y+=player.vy; }
+    else {
+      const drop=gY-player.y, stick=maxSlope*MOVE+6;
+      if(drop>stick){ player.onG=false; player.vy=0; }   // off a ledge / too-steep descent -> fall, don't glue
+      else { player.y=gY; player.vy=0; }
+    }
   }
   if(!player.onG){
-    player.vy+=GRAV; player.y+=player.vy;
-    if(player.vy>=0 && player.y>=gY){ player.y=gY; player.vy=0; player.onG=true; }
+    player.vy=Math.min(player.vy+GRAV,18); player.y+=player.vy;
+    const g2=surfaceY(player.x);
+    if(player.vy>=0 && player.y>=g2){ player.y=g2; player.vy=0; player.onG=true; }
   }
   jumpEdge=false;
   camX += ((player.x - W*0.4) - camX)*0.12;
