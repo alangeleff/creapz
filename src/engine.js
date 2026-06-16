@@ -1,4 +1,4 @@
-const ASSET_VER='1781800000';
+const ASSET_VER='1781810000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -195,6 +195,9 @@ fetch('./config/builder.json?cb='+ASSET_VER).then(r=>r.ok?r.json():null).then(c=
 const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+ASSET_VER;
 const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='+ASSET_VER; return i;})(), cavebg2:(()=>{const i=new Image(); i.src='./assets/cavebg2.png?v='+ASSET_VER; return i;})(), cryptbg:(()=>{const i=new Image(); i.src='./assets/cryptbg1.png?v='+ASSET_VER; return i;})(), rockwall:(()=>{const i=new Image(); i.src='./assets/rockwall1.png?v='+ASSET_VER; return i;})(), bonedirt:(()=>{const i=new Image(); i.src='./assets/bonedirt1.png?v='+ASSET_VER; return i;})()};
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[], GHURT=[], GSLAM=[], GBOUNCE=[];
+let POLY=null;   // optional polyline terrain for a stage (gated: null = classic flat terrain, zero change)
+const POLY_MAXSLOPE=1.3, POLY_STEP=18;
+const DEMO_POLY=[{x:60,y:380,wn:'auto',ha:true},{x:360,y:300,wn:'auto',ha:true},{x:640,y:380,wn:'auto',ha:true},{x:820,y:240,corner:true,wn:'auto',ha:true},{x:1000,y:380,wn:'auto',ha:true},{x:1180,y:382,wn:'auto',ha:true},{x:1230,y:200,corner:true,wn:'wall',ha:true},{x:1360,y:200,wn:'auto',ha:true},{x:1360,y:300,corner:true,wn:'wall',ha:true},{x:1280,y:300,corner:true,wn:'wall',ha:true},{x:1320,y:382,wn:'auto',ha:true},{x:1750,y:382,wn:'auto',ha:true}];
 let curses=[];   // Wood Witch aimed curse projectiles
 let flameWaves=[];   // Molten Skeleton crawling flame waves
 let STARS=[], TREES=[], GRAVES_BG=[];
@@ -296,6 +299,8 @@ function enterWorld(fromAct){
 function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
+  if(window.__polyDemo && !ST.poly) ST.poly=DEMO_POLY;
+  POLY = (ST.poly && ST.poly.length>1) ? polyBuild(ST.poly) : null;
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
   OBST = ST.obst.map(o => { const def=OBJ[o.type]||{w:96,h:62}; const m={x:o.x, type:o.type, w:def.w, h:def.h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z, f:o.f}; if(o.type==='chest'){ m.state='closed'; m.openT=0; m.loot=o.loot||'gold'; } return m; });
   loots=[];
@@ -1140,6 +1145,58 @@ function onSeg(x){ for(const s of SEG){ if(x>=s[0]&&x<=s[1]) return true; } retu
 function segFloorsAt(x){ const out=[]; for(const s of SEG){ if(x>=s[0]&&x<=s[1]) out.push(s.length>2?s[2]:GROUND); } return out; }
 function overlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+// ===== POLYLINE TERRAIN (gated; ported from the polyline tester) =====
+function polyBuild(nodes){
+  const ns=nodes.map(n=>({x:n.x,y:n.y,corner:!!n.corner,wn:n.wn||'auto',
+    ho:n.ho?{x:n.ho.x,y:n.ho.y}:{x:0,y:0}, hi:n.hi?{x:n.hi.x,y:n.hi.y}:{x:0,y:0}, ha:(n.ha!==false && !n.ho)}));
+  for(let i=0;i<ns.length;i++){ const n=ns[i]; if(n.ha){ const p=ns[i-1]||n,q=ns[i+1]||n; const tx=(q.x-p.x)/6,ty=(q.y-p.y)/6; n.ho={x:tx,y:ty}; n.hi={x:-tx,y:-ty}; } }
+  const samples=[];
+  for(let i=0;i<ns.length-1;i++){ const A=ns[i],B=ns[i+1];
+    const P1=A.corner?{x:A.x+(B.x-A.x)/3,y:A.y+(B.y-A.y)/3}:{x:A.x+A.ho.x,y:A.y+A.ho.y};
+    const P2=B.corner?{x:B.x+(A.x-B.x)/3,y:B.y+(A.y-B.y)/3}:{x:B.x+B.hi.x,y:B.y+B.hi.y};
+    const steps=Math.max(3,Math.min(170,Math.round(Math.hypot(B.x-A.x,B.y-A.y)/5)));
+    for(let sp=(i===0?0:1);sp<=steps;sp++){ const t=sp/steps,u=1-t;
+      samples.push({x:u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, y:u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y, seg:i}); } }
+  return {nodes:ns, samples};
+}
+function polyEdgeWall(a,b){ const nd=POLY.nodes[a.seg]; const c=(nd&&nd.wn)||'auto';
+  if(c==='wall') return true; if(c==='ground') return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
+function polyCross(x){ const S=POLY.samples, out=[];
+  for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); out.push(a.y+(b.y-a.y)*t); } }
+  out.sort((p,q)=>p-q); return out; }
+function polyFloorUnder(x,fy){ const cs=polyCross(x); for(let i=0;i<cs.length;i+=2){ if(cs[i]>=fy-POLY_STEP) return cs[i]; } return null; }
+function polyFloorBetween(x,y0,y1){ const cs=polyCross(x); const lo=Math.min(y0,y1)-2, hi=Math.max(y0,y1)+0.5; let best=null;
+  for(let i=0;i<cs.length;i+=2){ if(cs[i]>=lo && cs[i]<=hi && (best===null||cs[i]<best)) best=cs[i]; } return best; }
+function polyCeilAbove(x,hy){ const cs=polyCross(x); let c=null; for(let i=1;i<cs.length;i+=2){ if(cs[i]<=hy+2) c=cs[i]; else break; } return c; }
+function polySolidAt(x,y){ const cs=polyCross(x); let c=0; for(const k of cs) if(k<y) c++; return (c&1)===1; }
+function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2; const S=POLY.samples;
+  for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
+    for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!polyEdgeWall(a,b)) continue;
+      const vx=b.x-a.x, vy=b.y-a.y, L=vx*vx+vy*vy; if(L<0.01) continue;
+      let t=((cx-a.x)*vx+(cy-a.y)*vy)/L; t=Math.max(0,Math.min(1,t)); const px=a.x+t*vx, py=a.y+t*vy;
+      let dx=cx-px, dy=cy-py, dist=Math.hypot(dx,dy); if(dist<0.001){ dx=-vy; dy=vx; dist=Math.hypot(dx,dy)||1; }
+      const ndx=dx/dist, ndy=dy/dist, reach=Math.abs(ndx)*hx+Math.abs(ndy)*hy, pen=reach-dist;
+      if(pen>0.01){ p.x+=ndx*pen; p.y+=ndy*pen; cx=p.x; cy=p.y-PH/2;
+        if(ndy<-0.4){ if(p.vy>0)p.vy=0; p.onGround=true; } else if(ndy>0.4){ if(p.vy<0)p.vy=0; } } } } }
+function resolvePoly(prevFeet){
+  if(p.flying||p.dead||p.won||p.winning||!POLY) return;
+  if(p.vy>=0){
+    const fb=polyFloorBetween(p.x, prevFeet, p.y);
+    if(fb!==null){ p.y=fb; p.vy=0; p.onGround=true; }
+    else if(p.onGround){ const g=polyFloorUnder(p.x,p.y); if(g!==null && (g-p.y)<=POLY_MAXSLOPE*RUN+10){ p.y=g; p.vy=0; } else p.onGround=false; }
+    else { const g=polyFloorUnder(p.x,p.y); if(g!==null && p.y>=g){ p.y=g; p.vy=0; p.onGround=true; } }
+  } else { const c=polyCeilAbove(p.x,p.y-PH); if(c!==null && (p.y-PH)<c){ p.y=c+PH; p.vy=0; } }
+  resolvePolyWalls();
+}
+function drawPoly(){ if(!POLY||POLY.samples.length<2) return; const S=POLY.samples;
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(S[0].x-camX,S[0].y); for(let i=1;i<S.length;i++) ctx.lineTo(S[i].x-camX,S[i].y);
+  const baseY=WORLDH+320; ctx.lineTo(S[S.length-1].x-camX,baseY); ctx.lineTo(S[0].x-camX,baseY); ctx.closePath();
+  const tg=ctx.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); ctx.fillStyle=tg; ctx.fill('evenodd');
+  ctx.lineWidth=5; ctx.lineCap='round';
+  for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; const ax=a.x-camX,bx=b.x-camX; if((ax<-20&&bx<-20)||(ax>W+20&&bx>W+20)) continue;
+    ctx.strokeStyle=polyEdgeWall(a,b)?'#7a5360':'#6a5ca0'; ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke(); }
+  ctx.restore(); }
 function worldWeaponBox(spr, fi, x, y, facing){
   const wb = spr.weapon ? spr.weapon[fi] : null; if(!wb) return null;
   const cx=spr.cxs[fi], ft=spr.foots[fi];
@@ -1189,6 +1246,7 @@ const PW=52, PH=88;
 let testMode=false;
 try{
   const q=new URLSearchParams(location.search);
+  if(q.get('polytest')==='1') window.__polyDemo=true;
   if(q.get('test')==='1'){
     const raw=localStorage.getItem('creapz_testlevel');
     if(raw){ const st=JSON.parse(raw); window.STAGES=window.STAGES||[]; window.STAGES.push(st);
@@ -1448,6 +1506,7 @@ function update(dt){
       }
     }
   }
+  if(POLY) resolvePoly(prevFeet);
   if (!p.flying && p.y>WORLDH+220){
     gotHit=true; playSfx('sfx_hurt');
     p.hp-=1; p.x=p.spawn; p.y=(p.spawnY!==undefined?p.spawnY:GROUND); p.vy=0; p.vx=0; p.onGround=true; p.standPlat=null;
@@ -3355,6 +3414,7 @@ function draw(){
   ctx.save(); ctx.translate(0,-camY);
   drawSpikes();
   drawWorldProps();
+  drawPoly();
   drawChecks();
   drawRocks();
   drawVolleys();
