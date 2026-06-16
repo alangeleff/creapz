@@ -4,12 +4,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>cReapZ — Polyline Terrain Tester</title>
 <style>
-  :root{--bg:#0d0a18;--ink:#e8e6f5;--lime:#c8fb50;--line:#3a3360;--cyan:#5fd8ff;}
+  :root{--bg:#0d0a18;--ink:#e8e6f5;--lime:#c8fb50;--line:#3a3360;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;overflow:hidden}
   #wrap{position:fixed;inset:0;display:flex;flex-direction:column}
   #bar{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:#161030;border-bottom:1px solid var(--line);align-items:center}
-  .btn{background:#241d44;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 11px;font-size:13px;cursor:pointer;font-weight:600}
+  .btn{background:#241d44;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:13px;cursor:pointer;font-weight:600}
   .btn.on{background:var(--lime);color:#15121f;border-color:var(--lime)}
   label{font-size:12px;opacity:.85;display:flex;align-items:center;gap:6px}
   #cv{flex:1;display:block;touch-action:none}
@@ -21,16 +21,17 @@
 <body><div id="wrap">
   <div id="bar">
     <strong style="color:var(--lime);font-size:14px">Solid Terrain</strong>
-    <button class="btn" id="mHandle" title="show/hide bezier curve handles">✜ Curve handles: on</button>
-    <button class="btn" id="mWall">🧱 Paint walls: off</button>
-    <label>Auto-wall <input id="steep" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:78px"></label>
-    <button class="btn" id="bReset">↺ Terrain</button>
-    <button class="btn" id="bArch">⌒ Overhang</button>
-    <button class="btn" id="bSpawn">⟲ Player</button>
+    <button class="btn on" id="mHandle">✜ Handles: on</button>
+    <button class="btn" id="mBreak">✂ Break: off</button>
+    <button class="btn" id="mWall">🧱 Walls: off</button>
+    <label>Auto-wall <input id="steep" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:74px"></label>
+    <button class="btn" id="bReset">↺</button>
+    <button class="btn" id="bArch">⌒</button>
+    <button class="btn" id="bSpawn">⟲</button>
     <span id="info" style="font-size:12px;opacity:.7"></span>
   </div>
   <canvas id="cv"></canvas>
-  <div id="hint">Tap = add node · drag node = move · drag a cyan handle = bend the curve (direction = where it sweeps, length = how strong) · tap node = round⟷point (point hides handles) · double-tap = delete. 🧱 paint walls. Walk: ← → ⤒ / arrows + Space.</div>
+  <div id="hint">Tap = add node · drag node = move · drag a handle = bend the curve · ✂ Break (or Alt-drag) = move that handle independently of its partner · tap node = round⟷point · double-tap = delete. 🧱 paint walls. Walk: ← → ⤒ / arrows + Space.</div>
   <div id="pad"><div class="pb" id="pL">◀</div><div class="pb" id="pJ">⤒</div><div class="pb" id="pR">▶</div></div>
 </div>
 <script>
@@ -38,7 +39,7 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let DPR=1, W=0, H=0, camX=0;
 const WORLDW=2800;
 let nodes=[], samples=[];
-let maxSlope=1.3, wallMode=false, showHandles=true;
+let maxSlope=1.3, wallMode=false, showHandles=true, breakMode=false;
 const PH=46, PW=26, GRAV=0.8, MOVE=3.7, JUMP=-13.5, STEPUP=15;
 
 function resize(){
@@ -47,12 +48,11 @@ function resize(){
   cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
   if(!nodes.length) initNodes(); buildSamples(); if(!player.placed) resetPlayer();
 }
-function nn(x,y){ return {x,y,corner:false,wn:'auto',h:{x:0,y:0,a:true}}; }
+function nn(x,y){ return {x,y,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true,brk:false}; }
 function initNodes(){ const by=Math.min(H*0.62,H-90); nodes=[]; const n=7; for(let i=0;i<n;i++) nodes.push(nn(i*(WORLDW/(n-1)),by)); }
 
-// bezier sampling: each smooth node carries a tangent handle (h); 'a' = auto-derive from neighbors until dragged
-function ensureHandles(){ for(let i=0;i<nodes.length;i++){ const n=nodes[i]; if(!n.h) n.h={x:0,y:0,a:true};
-  if(n.h.a){ const p=nodes[i-1]||n, q=nodes[i+1]||n; n.h.x=(q.x-p.x)/6; n.h.y=(q.y-p.y)/6; } } }
+function ensureHandles(){ for(let i=0;i<nodes.length;i++){ const n=nodes[i]; if(!n.ho){ n.ho={x:0,y:0}; n.hi={x:0,y:0}; n.ha=true; n.brk=false; }
+  if(n.ha){ const p=nodes[i-1]||n, q=nodes[i+1]||n; const tx=(q.x-p.x)/6, ty=(q.y-p.y)/6; n.ho.x=tx; n.ho.y=ty; n.hi.x=-tx; n.hi.y=-ty; } } }
 function bez(P0,P1,P2,P3,t){ const u=1-t,uu=u*u,tt=t*t,a=uu*u,b=3*uu*t,c=3*u*tt,d=tt*t;
   return {x:a*P0.x+b*P1.x+c*P2.x+d*P3.x, y:a*P0.y+b*P1.y+c*P2.y+d*P3.y}; }
 function buildSamples(){
@@ -60,8 +60,8 @@ function buildSamples(){
   if(nodes.length<2){ if(nodes.length) samples=[{x:nodes[0].x,y:nodes[0].y,seg:0}]; return; }
   for(let i=0;i<nodes.length-1;i++){
     const A=nodes[i],B=nodes[i+1];
-    const P1 = A.corner ? {x:A.x+(B.x-A.x)/3,y:A.y+(B.y-A.y)/3} : {x:A.x+A.h.x,y:A.y+A.h.y};
-    const P2 = B.corner ? {x:B.x+(A.x-B.x)/3,y:B.y+(A.y-B.y)/3} : {x:B.x-B.h.x,y:B.y-B.h.y};
+    const P1 = A.corner ? {x:A.x+(B.x-A.x)/3,y:A.y+(B.y-A.y)/3} : {x:A.x+A.ho.x,y:A.y+A.ho.y};
+    const P2 = B.corner ? {x:B.x+(A.x-B.x)/3,y:B.y+(A.y-B.y)/3} : {x:B.x+B.hi.x,y:B.y+B.hi.y};
     const steps=Math.max(3,Math.min(160,Math.round(Math.hypot(B.x-A.x,B.y-A.y)/4)));
     for(let s=(i===0?0:1);s<=steps;s++){ const q=bez(A,P1,P2,B,s/steps); q.seg=i; samples.push(q); }
   }
@@ -118,11 +118,12 @@ function draw(){
     for(let i=1;i<samples.length;i++){ const a=samples[i-1],b=samples[i]; const ax=a.x-camX,bx=b.x-camX; if((ax<-12&&bx<-12)||(ax>W+12&&bx>W+12)) continue;
       ctx.strokeStyle = edgeWall(a,b) ? '#e2563b' : '#9d8ce0'; ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke(); }
   }
-  // bezier handles
-  if(showHandles && !wallMode){ for(const n of nodes){ if(n.corner) continue; const nx=n.x-camX; if(nx<-60||nx>W+60) continue;
-    const ox=nx+n.h.x, oy=n.y+n.h.y, ix=nx-n.h.x, iy=n.y-n.h.y;
-    ctx.strokeStyle='rgba(95,216,255,.6)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(ix,iy); ctx.lineTo(ox,oy); ctx.stroke();
-    ctx.fillStyle='#5fd8ff'; ctx.beginPath(); ctx.arc(ox,oy,5,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(ix,iy,5,0,7); ctx.fill(); } }
+  if(showHandles && !wallMode){ for(const n of nodes){ if(n.corner) continue; const nx=n.x-camX; if(nx<-80||nx>W+80) continue;
+    const ox=nx+n.ho.x, oy=n.y+n.ho.y, ix=nx+n.hi.x, iy=n.y+n.hi.y;
+    const col=n.brk?'#ffb24a':'#5fd8ff';
+    ctx.strokeStyle=n.brk?'rgba(255,178,74,.6)':'rgba(95,216,255,.6)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(ix,iy); ctx.lineTo(nx,n.y); ctx.lineTo(ox,oy); ctx.stroke();
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(ox,oy,5,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(ix,iy,5,0,7); ctx.fill(); } }
   for(const n of nodes){ const nx=n.x-camX; if(nx<-20||nx>W+20) continue;
     ctx.fillStyle=n.corner?'#ffd24a':'#c8fb50'; ctx.strokeStyle='#15121f'; ctx.lineWidth=2;
     if(n.corner){ ctx.beginPath(); ctx.moveTo(nx,n.y-8); ctx.lineTo(nx+8,n.y); ctx.lineTo(nx,n.y+8); ctx.lineTo(nx-8,n.y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
@@ -130,7 +131,7 @@ function draw(){
   const px=player.x-camX, py=player.y; ctx.save(); ctx.translate(px,py);
   ctx.fillStyle='#bdb6e6'; roundRect(-PW/2,-PH,PW,PH,7); ctx.fill();
   ctx.fillStyle='#15121f'; const eo=player.facing>0?3:-3; ctx.beginPath(); ctx.arc(eo-5,-PH+15,3,0,7); ctx.arc(eo+5,-PH+15,3,0,7); ctx.fill(); ctx.restore();
-  document.getElementById('info').textContent=nodes.length+' nodes'+(wallMode?' · PAINT WALLS':'');
+  document.getElementById('info').textContent=nodes.length+' nodes'+(wallMode?' · PAINT WALLS':(breakMode?' · BREAK':''));
 }
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function loop(){ step(); draw(); requestAnimationFrame(loop); }
@@ -139,7 +140,7 @@ let drag=null, dragH=null, dragMoved=false, lastTapNode=null, lastTapT=0;
 function worldPt(e){ const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)+camX, y:(e.clientY-r.top)}; }
 function nodeAt(p){ let best=null,bd=16; for(const n of nodes){ const d=Math.hypot(n.x-p.x,n.y-p.y); if(d<bd){bd=d;best=n;} } return best; }
 function handleAt(p){ if(!showHandles||wallMode) return null; for(const n of nodes){ if(n.corner) continue;
-  if(Math.hypot(p.x-(n.x+n.h.x),p.y-(n.y+n.h.y))<13) return {n,w:1}; if(Math.hypot(p.x-(n.x-n.h.x),p.y-(n.y-n.h.y))<13) return {n,w:-1}; } return null; }
+  if(Math.hypot(p.x-(n.x+n.ho.x),p.y-(n.y+n.ho.y))<13) return {n,side:'o'}; if(Math.hypot(p.x-(n.x+n.hi.x),p.y-(n.y+n.hi.y))<13) return {n,side:'i'}; } return null; }
 function distToSeg(p,a,b){ const vx=b.x-a.x,vy=b.y-a.y,wx=p.x-a.x,wy=p.y-a.y,L=vx*vx+vy*vy||1; let t=Math.max(0,Math.min(1,(wx*vx+wy*vy)/L)); return Math.hypot(p.x-(a.x+t*vx),p.y-(a.y+t*vy)); }
 function nearestEdgeSeg(p){ let bs=-1,bd=12; for(let i=1;i<samples.length;i++){ const d=distToSeg(p,samples[i-1],samples[i]); if(d<bd){bd=d;bs=samples[i].seg;} } return bs; }
 function addNode(p){
@@ -152,7 +153,7 @@ function addNode(p){
 }
 cv.addEventListener('pointerdown',e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); const p=worldPt(e);
   if(wallMode){ const seg=nearestEdgeSeg(p); if(seg>=0){ const nd=nodes[seg]; nd.wn = nd.wn==='wall'?'ground':(nd.wn==='ground'?'auto':'wall'); buildSamples(); } return; }
-  const h=handleAt(p); if(h){ dragH=h; return; }
+  const h=handleAt(p); if(h){ h.brk=(breakMode||e.altKey); dragH=h; return; }
   const hit=nodeAt(p);
   if(hit){ const now=performance.now();
     if(hit===lastTapNode && now-lastTapT<350){ if(nodes.length>2) nodes.splice(nodes.indexOf(hit),1); buildSamples(); lastTapNode=null; drag=null; return; }
@@ -160,7 +161,10 @@ cv.addEventListener('pointerdown',e=>{ e.preventDefault(); cv.setPointerCapture(
   } else { drag=addNode(p); buildSamples(); dragMoved=false; lastTapNode=null; }
 });
 cv.addEventListener('pointermove',e=>{ const p=worldPt(e);
-  if(dragH){ e.preventDefault(); const n=dragH.n; n.h.x=dragH.w*(p.x-n.x); n.h.y=dragH.w*(p.y-n.y); n.h.a=false; buildSamples(); return; }
+  if(dragH){ e.preventDefault(); const n=dragH.n; n.ha=false; const vx=p.x-n.x, vy=p.y-n.y;
+    if(dragH.side==='o'){ n.ho.x=vx; n.ho.y=vy; if(!dragH.brk){ n.hi.x=-vx; n.hi.y=-vy; n.brk=false; } else n.brk=true; }
+    else { n.hi.x=vx; n.hi.y=vy; if(!dragH.brk){ n.ho.x=-vx; n.ho.y=-vy; n.brk=false; } else n.brk=true; }
+    buildSamples(); return; }
   if(drag){ e.preventDefault(); drag.x=Math.max(0,Math.min(WORLDW,p.x)); drag.y=Math.max(20,Math.min(H+200,p.y)); dragMoved=true; buildSamples(); } });
 cv.addEventListener('pointerup',e=>{ if(dragH){ dragH=null; return; } if(drag && !dragMoved){ drag.corner=!drag.corner; buildSamples(); } drag=null; });
 
@@ -169,17 +173,16 @@ addEventListener('keyup',e=>{ if(e.code==='ArrowLeft')keyL=false; else if(e.code
 function bind(id,on,off){ const el=document.getElementById(id); el.addEventListener('pointerdown',e=>{e.preventDefault();on();}); el.addEventListener('pointerup',e=>{e.preventDefault();off&&off();}); el.addEventListener('pointerleave',()=>off&&off()); el.addEventListener('pointercancel',()=>off&&off()); }
 bind('pL',()=>keyL=true,()=>keyL=false); bind('pR',()=>keyR=true,()=>keyR=false); bind('pJ',()=>{ if(player.onG)jumpEdge=true; });
 document.getElementById('steep').addEventListener('input',e=>maxSlope=parseFloat(e.target.value));
-document.getElementById('mHandle').onclick=function(){ showHandles=!showHandles; this.classList.toggle('on',showHandles); this.textContent='✜ Curve handles: '+(showHandles?'on':'off'); };
-document.getElementById('mWall').onclick=function(){ wallMode=!wallMode; this.classList.toggle('on',wallMode); this.textContent='🧱 Paint walls: '+(wallMode?'ON':'off'); };
+document.getElementById('mHandle').onclick=function(){ showHandles=!showHandles; this.classList.toggle('on',showHandles); this.textContent='✜ Handles: '+(showHandles?'on':'off'); };
+document.getElementById('mBreak').onclick=function(){ breakMode=!breakMode; this.classList.toggle('on',breakMode); this.textContent='✂ Break: '+(breakMode?'ON':'off'); };
+document.getElementById('mWall').onclick=function(){ wallMode=!wallMode; this.classList.toggle('on',wallMode); this.textContent='🧱 Walls: '+(wallMode?'ON':'off'); };
 document.getElementById('bReset').onclick=()=>{ nodes=[]; initNodes(); buildSamples(); };
 document.getElementById('bSpawn').onclick=()=>{ player.placed=false; resetPlayer(); };
 document.getElementById('bArch').onclick=()=>{ const bx=Math.round(player.x+200), by=Math.min(H*0.62,H-90);
-  const mk=(x,y,c,w)=>({x,y,corner:c,wn:w,h:{x:0,y:0,a:true}});
+  const mk=(x,y,c,w)=>({x,y,corner:c,wn:w,ho:{x:0,y:0},hi:{x:0,y:0},ha:true,brk:false});
   const seg=[ mk(bx,by,false,'auto'),mk(bx+40,by-150,true,'wall'),mk(bx+150,by-150,false,'auto'),mk(bx+150,by-95,true,'wall'),mk(bx+70,by-95,true,'wall'),mk(bx+95,by,false,'auto') ];
   let bi=0,bd=1e9; for(let i=0;i<nodes.length-1;i++){ const d=distToSeg({x:bx,y:by},nodes[i],nodes[i+1]); if(d<bd){bd=d;bi=i;} }
   nodes.splice(bi+1,0,...seg); buildSamples(); };
-addEventListener('mHandle',()=>{}); 
-document.getElementById('mHandle').classList.add('on');
 addEventListener('resize',resize); resize(); loop();
 </script>
 </body></html>
