@@ -23,6 +23,7 @@
     <strong style="color:var(--lime);font-size:14px">Solid Terrain</strong>
     <button class="btn on" id="mHandle">✜ Handles: on</button>
     <button class="btn" id="mBreak">✂ Break: off</button>
+    <button class="btn" id="mLock">🔒 Lock: off</button>
     <button class="btn" id="mWall">🧱 Walls: off</button>
     <label>Auto-wall <input id="steep" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:74px"></label>
     <button class="btn" id="bReset">↺</button>
@@ -31,7 +32,7 @@
     <span id="info" style="font-size:12px;opacity:.7"></span>
   </div>
   <canvas id="cv"></canvas>
-  <div id="hint">Tap = add node · drag node = move · drag a handle = bend the curve · ✂ Break (or Alt-drag) = move that handle independently of its partner · tap node = round⟷point · double-tap = delete. 🧱 paint walls. Walk: ← → ⤒ / arrows + Space.</div>
+  <div id="hint">Tap ON the line = insert a node without warping the shape (then paint that segment as a wall). Tap off the line = add a node. Drag node/handle to shape · ✂ Break / Alt-drag = independent handle · 🔒 Lock = tap a node to lock it (no handles, can\u2019t move) · tap node = round⟷point · double-tap = delete. Walk: ← → ⤒.</div>
   <div id="pad"><div class="pb" id="pL">◀</div><div class="pb" id="pJ">⤒</div><div class="pb" id="pR">▶</div></div>
 </div>
 <script>
@@ -39,7 +40,7 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let DPR=1, W=0, H=0, camX=0;
 const WORLDW=2800;
 let nodes=[], samples=[];
-let maxSlope=1.3, wallMode=false, showHandles=true, breakMode=false;
+let maxSlope=1.3, wallMode=false, showHandles=true, breakMode=false, lockMode=false;
 const PH=46, PW=26, GRAV=0.8, MOVE=3.7, JUMP=-13.5, STEPUP=15;
 
 function resize(){
@@ -48,7 +49,7 @@ function resize(){
   cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
   if(!nodes.length) initNodes(); buildSamples(); if(!player.placed) resetPlayer();
 }
-function nn(x,y){ return {x,y,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true,brk:false}; }
+function nn(x,y){ return {x,y,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true,brk:false,locked:false}; }
 function initNodes(){ const by=Math.min(H*0.62,H-90); nodes=[]; const n=7; for(let i=0;i<n;i++) nodes.push(nn(i*(WORLDW/(n-1)),by)); }
 
 function ensureHandles(){ for(let i=0;i<nodes.length;i++){ const n=nodes[i]; if(!n.ho){ n.ho={x:0,y:0}; n.hi={x:0,y:0}; n.ha=true; n.brk=false; }
@@ -66,6 +67,23 @@ function buildSamples(){
     for(let s=(i===0?0:1);s<=steps;s++){ const q=bez(A,P1,P2,B,s/steps); q.seg=i; samples.push(q); }
   }
 }
+function effOut(i){ const A=nodes[i],B=nodes[i+1]; if(!B) return {x:0,y:0}; return A.corner?{x:(B.x-A.x)/3,y:(B.y-A.y)/3}:{x:A.ho.x,y:A.ho.y}; }
+function effIn(i){ const A=nodes[i],P=nodes[i-1]; if(!P) return {x:0,y:0}; return A.corner?{x:(P.x-A.x)/3,y:(P.y-A.y)/3}:{x:A.hi.x,y:A.hi.y}; }
+function nearestCurve(p){ let bi=-1,bt=0,bd=1e9;
+  for(let i=0;i<nodes.length-1;i++){ const A=nodes[i],B=nodes[i+1],ao=effOut(i),bn=effIn(i+1);
+    const P1={x:A.x+ao.x,y:A.y+ao.y},P2={x:B.x+bn.x,y:B.y+bn.y};
+    for(let s=0;s<=24;s++){ const t=s/24,q=bez(A,P1,P2,B,t),d=Math.hypot(p.x-q.x,p.y-q.y); if(d<bd){bd=d;bi=i;bt=t;} } }
+  return {seg:bi,t:bt,d:bd}; }
+function splitAt(i,t){ const A=nodes[i],B=nodes[i+1];
+  const aIn=effIn(i),aOut=effOut(i),bIn=effIn(i+1),bOut=effOut(i+1);
+  const P0={x:A.x,y:A.y},P1={x:A.x+aOut.x,y:A.y+aOut.y},P2={x:B.x+bIn.x,y:B.y+bIn.y},P3={x:B.x,y:B.y};
+  const lp=(u,v)=>({x:u.x+(v.x-u.x)*t,y:u.y+(v.y-u.y)*t});
+  const Q0=lp(P0,P1),Q1=lp(P1,P2),Q2=lp(P2,P3),R0=lp(Q0,Q1),R1=lp(Q1,Q2),S=lp(R0,R1);
+  if(A.corner && B.corner){ const M=nn(S.x,S.y); M.corner=true; M.ha=false; nodes.splice(i+1,0,M); return; }   // straight stays straight
+  A.corner=false; A.ha=false; A.brk=true; A.ho={x:Q0.x-A.x,y:Q0.y-A.y}; A.hi={x:aIn.x,y:aIn.y};
+  B.corner=false; B.ha=false; B.brk=true; B.hi={x:Q2.x-B.x,y:Q2.y-B.y}; B.ho={x:bOut.x,y:bOut.y};
+  const M=nn(S.x,S.y); M.corner=false; M.ha=false; M.brk=true; M.hi={x:R0.x-S.x,y:R0.y-S.y}; M.ho={x:R1.x-S.x,y:R1.y-S.y};
+  nodes.splice(i+1,0,M); }
 function edgeWall(a,b){ const nd=nodes[a.seg]; const c=(nd&&nd.wn)||'auto';
   if(c==='wall') return true; if(c==='ground') return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>maxSlope; }
 
@@ -118,20 +136,21 @@ function draw(){
     for(let i=1;i<samples.length;i++){ const a=samples[i-1],b=samples[i]; const ax=a.x-camX,bx=b.x-camX; if((ax<-12&&bx<-12)||(ax>W+12&&bx>W+12)) continue;
       ctx.strokeStyle = edgeWall(a,b) ? '#e2563b' : '#9d8ce0'; ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke(); }
   }
-  if(showHandles && !wallMode){ for(const n of nodes){ if(n.corner) continue; const nx=n.x-camX; if(nx<-80||nx>W+80) continue;
+  if(showHandles && !wallMode && !lockMode){ for(const n of nodes){ if(n.corner||n.locked) continue; const nx=n.x-camX; if(nx<-80||nx>W+80) continue;
     const ox=nx+n.ho.x, oy=n.y+n.ho.y, ix=nx+n.hi.x, iy=n.y+n.hi.y;
     const col=n.brk?'#ffb24a':'#5fd8ff';
     ctx.strokeStyle=n.brk?'rgba(255,178,74,.6)':'rgba(95,216,255,.6)'; ctx.lineWidth=1.5;
     ctx.beginPath(); ctx.moveTo(ix,iy); ctx.lineTo(nx,n.y); ctx.lineTo(ox,oy); ctx.stroke();
     ctx.fillStyle=col; ctx.beginPath(); ctx.arc(ox,oy,5,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(ix,iy,5,0,7); ctx.fill(); } }
   for(const n of nodes){ const nx=n.x-camX; if(nx<-20||nx>W+20) continue;
-    ctx.fillStyle=n.corner?'#ffd24a':'#c8fb50'; ctx.strokeStyle='#15121f'; ctx.lineWidth=2;
-    if(n.corner){ ctx.beginPath(); ctx.moveTo(nx,n.y-8); ctx.lineTo(nx+8,n.y); ctx.lineTo(nx,n.y+8); ctx.lineTo(nx-8,n.y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-    else { ctx.beginPath(); ctx.arc(nx,n.y,6.5,0,7); ctx.fill(); ctx.stroke(); } }
+    ctx.strokeStyle='#15121f'; ctx.lineWidth=2;
+    if(n.locked){ ctx.fillStyle='#9aa3b8'; ctx.fillRect(nx-5,n.y-5,10,10); ctx.strokeRect(nx-5,n.y-5,10,10); }
+    else if(n.corner){ ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.moveTo(nx,n.y-8); ctx.lineTo(nx+8,n.y); ctx.lineTo(nx,n.y+8); ctx.lineTo(nx-8,n.y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else { ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(nx,n.y,6.5,0,7); ctx.fill(); ctx.stroke(); } }
   const px=player.x-camX, py=player.y; ctx.save(); ctx.translate(px,py);
   ctx.fillStyle='#bdb6e6'; roundRect(-PW/2,-PH,PW,PH,7); ctx.fill();
   ctx.fillStyle='#15121f'; const eo=player.facing>0?3:-3; ctx.beginPath(); ctx.arc(eo-5,-PH+15,3,0,7); ctx.arc(eo+5,-PH+15,3,0,7); ctx.fill(); ctx.restore();
-  document.getElementById('info').textContent=nodes.length+' nodes'+(wallMode?' · PAINT WALLS':(breakMode?' · BREAK':''));
+  document.getElementById('info').textContent=nodes.length+' nodes'+(wallMode?' · PAINT WALLS':(lockMode?' · LOCK':(breakMode?' · BREAK':'')));
 }
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function loop(){ step(); draw(); requestAnimationFrame(loop); }
@@ -139,7 +158,7 @@ function loop(){ step(); draw(); requestAnimationFrame(loop); }
 let drag=null, dragH=null, dragMoved=false, lastTapNode=null, lastTapT=0;
 function worldPt(e){ const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)+camX, y:(e.clientY-r.top)}; }
 function nodeAt(p){ let best=null,bd=16; for(const n of nodes){ const d=Math.hypot(n.x-p.x,n.y-p.y); if(d<bd){bd=d;best=n;} } return best; }
-function handleAt(p){ if(!showHandles||wallMode) return null; for(const n of nodes){ if(n.corner) continue;
+function handleAt(p){ if(!showHandles||wallMode||lockMode) return null; for(const n of nodes){ if(n.corner||n.locked) continue;
   if(Math.hypot(p.x-(n.x+n.ho.x),p.y-(n.y+n.ho.y))<13) return {n,side:'o'}; if(Math.hypot(p.x-(n.x+n.hi.x),p.y-(n.y+n.hi.y))<13) return {n,side:'i'}; } return null; }
 function distToSeg(p,a,b){ const vx=b.x-a.x,vy=b.y-a.y,wx=p.x-a.x,wy=p.y-a.y,L=vx*vx+vy*vy||1; let t=Math.max(0,Math.min(1,(wx*vx+wy*vy)/L)); return Math.hypot(p.x-(a.x+t*vx),p.y-(a.y+t*vy)); }
 function nearestEdgeSeg(p){ let bs=-1,bd=12; for(let i=1;i<samples.length;i++){ const d=distToSeg(p,samples[i-1],samples[i]); if(d<bd){bd=d;bs=samples[i].seg;} } return bs; }
@@ -153,12 +172,18 @@ function addNode(p){
 }
 cv.addEventListener('pointerdown',e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); const p=worldPt(e);
   if(wallMode){ const seg=nearestEdgeSeg(p); if(seg>=0){ const nd=nodes[seg]; nd.wn = nd.wn==='wall'?'ground':(nd.wn==='ground'?'auto':'wall'); buildSamples(); } return; }
+  if(lockMode){ const n=nodeAt(p); if(n){ n.locked=!n.locked; } return; }
   const h=handleAt(p); if(h){ h.brk=(breakMode||e.altKey); dragH=h; return; }
   const hit=nodeAt(p);
-  if(hit){ const now=performance.now();
+  if(hit){ if(hit.locked) return; const now=performance.now();
     if(hit===lastTapNode && now-lastTapT<350){ if(nodes.length>2) nodes.splice(nodes.indexOf(hit),1); buildSamples(); lastTapNode=null; drag=null; return; }
     lastTapNode=hit; lastTapT=now; drag=hit; dragMoved=false;
-  } else { drag=addNode(p); buildSamples(); dragMoved=false; lastTapNode=null; }
+  } else {
+    const nc=nearestCurve(p);
+    if(nc.seg>=0 && nc.d<16){ splitAt(nc.seg,nc.t); buildSamples(); drag=null; }     // insert ON the line, shape unchanged
+    else { drag=addNode(p); buildSamples(); dragMoved=true; }                          // add OFF the line (free)
+    lastTapNode=null;
+  }
 });
 cv.addEventListener('pointermove',e=>{ const p=worldPt(e);
   if(dragH){ e.preventDefault(); const n=dragH.n; n.ha=false; const vx=p.x-n.x, vy=p.y-n.y;
@@ -175,6 +200,7 @@ bind('pL',()=>keyL=true,()=>keyL=false); bind('pR',()=>keyR=true,()=>keyR=false)
 document.getElementById('steep').addEventListener('input',e=>maxSlope=parseFloat(e.target.value));
 document.getElementById('mHandle').onclick=function(){ showHandles=!showHandles; this.classList.toggle('on',showHandles); this.textContent='✜ Handles: '+(showHandles?'on':'off'); };
 document.getElementById('mBreak').onclick=function(){ breakMode=!breakMode; this.classList.toggle('on',breakMode); this.textContent='✂ Break: '+(breakMode?'ON':'off'); };
+document.getElementById('mLock').onclick=function(){ lockMode=!lockMode; this.classList.toggle('on',lockMode); this.textContent='🔒 Lock: '+(lockMode?'ON':'off'); };
 document.getElementById('mWall').onclick=function(){ wallMode=!wallMode; this.classList.toggle('on',wallMode); this.textContent='🧱 Walls: '+(wallMode?'ON':'off'); };
 document.getElementById('bReset').onclick=()=>{ nodes=[]; initNodes(); buildSamples(); };
 document.getElementById('bSpawn').onclick=()=>{ player.placed=false; resetPlayer(); };
