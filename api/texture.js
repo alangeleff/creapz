@@ -16,7 +16,7 @@ function texturePrompt(prompt, style) {
 }
 function fringePrompt(prompt, style) {
   return `A horizontal border/edge row of: ${prompt}, for a 2D side-scrolling video game. `
-    + `The ${prompt} fills the LOWER ~60% of the frame reaching the very bottom edge, with detailed organic tips pointing straight UP. `
+    + `The ${prompt} fills the LOWER ~60% of the frame, spanning the FULL width edge-to-edge with NO empty gaps on the left or right, reaching the very bottom edge, with detailed organic tips pointing straight UP. `
     + `The ENTIRE background and all empty space (top and between the tips) is pure solid magenta #FF00FF (rgb 255,0,255). `
     + `The ${prompt} itself must contain NO magenta, pink, or purple. Flat even lighting, no shadows, no ground line, no scene, no characters, repeats left-to-right.`
     + (style ? ` Art style: ${style}.` : '');

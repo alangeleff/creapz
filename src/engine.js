@@ -1,4 +1,4 @@
-const ASSET_VER='1782150000';
+const ASSET_VER='1782160000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1244,7 +1244,7 @@ function polyObjTop(S,x){ let top=null; for(let i=1;i<S.length;i++){ const a=S[i
 function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex):null; if(!img) return; const H=ob.fringeH||44;
   let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
   const iw=img.naturalWidth, ih=img.naturalHeight, tileW=H*iw/Math.max(1,ih), step=4; ctx.save(); ctx.globalAlpha=alpha;
-  for(let x=Math.floor(x0); x<=x1; x+=step){ const sy=polyObjTop(S,x); if(sy==null) continue;
+  for(let x=Math.floor(x0); x<=x1; x+=step){ const sy=polyObjTop(S,Math.min(x1-0.5,Math.max(x0,x))); if(sy==null) continue;
     const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw), drop=Math.min(Math.round(H*0.08),9);
     ctx.drawImage(img, u,0, sw,ih, x-camX, sy-H+drop, step+1, H); }
   ctx.restore(); }
