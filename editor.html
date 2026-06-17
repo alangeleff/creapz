@@ -263,8 +263,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1781890000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781890000');
+fetch('./assets/sprites.json?v=1781900000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781900000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1464,6 +1464,7 @@ function openNew(){ const p=document.getElementById('newP');
    +'<div class="nrow"><span>width</span><input id="nwW" inputmode="numeric" value="3200"></div>'
    +'<div class="nrow"><span>height</span><input id="nwH" inputmode="numeric" value="2900"></div>'
    +'<div class="nrow"><span>music</span><select id="nwMusic">'+musicOpts('crypt1')+'</select></div>'
+   +'<div class="nrow"><span>polyline ground</span><input type="checkbox" id="nwPoly" checked style="flex:0 0 auto;width:20px;height:20px"></div>'
    +'<button class="savebtn" id="nwCreate">Create stage</button><button class="closebtn" id="nwCancel">Cancel</button>';
   p.style.display='block';
   const th=p.querySelector('#nwTheme');
@@ -1478,14 +1479,16 @@ function createNew(){ const p=document.getElementById('newP');
   const w=Math.max(800,+p.querySelector('#nwW').value||3200);
   const h=Math.max(360,+p.querySelector('#nwH').value||(theme==='crypt'?2900:520));
   const music=p.querySelector('#nwMusic').value;
+  const usePoly=!!(p.querySelector('#nwPoly')&&p.querySelector('#nwPoly').checked);
   histPush();
   const G=theme==='crypt'?400:360;
   const ground = theme==='crypt' ? [0, Math.round(w*0.7), G, 140, 10, '1F', 'cave'] : [0, w, G, Math.max(80,Math.min(160,h-G)), 10];
   M={ name, act, music, theme, world:w, h:h,
       goal: theme==='crypt'?Math.round(w*0.85):w-120,
       goalY: theme==='crypt'?Math.max(G+200,h-180):G,
-      seg:[ground], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[],
-      bg: theme==='crypt'?[{t:'cavebg',par:0.2}]:[], fg:[] };
+      seg: usePoly?[]:[ground], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[],
+      bg: theme==='crypt'?[{t:'cavebg',par:0.2}]:[], fg:[], poly:null };
+  if(usePoly){ M.poly=[]; for(let i=0;i<6;i++) M.poly.push({x:Math.round(i*w/5),y:380,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true}); polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); }
   loadFields(); sel=null; showSel(); camx=0; camy=0; zoom=Math.min(CW/Math.min(w,1600), CH/Math.min(h,900)); persist(); draw(); closeNew(); toast('new stage “'+name+'” created'); }
 document.getElementById('bNew').onclick=()=>{ const p=document.getElementById('newP'); if(p.style.display==='block')closeNew(); else openNew(); };
 // ---- named local saves ----
