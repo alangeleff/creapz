@@ -174,6 +174,7 @@
    <button class="btn" id="bNew">✦ New Stage</button>
    <button class="btn" id="mPoly" title="Terrain sculpt mode (polyline ground)">⛰ Terrain</button>
    <button class="btn" id="bAddPoly" title="Add a main ground polyline across the stage">+ Polyline</button>
+   <button class="btn" id="bAddShape" title="Add a closed free-floating shape (platform / pillar / ceiling)">+ Shape</button>
    <button class="btn" id="mPBreak" title="Terrain: break handle (independent in/out curve)">✂</button>
    <button class="btn" id="mPWall" title="Terrain: paint wall segments">🧱</button>
    <button class="btn" id="mPLock" title="Terrain: lock a node">🔒</button>
@@ -264,8 +265,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1781930000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781930000');
+fetch('./assets/sprites.json?v=1781940000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781940000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1003,25 +1004,26 @@ let polyMode=false, polyBreakMode=false, polyWallMode=false, polyLockMode=false;
 let polyDrag=null, polyLastTapNode=null, polyLastTapT=0, polyActive=0;
 const POLY_MAXSLOPE_ED=1.3;
 function curNodes(){ return (M.poly && M.poly[polyActive]) ? M.poly[polyActive].nodes : null; }
-function polyEnsureH(ns){ for(let i=0;i<ns.length;i++){ const n=ns[i]; if(!n.ho){n.ho={x:0,y:0};n.hi={x:0,y:0};n.ha=true;}
-  if(n.ha){ const p=ns[i-1]||n,q=ns[i+1]||n; const tx=(q.x-p.x)/6,ty=(q.y-p.y)/6; n.ho={x:tx,y:ty}; n.hi={x:-tx,y:-ty}; } } }
-function polySamplesNs(ns){ polyEnsureH(ns); const out=[]; if(ns.length<2) return out;
-  for(let i=0;i<ns.length-1;i++){ const A=ns[i],B=ns[i+1];
+function polyEnsureH(ns,closed){ const N=ns.length; for(let i=0;i<N;i++){ const n=ns[i]; if(!n.ho){n.ho={x:0,y:0};n.hi={x:0,y:0};n.ha=true;}
+  if(n.ha){ const p=ns[i-1]||(closed?ns[N-1]:n), q=ns[i+1]||(closed?ns[0]:n); const tx=(q.x-p.x)/6,ty=(q.y-p.y)/6; n.ho={x:tx,y:ty}; n.hi={x:-tx,y:-ty}; } } }
+function polySamplesNs(ns,closed){ polyEnsureH(ns,closed); const out=[]; if(ns.length<2) return out; const N=ns.length, segCount=closed?N:N-1;
+  for(let i=0;i<segCount;i++){ const A=ns[i],B=ns[(i+1)%N];
     const P1=A.corner?{x:A.x+(B.x-A.x)/3,y:A.y+(B.y-A.y)/3}:{x:A.x+A.ho.x,y:A.y+A.ho.y};
     const P2=B.corner?{x:B.x+(A.x-B.x)/3,y:B.y+(A.y-B.y)/3}:{x:B.x+B.hi.x,y:B.y+B.hi.y};
     const steps=Math.max(3,Math.min(120,Math.round(Math.hypot(B.x-A.x,B.y-A.y)/8)));
     for(let sp=(i===0?0:1);sp<=steps;sp++){ const t=sp/steps,u=1-t; out.push({x:u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, y:u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y, seg:i, wn:A.wn}); } }
+  if(closed&&out.length) out.push({x:out[0].x,y:out[0].y,seg:N-1,wn:ns[N-1].wn});
   return out; }
 function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE_ED; }
 function polyNodeHitAny(wxp,wyp){ if(!M.poly) return null; const r=14/zoom; let best=null,bd=r; for(let pi=0;pi<M.poly.length;pi++){ for(const n of M.poly[pi].nodes){ const d=Math.hypot(n.x-wxp,n.y-wyp); if(d<bd){bd=d;best={idx:pi,node:n};} } } return best; }
 function polyHandleAtActive(wxp,wyp){ const ns=curNodes(); if(!ns||polyWallMode||polyLockMode) return null; const r=13/zoom; for(const n of ns){ if(n.corner||n.locked) continue;
   if(Math.hypot(wxp-(n.x+n.ho.x),wyp-(n.y+n.ho.y))<r) return {n,side:'o'}; if(Math.hypot(wxp-(n.x+n.hi.x),wyp-(n.y+n.hi.y))<r) return {n,side:'i'}; } return null; }
 function polyDistSeg(px,py,a,b){ const vx=b.x-a.x,vy=b.y-a.y,L=vx*vx+vy*vy||1; let t=Math.max(0,Math.min(1,((px-a.x)*vx+(py-a.y)*vy)/L)); return Math.hypot(px-(a.x+t*vx),py-(a.y+t*vy)); }
-function polyNearestCurve(wxp,wyp,thr){ let best=null,bd=(thr||24/zoom); for(let pi=0;pi<M.poly.length;pi++){ const S=polySamplesNs(M.poly[pi].nodes); for(let i=1;i<S.length;i++){ const d=polyDistSeg(wxp,wyp,S[i-1],S[i]); if(d<bd){bd=d;best={idx:pi};} } } return best; }
-function polyEffOut(ns,i){ const A=ns[i],B=ns[i+1]; if(!B)return{x:0,y:0}; return A.corner?{x:(B.x-A.x)/3,y:(B.y-A.y)/3}:{x:A.ho.x,y:A.ho.y}; }
-function polyEffIn(ns,i){ const A=ns[i],P=ns[i-1]; if(!P)return{x:0,y:0}; return A.corner?{x:(P.x-A.x)/3,y:(P.y-A.y)/3}:{x:A.hi.x,y:A.hi.y}; }
-function polyNearestT(ns,wxp,wyp){ let bs=0,bt=0,bd=1e9; for(let i=0;i<ns.length-1;i++){ const A=ns[i],B=ns[i+1],ao=polyEffOut(ns,i),bn=polyEffIn(ns,i+1); const P1={x:A.x+ao.x,y:A.y+ao.y},P2={x:B.x+bn.x,y:B.y+bn.y}; for(let s=0;s<=24;s++){ const t=s/24,u=1-t; const qx=u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, qy=u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y; const d=Math.hypot(wxp-qx,wyp-qy); if(d<bd){bd=d;bs=i;bt=t;} } } return {seg:bs,t:bt}; }
-function polySplitNs(ns,i,t){ const A=ns[i],B=ns[i+1]; const aIn=polyEffIn(ns,i),aOut=polyEffOut(ns,i),bIn=polyEffIn(ns,i+1),bOut=polyEffOut(ns,i+1);
+function polyNearestCurve(wxp,wyp,thr){ let best=null,bd=(thr||24/zoom); for(let pi=0;pi<M.poly.length;pi++){ const S=polySamplesNs(M.poly[pi].nodes,!!M.poly[pi].closed); for(let i=1;i<S.length;i++){ const d=polyDistSeg(wxp,wyp,S[i-1],S[i]); if(d<bd){bd=d;best={idx:pi};} } } return best; }
+function polyEffOut(ns,i,closed){ const N=ns.length, A=ns[i], B=ns[(i+1)%N]; if(!B||(!closed&&i+1>=N))return{x:0,y:0}; return A.corner?{x:(B.x-A.x)/3,y:(B.y-A.y)/3}:{x:A.ho.x,y:A.ho.y}; }
+function polyEffIn(ns,i,closed){ const N=ns.length, A=ns[i], P=ns[(i-1+N)%N]; if(!A||(!closed&&i-1<0))return{x:0,y:0}; return A.corner?{x:(P.x-A.x)/3,y:(P.y-A.y)/3}:{x:A.hi.x,y:A.hi.y}; }
+function polyNearestT(ns,wxp,wyp,closed){ let bs=0,bt=0,bd=1e9; const N=ns.length, segCount=closed?N:N-1; for(let i=0;i<segCount;i++){ const A=ns[i],B=ns[(i+1)%N],ao=polyEffOut(ns,i,closed),bn=polyEffIn(ns,(i+1)%N,closed); const P1={x:A.x+ao.x,y:A.y+ao.y},P2={x:B.x+bn.x,y:B.y+bn.y}; for(let s=0;s<=24;s++){ const t=s/24,u=1-t; const qx=u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, qy=u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y; const d=Math.hypot(wxp-qx,wyp-qy); if(d<bd){bd=d;bs=i;bt=t;} } } return {seg:bs,t:bt}; }
+function polySplitNs(ns,i,t,closed){ const N=ns.length, A=ns[i],B=ns[(i+1)%N]; const aIn=polyEffIn(ns,i,closed),aOut=polyEffOut(ns,i,closed),bIn=polyEffIn(ns,(i+1)%N,closed),bOut=polyEffOut(ns,(i+1)%N,closed);
   const P0={x:A.x,y:A.y},P1={x:A.x+aOut.x,y:A.y+aOut.y},P2={x:B.x+bIn.x,y:B.y+bIn.y},P3={x:B.x,y:B.y};
   const lp=(u,v)=>({x:u.x+(v.x-u.x)*t,y:u.y+(v.y-u.y)*t});
   const Q0=lp(P0,P1),Q1=lp(P1,P2),Q2=lp(P2,P3),R0=lp(Q0,Q1),R1=lp(Q1,Q2),S=lp(R0,R1);
@@ -1031,18 +1033,19 @@ function polySplitNs(ns,i,t){ const A=ns[i],B=ns[i+1]; const aIn=polyEffIn(ns,i)
     B.corner=false; B.ha=false; B.brk=true; B.hi={x:Q2.x-B.x,y:Q2.y-B.y}; B.ho={x:bOut.x,y:bOut.y};
     m={x:Math.round(S.x),y:Math.round(S.y),corner:false,wn:'auto',ha:false,brk:true,hi:{x:R0.x-S.x,y:R0.y-S.y},ho:{x:R1.x-S.x,y:R1.y-S.y}}; }
   ns.splice(i+1,0,m); return m; }
-function polyBodyHit(wxp,wyp){ for(let pi=M.poly.length-1;pi>=0;pi--){ const S=polySamplesNs(M.poly[pi].nodes); if(S.length<2) continue;
+function polyBodyHit(wxp,wyp){ for(let pi=M.poly.length-1;pi>=0;pi--){ const o=M.poly[pi]; const S=polySamplesNs(o.nodes,!!o.closed); if(S.length<2) continue;
+    if(o.closed){ let inside=false; for(let i=0,j=S.length-1;i<S.length;j=i++){ const xi=S[i].x,yi=S[i].y,xj=S[j].x,yj=S[j].y; if(((yi>wyp)!=(yj>wyp)) && (wxp<(xj-xi)*(wyp-yi)/((yj-yi)||1e-9)+xi)) inside=!inside; } if(inside) return pi; continue; }
     let minx=Infinity,maxx=-Infinity; for(const s of S){ if(s.x<minx)minx=s.x; if(s.x>maxx)maxx=s.x; }
     if(wxp<minx||wxp>maxx) continue;
     let topy=null; for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=wxp&&wxp<b.x)||(b.x<=wxp&&wxp<a.x)){ const t=(wxp-a.x)/((b.x-a.x)||1e-6); const yy=a.y+(b.y-a.y)*t; if(topy===null||yy<topy)topy=yy; } }
     if(topy!==null && wyp>=topy-2 && wyp<=M.h) return pi; }
   return -1; }
 function polyDown(wxp,wyp,alt){ if(!M.poly||!M.poly.length) return false;
-  if(polyWallMode){ const nc=polyNearestCurve(wxp,wyp); if(nc){ histPush(); polyActive=nc.idx; const ns=M.poly[nc.idx].nodes; const t=polyNearestT(ns,wxp,wyp); const nd=ns[t.seg]; nd.wn = nd.wn==='wall'?'ground':(nd.wn==='ground'?'auto':'wall'); persist(); draw(); return true; } return false; }
+  if(polyWallMode){ const nc=polyNearestCurve(wxp,wyp); if(nc){ histPush(); polyActive=nc.idx; const ns=M.poly[nc.idx].nodes; const t=polyNearestT(ns,wxp,wyp,!!M.poly[nc.idx].closed); const nd=ns[t.seg]; nd.wn = nd.wn==='wall'?'ground':(nd.wn==='ground'?'auto':'wall'); persist(); draw(); return true; } return false; }
   if(polyLockMode){ const nr=polyNodeHitAny(wxp,wyp); if(nr){ histPush(); polyActive=nr.idx; nr.node.locked=!nr.node.locked; persist(); draw(); return true; } return false; }
   const h=polyHandleAtActive(wxp,wyp); if(h){ histPush(); polyDrag={kind:'handle',n:h.n,side:h.side,brk:(polyBreakMode||alt)}; return true; }
   const nr=polyNodeHitAny(wxp,wyp); if(nr){ polyActive=nr.idx; if(nr.node.locked){ draw(); return true; } histPush(); polyDrag={kind:'node',n:nr.node,moved:false}; draw(); return true; }
-  const nc=polyNearestCurve(wxp,wyp,14/zoom); if(nc){ histPush(); polyActive=nc.idx; const ns=M.poly[nc.idx].nodes; const t=polyNearestT(ns,wxp,wyp); const m=polySplitNs(ns,t.seg,t.t); polyDrag={kind:'node',n:m,moved:false}; persist(); draw(); return true; }
+  const nc=polyNearestCurve(wxp,wyp,14/zoom); if(nc){ histPush(); polyActive=nc.idx; const ns=M.poly[nc.idx].nodes; const cl=!!M.poly[nc.idx].closed; const t=polyNearestT(ns,wxp,wyp,cl); const m=polySplitNs(ns,t.seg,t.t,cl); polyDrag={kind:'node',n:m,moved:false}; persist(); draw(); return true; }
   const bh=polyBodyHit(wxp,wyp); if(bh!==-1){ polyActive=bh; draw(); return true; }   // tap a shape's body -> focus only (no node)
   return false; }
 function polyMove(wxp,wyp){ if(!polyDrag) return;
@@ -1051,11 +1054,14 @@ function polyMove(wxp,wyp){ if(!polyDrag) return;
     else { n.hi={x:vx,y:vy}; if(!polyDrag.brk){ n.ho={x:-vx,y:-vy}; n.brk=false; } else n.brk=true; }
     persist(); draw(); return; }
   polyDrag.n.x=Math.round(wxp); polyDrag.n.y=Math.round(wyp); polyDrag.moved=true; persist(); draw(); }
+function addShape(){ histPush(); const cx=Math.round(camx+(CW/2)/zoom), cy=Math.round(camy+(CH/2)/zoom), r=130; const nodes=[]; const n=6;
+  for(let i=0;i<n;i++){ const a=i/n*Math.PI*2 - Math.PI/2; nodes.push({x:Math.round(cx+Math.cos(a)*r), y:Math.round(cy+Math.sin(a)*r*0.8), corner:false, wn:'auto', ho:{x:0,y:0}, hi:{x:0,y:0}, ha:true}); }
+  M.poly=M.poly||[]; M.poly.push({nodes, closed:true, layer:'main'}); polyActive=M.poly.length-1; polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); persist(); draw(); if(typeof toast==='function')toast('closed shape added (shape '+(polyActive+1)+') — drag to place + sculpt'); }
 function addMainPoly(){ histPush(); const y=380, Wd=M.world, nodes=[]; for(let i=0;i<6;i++) nodes.push({x:Math.round(i*Wd/5),y,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true});
   M.poly=M.poly||[]; M.poly.push({nodes,closed:false,layer:'main'}); polyActive=M.poly.length-1; polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); persist(); draw(); if(typeof toast==='function')toast('polyline added (shape '+(polyActive+1)+') — tap a shape to select it'); }
 function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
   const order=['bg','main','fg'], colof=L=>(L==='bg'?'#4a6a9a':(L==='fg'?'#3fcf9a':'#9d8ce0'));
-  for(const L of order){ for(let pi=0;pi<M.poly.length;pi++){ const o=M.poly[pi]; if((o.layer||'main')!==L) continue; const active=(pi===polyActive); const S=polySamplesNs(o.nodes); if(S.length<2) continue; const base=colof(L);
+  for(const L of order){ for(let pi=0;pi<M.poly.length;pi++){ const o=M.poly[pi]; if((o.layer||'main')!==L) continue; const active=(pi===polyActive); const S=polySamplesNs(o.nodes,!!o.closed); if(S.length<2) continue; const base=colof(L);
     ctx.save();
     ctx.beginPath(); ctx.moveTo(sx(S[0].x),sy(S[0].y)); for(let i=1;i<S.length;i++) ctx.lineTo(sx(S[i].x),sy(S[i].y));
     if(o.closed){ ctx.closePath(); } else { ctx.lineTo(sx(S[S.length-1].x),sy(M.h)); ctx.lineTo(sx(S[0].x),sy(M.h)); ctx.closePath(); }
@@ -1076,6 +1082,7 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
 (function(){ const mk=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   mk('mPoly',function(){ polyMode=!polyMode; document.getElementById('mPoly').classList.toggle('on',polyMode); if(polyMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); } draw(); });
   mk('bAddPoly',addMainPoly);
+  mk('bAddShape',addShape);
   mk('mPBreak',function(){ polyBreakMode=!polyBreakMode; this.classList.toggle('on',polyBreakMode); });
   mk('mPWall',function(){ polyWallMode=!polyWallMode; this.classList.toggle('on',polyWallMode); if(polyWallMode){ polyLockMode=false; const l=document.getElementById('mPLock'); if(l)l.classList.remove('on'); } draw(); });
   mk('mPLock',function(){ polyLockMode=!polyLockMode; this.classList.toggle('on',polyLockMode); if(polyLockMode){ polyWallMode=false; const w=document.getElementById('mPWall'); if(w)w.classList.remove('on'); } draw(); });
