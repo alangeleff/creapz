@@ -1,4 +1,4 @@
-const ASSET_VER='1782210000';
+const ASSET_VER='1782220000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1243,9 +1243,9 @@ function polySoftCache(ob,S){ const f=Math.max(2,ob.feather||24), pad=Math.ceil(
 function polyObjTop(S,x){ let top=null; for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); const y=a.y+(b.y-a.y)*t; if(top==null||y<top) top=y; } } return top; }
 function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex):null; if(!img) return; const H=ob.fringeH||44;
   let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
-  const iw=img.naturalWidth, ih=img.naturalHeight, tileW=H*iw/Math.max(1,ih), step=4; ctx.save(); ctx.globalAlpha=alpha;
+  const iw=img.naturalWidth, ih=img.naturalHeight, trim=ob.fringeTrim||0, cw=iw*(1-2*trim), tileW=H*cw/Math.max(1,ih), step=4, drop=Math.min(Math.round(H*0.08),9); ctx.save(); ctx.globalAlpha=alpha;
   for(let x=Math.floor(x0); x<=x1; x+=step){ const sy=polyObjTop(S,x); if(sy==null) continue;
-    const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw), drop=Math.min(Math.round(H*0.08),9);
+    const frac=((x-x0)%tileW)/tileW, u=trim*iw+frac*cw, sw=Math.max(1,(step/tileW)*cw);
     ctx.drawImage(img, u,0, sw,ih, x-camX, sy-H+drop, step+1, H); }
   ctx.restore(); }
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;

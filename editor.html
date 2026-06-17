@@ -190,6 +190,7 @@
    <button class="btn" id="bPolyFringe" title="Generate a fringe (grass/rock edge) along the top of the selected shape">🌿 Fringe</button>
    <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Fringe height (only affects fringe edges)">grass<input id="polyFringeH" type="range" min="12" max="140" step="2" value="44" style="width:74px;vertical-align:middle"></label>
    <button class="btn" id="bPolyFringeHist" title="Cycle back through this shape's previous fringes">⟳🌿</button>
+   <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Trim the fringe tile edges to close gaps between repeats">seam<input id="polyFringeTrim" type="range" min="0" max="35" step="1" value="0" style="width:74px;vertical-align:middle"></label>
    <button class="btn" id="bPolyTexHist" title="Cycle back through this shape's previous textures">⟳ Tex</button>
   </div>
   <div id="cvWrap">
@@ -277,8 +278,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782210000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782210000');
+fetch('./assets/sprites.json?v=1782220000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782220000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1067,7 +1068,7 @@ function polyEdFill(g,o,S,base){ polyEdPath(g,S,o.closed); const tImg=o.tex?poly
 function polyCycleEdge(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } histPush(); o.edge=(!o.edge||o.edge==='hard')?'soft':(o.edge==='soft'?'fringe':'hard'); if(o.edge==='soft'&&!o.feather)o.feather=24; if(o.edge==='fringe'){ if(!o.fringeH)o.fringeH=44; if(!o.fringeTex) toast('fringe mode — tap 🌿 Fringe to generate the edge'); } persist(); draw(); syncPolyUI(); if(o.edge!=='fringe') toast('edges: '+o.edge); }
 function polyCycleTex(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.texList||o.texList.length<2){ toast('only one texture for this shape'); return; } o.texIdx=((o.texIdx==null?o.texList.length-1:o.texIdx)-1+o.texList.length)%o.texList.length; o.tex=o.texList[o.texIdx]; persist(); draw(); toast('texture '+(o.texIdx+1)+'/'+o.texList.length); }
 function polyCycleFringe(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.fringeList||o.fringeList.length<2){ toast('only one fringe for this shape'); return; } o.fringeIdx=((o.fringeIdx==null?o.fringeList.length-1:o.fringeIdx)-1+o.fringeList.length)%o.fringeList.length; o.fringeTex=o.fringeList[o.fringeIdx]; o.edge='fringe'; persist(); draw(); toast('fringe '+(o.fringeIdx+1)+'/'+o.fringeList.length); }
-function syncPolyUI(){ const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); const o=M.poly&&M.poly[polyActive]; const ts=document.getElementById('polyTexScale'); const op=document.getElementById('polyOpac'); const be=document.getElementById('bPolyEdge'); if(!o) return; if(ts) ts.value=(o.texScale||1); if(op) op.value=(o.alpha!==undefined?o.alpha:1); if(be) be.textContent=(o.edge==='fringe'?'\ud83c\udf3f fringe':('\u25e1 '+(o.edge||'hard'))); const pf=document.getElementById('polyFeather'); if(pf) pf.value=(o.feather||24); const fh=document.getElementById('polyFringeH'); if(fh) fh.value=(o.fringeH||44); }
+function syncPolyUI(){ const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); const o=M.poly&&M.poly[polyActive]; const ts=document.getElementById('polyTexScale'); const op=document.getElementById('polyOpac'); const be=document.getElementById('bPolyEdge'); if(!o) return; if(ts) ts.value=(o.texScale||1); if(op) op.value=(o.alpha!==undefined?o.alpha:1); if(be) be.textContent=(o.edge==='fringe'?'\ud83c\udf3f fringe':('\u25e1 '+(o.edge||'hard'))); const pf=document.getElementById('polyFeather'); if(pf) pf.value=(o.feather||24); const fh=document.getElementById('polyFringeH'); if(fh) fh.value=(o.fringeH||44); const ft=document.getElementById('polyFringeTrim'); if(ft) ft.value=Math.round((o.fringeTrim||0)*100); }
 let _texModel='gemini', _texMode='texture', _texModal=null;
 function ensureTexModal(){ if(_texModal) return _texModal;
   const ov=document.createElement('div'); ov.id='texModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
@@ -1158,9 +1159,9 @@ function addMainPoly(){ histPush(); const y=380, Wd=M.world, nodes=[]; for(let i
 function polyObjTopEd(S,x){ let top=null; for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); const y=a.y+(b.y-a.y)*t; if(top==null||y<top) top=y; } } return top; }
 function drawEditorFringe(o,S){ const img=o.fringeTex?polyTexImgEd(o.fringeTex):null; if(!img) return; const H=o.fringeH||44;
   let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
-  const iw=img.naturalWidth, ih=img.naturalHeight, tileW=H*iw/Math.max(1,ih), step=4;
+  const iw=img.naturalWidth, ih=img.naturalHeight, trim=o.fringeTrim||0, cw=iw*(1-2*trim), tileW=H*cw/Math.max(1,ih), step=4, drop=Math.min(H*0.08,9)*zoom;
   for(let x=Math.floor(x0); x<=x1; x+=step){ const ty=polyObjTopEd(S,x); if(ty==null) continue;
-    const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw), drop=Math.min(H*0.08,9)*zoom;
+    const frac=((x-x0)%tileW)/tileW, u=trim*iw+frac*cw, sw=Math.max(1,(step/tileW)*cw);
     ctx.drawImage(img, u,0, sw,ih, sx(x), sy(ty)-H*zoom+drop, step*zoom+1, H*zoom); } }
 function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
   const order=['bg','main','fg'], colof=L=>(L==='bg'?'#4a6a9a':(L==='fg'?'#3fcf9a':'#9d8ce0'));
@@ -1217,6 +1218,7 @@ function drawPolyLabels(){ if(!M.poly) return; ctx.textAlign='center'; ctx.font=
   mk('bPolyEdge',polyCycleEdge); mk('bPolyTexHist',polyCycleTex); mk('bPolyFringe',polyGenFringe);
   { const fh=document.getElementById('polyFringeH'); if(fh) fh.addEventListener('input',function(){ const o=M.poly&&M.poly[polyActive]; if(o){ o.fringeH=+this.value; if(o.edge!=='fringe'&&o.fringeTex)o.edge='fringe'; persist(); draw(); } }); }
   mk('bPolyFringeHist',polyCycleFringe);
+  { const ft=document.getElementById('polyFringeTrim'); if(ft) ft.addEventListener('input',function(){ const o=M.poly&&M.poly[polyActive]; if(o){ o.fringeTrim=(+this.value)/100; if(o.edge!=='fringe'&&o.fringeTex)o.edge='fringe'; persist(); draw(); } }); }
 })();
 function draw(){
  syncFields(); ctx.clearRect(0,0,CW,CH); /*polylabels-after*/
