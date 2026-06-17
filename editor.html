@@ -164,7 +164,7 @@
    <span class="grp grp-stage"><span class="glabel">Stage</span><label>name</label><input id="fName" size="9" value="Crypt Depths"><label>act</label><input id="fAct" size="2" value="I"><label>theme</label><select id="fTheme"><option value="crypt">crypt</option><option value="plains">ethereal plains</option><option value="witch">witchwood</option><option value="harbor">drowned harbor</option><option value="spire">bell spire</option><option value="charnel">charnel peak</option><option value="rift">the rift</option><option value="castle">blood moon castle</option><option value="">surface</option></select><label>music</label><select id="fMusic"><option>act1</option><option>act2</option><option>crypt1</option><option>crypt2</option><option>ethereal1</option><option>ethereal2</option><option>title</option></select><label>W</label><input id="fW" size="4" value="3200"><label>H</label><input id="fH" size="4" value="2900"><label>idx</label><input id="fIdx" size="2" value="2"><button class="btn" id="bNew"><i data-lucide="file-plus-2">✦</i> New</button></span>
    <span class="grp grp-save"><span class="glabel">Save</span><button class="btn" id="bBench" title="Committed stage bench — permanent, every device"><i data-lucide="archive">🗄</i> Bench</button><button class="btn" id="bMap" title="World Map — assign bench stages to zones/acts"><i data-lucide="map">🗺</i> Map</button><select class="btn" id="bLoad" title="Load an existing level to edit"><option value="">Load level…</option><option value="stage1.js|0">Cemetery · Act I</option><option value="stage2.js|1">Cemetery · Act II</option><option value="crypt1.js|2">Crypt Depths · Act I</option><option value="crypt2.js|3">Crypt Depths · Act II</option></select><button class="btn" id="bExport" title="Export a full backup — this stage + all custom assets + every bench stage"><i data-lucide="download">⭳</i> Backup</button><button class="btn" id="bImport" title="Import a level file"><i data-lucide="file-up">⭱</i> Import</button></span>
    <span class="grp grp-edit"><span class="glabel">Edit</span><button class="btn" id="bUndo" title="Undo (Ctrl+Z)"><i data-lucide="undo-2">↶</i></button><button class="btn" id="bRedo" title="Redo (Ctrl+Y)"><i data-lucide="redo-2">↷</i></button><button class="btn" id="bRuler" title="Measure / jump-reach ruler"><i data-lucide="ruler">📏</i></button><button class="btn" id="bSnap" title="Magnetic edge snapping"><i data-lucide="magnet">🧲</i></button></span>
-   <span class="grp grp-assets"><span class="glabel">Assets</span><button class="btn" id="bUpload" title="Upload a custom asset"><i data-lucide="upload">⬆</i> Upload</button><button class="btn" id="bMusic" title="Upload a background music track"><i data-lucide="music">🎵</i> Music</button></span>
+   <span class="grp grp-assets"><span class="glabel">Assets</span><button class="btn" id="bUpload" title="Upload a custom asset"><i data-lucide="upload">⬆</i> Upload</button><button class="btn" id="bMusic" title="Upload a background music track"><i data-lucide="music">🎵</i> Music</button><button class="btn" id="bObject" title="Create an AI object/prop with auto-traced collision"><i data-lucide="sparkles">✨</i> Object</button></span>
    <button class="btn" id="mPoly" title="Terrain sculpt mode (polyline ground)"><i data-lucide="mountain">⛰</i> Terrain</button>
    <span class="grp grp-terrain termode"><span class="glabel">Terrain</span><button class="btn" id="bAddPoly" title="Add a main ground polyline across the stage"><i data-lucide="spline">+</i> Polyline</button><button class="btn" id="bAddShape" title="Add a closed free-floating shape (platform / pillar / ceiling)"><i data-lucide="hexagon">+</i> Shape</button><button class="btn" id="mPBreak" title="Terrain: break handle (independent in/out curve)"><i data-lucide="scissors">✂</i></button><button class="btn" id="mPWall" title="Terrain: paint wall segments"><i data-lucide="brick-wall">🧱</i></button><button class="btn" id="mPLock" title="Terrain: lock a node"><i data-lucide="lock">🔒</i></button><select class="btn" id="polyLayerSel" title="Layer of the selected shape"><option value="main">▦ Main · collides</option><option value="bg">▦ Background</option><option value="fg">▦ Foreground</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Wall angle: slopes steeper than this become walls">∠<input id="polyAngle" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:64px;vertical-align:middle"></label></span>
    <span class="grp grp-skin termode"><span class="glabel">Skin</span><button class="btn" id="mPText" title="Terrain: label / color the selected shape (no node edits)"><i data-lucide="tag">🏷</i> Label</button><input id="polyColor" type="color" value="#6a5ca0" title="Fill color of selected shape" style="width:30px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;vertical-align:middle"><button class="btn" id="bPolyTex" title="Generate an AI texture for the selected shape"><i data-lucide="palette">🎨</i> Skin</button><button class="btn" id="bPolyTexHist" title="View this shape's skin history — tap to apply, × to delete"><i data-lucide="history">⟳</i> Tex</button><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Texture tile size of selected shape">tile<input id="polyTexScale" type="range" min="0.25" max="4" step="0.05" value="1" style="width:64px;vertical-align:middle"></label><button class="btn" id="bPolyEdge" title="Edge style: hard / soft (feathered, for fog & clouds)">◡ hard</button><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Transparency of selected shape">α<input id="polyOpac" type="range" min="0.1" max="1" step="0.05" value="1" style="width:58px;vertical-align:middle"></label><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Soft-edge fade distance (only affects soft edges)">fade<input id="polyFeather" type="range" min="2" max="90" step="1" value="24" style="width:64px;vertical-align:middle"></label></span>
@@ -256,8 +256,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782350000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782350000');
+fetch('./assets/sprites.json?v=1782360000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782360000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1047,8 +1047,9 @@ function polyEdPath(g,S,closed){ g.beginPath(); g.moveTo(sx(S[0].x),sy(S[0].y));
 function polySingleFillEd(g,img,S,closed){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } if(!closed) y1=M.h;
   const OS=1.12, bw=x1-x0, bh=y1-y0, iw=img.naturalWidth, ih=img.naturalHeight, sc=Math.max(bw/iw,bh/Math.max(1,ih))*OS, dw=iw*sc, dh=ih*sc, dx=x0+(bw-dw)/2, dy=y0+(bh-dh)/2;
   g.drawImage(img, sx(dx), sy(dy), dw*zoom, dh*zoom); }
+function polyObjFitEd(g,img,S){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } g.drawImage(img, sx(x0), sy(y0), (x1-x0)*zoom, (y1-y0)*zoom); }
 function _unrotSE(S,rot){ if(!rot) return {Sf:S,cx:0,cy:0}; let cx=0,cy=0; for(const p of S){cx+=p.x;cy+=p.y;} cx/=S.length; cy/=S.length; const cs=Math.cos(-rot),sn=Math.sin(-rot); const Sf=S.map(p=>{const dx=p.x-cx,dy=p.y-cy;return{x:cx+dx*cs-dy*sn,y:cy+dx*sn+dy*cs};}); return {Sf,cx,cy}; }
-function polyEdFill(g,o,S,base){ polyEdPath(g,S,o.closed); const tImg=o.tex?polyTexImgEd(o.tex):null; if(tImg){ g.save(); g.clip('evenodd'); const rot=o.rot||0; let Sf=S; if(rot){ const u=_unrotSE(S,rot); Sf=u.Sf; g.translate(sx(u.cx),sy(u.cy)); g.rotate(rot); g.translate(-sx(u.cx),-sy(u.cy)); } if(o.fillMode==='single') polySingleFillEd(g,tImg,Sf,o.closed); else polyTileFillEd(g,tImg,Sf,o.closed,o.texScale||1); g.restore(); } else { g.fillStyle=o.color||base; g.fill('evenodd'); } }
+function polyEdFill(g,o,S,base){ polyEdPath(g,S,o.closed); const tImg=o.tex?polyTexImgEd(o.tex):null; if(tImg){ g.save(); const isObj=o.kind==='object'; if(!isObj) g.clip('evenodd'); const rot=o.rot||0; let Sf=S; if(rot){ const u=_unrotSE(S,rot); Sf=u.Sf; g.translate(sx(u.cx),sy(u.cy)); g.rotate(rot); g.translate(-sx(u.cx),-sy(u.cy)); } if(isObj) polyObjFitEd(g,tImg,Sf); else if(o.fillMode==='single') polySingleFillEd(g,tImg,Sf,o.closed); else polyTileFillEd(g,tImg,Sf,o.closed,o.texScale||1); g.restore(); } else { g.fillStyle=o.color||base; g.fill('evenodd'); } }
 function polyCycleEdge(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } histPush(); o.edge=(!o.edge||o.edge==='hard')?'soft':(o.edge==='soft'?'fringe':'hard'); if(o.edge==='soft'&&!o.feather)o.feather=24; if(o.edge==='fringe'){ if(!o.fringeH)o.fringeH=44; if(!o.fringeTex) toast('fringe mode — tap 🌿 Fringe to generate the edge'); } persist(); draw(); syncPolyUI(); if(o.edge!=='fringe') toast('edges: '+o.edge); }
 let _histOv=null;
 function ensureHistOv(){ if(_histOv) return _histOv; const ov=document.createElement('div'); ov.id='histOv'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
@@ -1087,6 +1088,63 @@ function polyCycleFringe(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.fringe
 function updateTermodeBar(){ const b=document.getElementById('bar'); if(b) b.classList.toggle('noterr', !polyMode); }
 function syncPolyUI(){ const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); const o=M.poly&&M.poly[polyActive]; { const ls=document.getElementById('polyLayerSel'); if(ls&&o) ls.value=(o.layer||'main'); } const ts=document.getElementById('polyTexScale'); const op=document.getElementById('polyOpac'); const be=document.getElementById('bPolyEdge'); if(!o) return; if(ts) ts.value=(o.texScale||1); if(op) op.value=(o.alpha!==undefined?o.alpha:1); if(be) be.textContent=(o.edge==='fringe'?'\ud83c\udf3f fringe':('\u25e1 '+(o.edge||'hard'))); const pf=document.getElementById('polyFeather'); if(pf) pf.value=(o.feather||24); const fh=document.getElementById('polyFringeH'); if(fh) fh.value=(o.fringeH||44); const ft=document.getElementById('polyFringeTrim'); if(ft) ft.value=Math.round((o.fringeTrim||0)*100); }
 let _texModel='gemini', _texMode='texture', _texFill='pattern', _fringeI2I=false, _texModal=null;
+let _objModal=null, _objModel='gemini', _objRays=28, _objKeyedB64=null;
+function _loadImg(src){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; }); }
+function traceObjectImage(img, rays){
+  const MAXW=170, sc0=Math.min(1, MAXW/img.naturalWidth), W=Math.max(8,Math.round(img.naturalWidth*sc0)), H=Math.max(8,Math.round(img.naturalHeight*sc0));
+  const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.drawImage(img,0,0,W,H);
+  const d=x.getImageData(0,0,W,H).data, A=(px,py)=>(px>=0&&py>=0&&px<W&&py<H&&d[(py*W+px)*4+3]>40);
+  let x0=W,x1=-1,y0=H,y1=-1, cx=0,cy=0,n=0;
+  for(let py=0;py<H;py++)for(let px=0;px<W;px++){ if(A(px,py)){ if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py; cx+=px; cy+=py; n++; } }
+  if(!n) return null; cx/=n; cy/=n; const maxR=Math.hypot(W,H), pts=[];
+  for(let i=0;i<rays;i++){ const a=i/rays*Math.PI*2, dx=Math.cos(a), dy=Math.sin(a); let r=0; for(let rr=maxR; rr>=0; rr--){ if(A(Math.round(cx+dx*rr),Math.round(cy+dy*rr))){ r=rr; break; } } pts.push({x:cx+dx*r,y:cy+dy*r}); }
+  return {pts, x0,y0,x1,y1, W,H, natW:img.naturalWidth, natH:img.naturalHeight};
+}
+function cropObjectB64(img, t){ const sx0=t.x0/t.W*t.natW, sy0=t.y0/t.H*t.natH, sw=(t.x1-t.x0+1)/t.W*t.natW, sh=(t.y1-t.y0+1)/t.H*t.natH;
+  const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(sw)); c.height=Math.max(1,Math.round(sh)); c.getContext('2d').drawImage(img, sx0,sy0,sw,sh, 0,0,c.width,c.height);
+  return c.toDataURL('image/png').split(',')[1]; }
+function ensureObjModal(){ if(_objModal) return _objModal; const ov=document.createElement('div'); ov.id='objModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
+  ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:18px;width:min(460px,94vw);font-family:sans-serif;color:#e8e6f5">'
+   +'<div style="font-size:15px;font-weight:600;margin-bottom:4px">Create an Object</div>'
+   +'<div id="objInput"><div style="font-size:12px;color:#9b93b5;margin-bottom:10px">Describe a prop. It generates with a transparent cutout and an auto-traced collision outline.</div>'
+   +'<textarea id="objPromptI" rows="2" placeholder="big grey boulder / wooden barrel / stone coffin / gravestone" style="width:100%;box-sizing:border-box;background:#0f0c1a;border:1px solid #2c2740;border-radius:8px;color:#e8e6f5;padding:8px;font-size:13px;resize:vertical"></textarea>'
+   +'<div style="font-size:12px;color:#9b93b5;margin:12px 0 6px">Image model</div><div style="display:flex;gap:8px"><button id="objMGemini" class="texMbtn">Gemini</button><button id="objMFal" class="texMbtn">FAL / FLUX</button></div>'
+   +'<div style="font-size:12px;color:#9b93b5;margin:12px 0 6px">Collision detail</div><label style="display:flex;align-items:center;gap:8px;font-size:11px;color:#9b93b5">loose<input id="objRaysI" type="range" min="10" max="80" step="2" value="28" style="flex:1">tight</label>'
+   +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button id="objCancel" class="texCbtn">Cancel</button><button id="objGen" class="texGbtn">Generate</button></div></div>'
+   +'<div id="objPreview" style="display:none"><div style="background:repeating-conic-gradient(#3a3550 0% 25%,#2a2640 0% 50%) 50%/22px 22px;border:1px solid #2c2740;border-radius:10px;padding:10px;text-align:center"><img id="objImg" style="max-width:100%;max-height:46vh;vertical-align:middle"></div>'
+   +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button id="objReprompt" class="texCbtn">Reprompt</button><button id="objTrash" class="texCbtn">Trash</button><button id="objPlace" class="texGbtn">Place</button></div></div></div>';
+  document.body.appendChild(ov); _objModal=ov;
+  const gm=ov.querySelector('#objMGemini'), fl=ov.querySelector('#objMFal'); function pick(m){ _objModel=m; gm.classList.toggle('sel',m==='gemini'); fl.classList.toggle('sel',m==='fal'); } gm.onclick=()=>pick('gemini'); fl.onclick=()=>pick('fal'); pick(_objModel);
+  ov.querySelector('#objRaysI').addEventListener('input',function(){ _objRays=+this.value; });
+  ov.querySelector('#objCancel').onclick=()=>{ ov.style.display='none'; };
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
+  ov.querySelector('#objGen').onclick=objGenerate;
+  ov.querySelector('#objReprompt').onclick=()=>{ ov.querySelector('#objPreview').style.display='none'; ov.querySelector('#objInput').style.display='block'; };
+  ov.querySelector('#objTrash').onclick=()=>{ _objKeyedB64=null; ov.querySelector('#objPreview').style.display='none'; ov.querySelector('#objInput').style.display='block'; };
+  ov.querySelector('#objPlace').onclick=objPlace;
+  return ov; }
+function openObjModal(){ const ov=ensureObjModal(); ov.querySelector('#objInput').style.display='block'; ov.querySelector('#objPreview').style.display='none'; ov.style.display='flex'; setTimeout(()=>{ const t=ov.querySelector('#objPromptI'); if(t)t.focus(); },30); }
+async function objGenerate(){ const ov=_objModal; const desc=(ov.querySelector('#objPromptI').value||'').trim(); if(!desc){ toast('describe the object'); return; }
+  toast('generating object ('+_objModel+')'); 
+  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model:_objModel, mode:'object'})});
+    const j=await r.json().catch(()=>({})); if(!r.ok||!j.imageBase64){ toast('gen failed: '+(j.error||'no image')); return; }
+    _objKeyedB64=await keyFringeB64(j.imageBase64, j.mimeType);
+    ov.querySelector('#objImg').src='data:image/png;base64,'+_objKeyedB64;
+    ov.querySelector('#objInput').style.display='none'; ov.querySelector('#objPreview').style.display='block';
+  }catch(e){ toast('gen error: '+e.message); } }
+async function objPlace(){ if(!_objKeyedB64){ toast('nothing to place'); return; }
+  try{ const img=await _loadImg('data:image/png;base64,'+_objKeyedB64); const t=traceObjectImage(img, _objRays); if(!t){ toast('could not trace - try another'); return; }
+    const b64=cropObjectB64(img, t); const id='obj_'+Date.now().toString(36), path='./config/textures/'+id+'.png';
+    const im=new Image(); im.onload=()=>{try{draw();}catch(e){}}; im.src='data:image/png;base64,'+b64; POLYTEX_ED[path]=im;
+    const cxB=(t.x0+t.x1)/2, cyB=(t.y0+t.y1)/2, pw=Math.max(1,t.x1-t.x0), ph=Math.max(1,t.y1-t.y0), target=260, sc=target/Math.max(pw,ph);
+    const wcx=Math.round(camx+(CW/2)/zoom), wcy=Math.round(camy+(CH/2)/zoom);
+    const nodes=t.pts.map(p=>({x:Math.round(wcx+(p.x-cxB)*sc), y:Math.round(wcy+(p.y-cyB)*sc), corner:true, wn:'auto', ho:{x:0,y:0}, hi:{x:0,y:0}, ha:false}));
+    histPush(); M.poly=M.poly||[]; M.poly.push({nodes, closed:true, layer:'main', kind:'object', tex:path, rot:0}); polyActive=M.poly.length-1;
+    polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); try{updateTermodeBar();}catch(e){}
+    persist(); draw(); syncPolyUI(); if(_objModal)_objModal.style.display='none'; toast('placed - drag to position; edit nodes to tweak collision');
+    const res=await commitFiles([{path:'config/textures/'+id+'.png', content:b64, encoding:'base64'}], 'object: '+id);
+    if(!res) toast('object placed but image not saved (commit failed)');
+  }catch(e){ toast('place error: '+e.message); } }
 function ensureTexModal(){ if(_texModal) return _texModal;
   const ov=document.createElement('div'); ov.id='texModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
   ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:18px;width:min(440px,92vw);box-shadow:0 18px 60px rgba(0,0,0,.5);font-family:sans-serif;color:#e8e6f5">'
@@ -1219,7 +1277,7 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
       sc.save(); sc.globalCompositeOperation='destination-in'; sc.drawImage(_esmaskC,0,0); sc.restore();
       ctx.save(); ctx.globalAlpha=(active?1:0.85)*sa; ctx.drawImage(_esoff,0,0); ctx.restore(); }
     else { const tImg=o.tex?polyTexImgEd(o.tex):null;
-      if(tImg){ polyEdPath(ctx,S,o.closed); ctx.save(); ctx.globalAlpha=(active?1:0.7)*sa; ctx.clip('evenodd'); const rot=o.rot||0; let Sf=S; if(rot){ const u=_unrotSE(S,rot); Sf=u.Sf; ctx.translate(sx(u.cx),sy(u.cy)); ctx.rotate(rot); ctx.translate(-sx(u.cx),-sy(u.cy)); } if(o.fillMode==='single') polySingleFillEd(ctx,tImg,Sf,o.closed); else polyTileFillEd(ctx,tImg,Sf,o.closed,o.texScale||1); ctx.restore(); ctx.globalAlpha=1; }
+      if(tImg){ polyEdPath(ctx,S,o.closed); ctx.save(); ctx.globalAlpha=(active?1:0.7)*sa; const isObj=o.kind==='object'; if(!isObj) ctx.clip('evenodd'); const rot=o.rot||0; let Sf=S; if(rot){ const u=_unrotSE(S,rot); Sf=u.Sf; ctx.translate(sx(u.cx),sy(u.cy)); ctx.rotate(rot); ctx.translate(-sx(u.cx),-sy(u.cy)); } if(isObj) polyObjFitEd(ctx,tImg,Sf); else if(o.fillMode==='single') polySingleFillEd(ctx,tImg,Sf,o.closed); else polyTileFillEd(ctx,tImg,Sf,o.closed,o.texScale||1); ctx.restore(); ctx.globalAlpha=1; }
       else { polyEdPath(ctx,S,o.closed); ctx.fillStyle=o.color||base; ctx.globalAlpha=(o.color?(active?0.55:0.3):(active?0.28:0.12))*sa; ctx.fill('evenodd'); ctx.globalAlpha=1; } }
     ctx.lineWidth=active?3:2;
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; ctx.strokeStyle=polyEdgeWall(a,b)?'#e2563b':base; ctx.globalAlpha=active?1:0.55; ctx.beginPath(); ctx.moveTo(sx(a.x),sy(a.y)); ctx.lineTo(sx(b.x),sy(b.y)); ctx.stroke(); }
@@ -1642,6 +1700,7 @@ document.getElementById('bExport').onclick=async()=>{ toast('building backup\u20
  try{ const list=(BCONFIG.bench||[]); for(const b of list){ const id=(b&&b.id)||b; if(!id) continue; try{ const r=await fetch('./config/bench/'+id+'.json?cb='+Date.now()); if(r.ok) backup.bench[id]=await r.json(); }catch(e){} } }catch(e){}
  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(backup)],{type:'application/json'}));
  a.download='creapz-backup-'+new Date().toISOString().slice(0,10)+'.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('backup exported \u2014 '+Object.keys(backup.bench).length+' bench stages + assets'); };
+document.getElementById('bObject').onclick=openObjModal;
 document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file';
  inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{ let j=tx.trim(); const i=j.indexOf('={'); if(i>=0)j=j.slice(i+1,j.lastIndexOf('}')+1);
    histPush(); M=Object.assign(blankLevel(),migrateLevel(JSON.parse(j))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };

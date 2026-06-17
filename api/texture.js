@@ -8,6 +8,7 @@ const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models
 const FAL_FLUX = 'https://fal.run/fal-ai/flux/dev';
 const FAL_REMBG = 'https://fal.run/fal-ai/imageutils/rembg';
 
+function objectPrompt(prompt, style){ return `A single ${prompt}, centered and complete, filling most of the frame as ONE game prop. The ENTIRE background is pure solid magenta #FF00FF (rgb 255,0,255); the ${prompt} contains NO magenta/pink/purple. 2D side-scrolling video-game art, stylized, flat even lighting, no shadow, no ground, no scene, no text.`+(style?` Art style: ${style}.`:''); }
 function singleI2IPrompt(prompt, style){ return `The image is a WHITE silhouette on a BLACK background. Repaint the white silhouette as: ${prompt} — a single detailed ${prompt} that completely FILLS the silhouette edge-to-edge and exactly matches its shape (the silhouette IS the object's outline). The ${prompt} must reach ALL the way to the white silhouette boundary with NO black gap or border between the object and the silhouette edge. Keep the area OUTSIDE the silhouette pure black. 2D side-scrolling game art, flat even lighting, no scene, no ground, no extra objects, no text.`+(style?` Art style: ${style}.`:''); }
 function singlePrompt(prompt, style) {
   return `A single complete ${prompt} as ONE image filling the entire frame edge to edge, 2D side-scrolling video-game art, stylized and painterly, centered and filling the frame. This is a single object/scene, NOT a repeating tile or pattern. No UI, no text, no border.`
@@ -120,9 +121,15 @@ module.exports = async (req, res) => {
     if (!body || typeof body !== 'object') body = {};
     const { prompt, style } = body;
     const model = (body.model === 'fal') ? 'fal' : 'gemini';
-    const mode = (body.mode === 'fringe') ? 'fringe' : 'texture';
+    const mode = (body.mode === 'fringe') ? 'fringe' : (body.mode === 'object' ? 'object' : 'texture');
     if (!prompt) return res.status(400).json({ error: 'prompt required' });
 
+    if (mode === 'object') {
+      const full = objectPrompt(prompt, style);
+      const base = model === 'fal' ? await genFal(full) : await genGemini(full);
+      if (base.err) return res.status(base.status || 500).json({ error: base.err, model, mode });
+      return res.status(200).json({ imageBase64: base.imageBase64, mimeType: base.mimeType || 'image/png', model, mode });
+    }
     if (mode === 'fringe') {
       const hasImg = typeof body.image === 'string' && body.image.length > 200;   // composed input (texture bottom + magenta top) => derive blades from the real surface
       let base;

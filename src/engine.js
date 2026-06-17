@@ -1,4 +1,4 @@
-const ASSET_VER='1782350000';
+const ASSET_VER='1782360000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1166,7 +1166,7 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; b.fillMode=o.fillMode||'pattern'; b.rot=o.rot||0; built.push(b); } }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; b.fillMode=o.fillMode||'pattern'; b.rot=o.rot||0; b.kind=o.kind||null; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyCollides(ob){ return (ob.layer||'main')==='main'; }
@@ -1222,9 +1222,10 @@ function polyPath(g,S,closed,ox){ if(ox===undefined)ox=camX; g.beginPath(); g.mo
 function polySingleFill(g,img,S,closed,ox){ if(ox===undefined)ox=camX; let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } if(!closed) y1=WORLDH;
   const OS=1.12, bw=x1-x0, bh=y1-y0, iw=img.naturalWidth, ih=img.naturalHeight, sc=Math.max(bw/iw,bh/Math.max(1,ih))*OS, dw=iw*sc, dh=ih*sc, dx=x0+(bw-dw)/2, dy=y0+(bh-dh)/2;
   g.drawImage(img, dx-ox, dy, dw, dh); }
+function polyObjFit(g,img,S,ox){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } g.drawImage(img, x0-ox, y0, x1-x0, y1-y0); }
 function _unrotS(S,rot){ if(!rot) return {Sf:S,cx:0,cy:0}; let cx=0,cy=0; for(const p of S){cx+=p.x;cy+=p.y;} cx/=S.length; cy/=S.length; const cs=Math.cos(-rot),sn=Math.sin(-rot); const Sf=S.map(p=>{const dx=p.x-cx,dy=p.y-cy;return{x:cx+dx*cs-dy*sn,y:cy+dx*sn+dy*cs};}); return {Sf,cx,cy}; }
 function polyPaint(g,ob,S,ox){ if(ox===undefined)ox=camX; polyPath(g,S,ob.closed,ox); const tImg=ob.tex?polyTexImg(ob.tex):null;
-  if(tImg){ g.save(); g.clip('evenodd'); const rot=ob.rot||0; let Sf=S; if(rot){ const u=_unrotS(S,rot); Sf=u.Sf; g.translate(u.cx-ox,u.cy); g.rotate(rot); g.translate(-(u.cx-ox),-u.cy); } if(ob.fillMode==='single') polySingleFill(g,tImg,Sf,ob.closed,ox); else polyTileFill(g,tImg,Sf,ob.closed,ob.texScale,ox); g.restore(); }
+  if(tImg){ g.save(); const isObj=ob.kind==='object'; if(!isObj) g.clip('evenodd'); const rot=ob.rot||0; let Sf=S; if(rot){ const u=_unrotS(S,rot); Sf=u.Sf; g.translate(u.cx-ox,u.cy); g.rotate(rot); g.translate(-(u.cx-ox),-u.cy); } if(isObj) polyObjFit(g,tImg,Sf,ox); else if(ob.fillMode==='single') polySingleFill(g,tImg,Sf,ob.closed,ox); else polyTileFill(g,tImg,Sf,ob.closed,ob.texScale,ox); g.restore(); }
   else { if(ob.color){ g.fillStyle=ob.color; } else { const tg=g.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); g.fillStyle=tg; } g.fill('evenodd'); }
 }
 function polySoftCache(ob,S){ const f=Math.max(2,ob.feather||24), pad=Math.ceil(f+3);
