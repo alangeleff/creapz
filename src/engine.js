@@ -1,4 +1,4 @@
-const ASSET_VER='1781920000';
+const ASSET_VER='1781930000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1165,12 +1165,12 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1) built.push(polyBuildOne(o.nodes, !!o.closed)); }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
 function polyCross(x){ const out=[];
-  for(const ob of POLY.objs){ const S=ob.samples;
+  for(const ob of POLY.objs){ if((ob.layer||'main')!=='main') continue; const S=ob.samples;
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t, wall:polyEdgeWall(a,b)}); } } }
   out.sort((p,q)=>p.y-q.y); return out; }
 function polyFloorUnder(x,fy){ const cs=polyCross(x); for(let i=0;i<cs.length;i+=2){ if(!cs[i].wall && cs[i].y>=fy-POLY_STEP) return cs[i].y; } return null; }
@@ -1188,7 +1188,7 @@ function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(
   return false; }
 function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
-    for(const ob of POLY.objs){ const S=ob.samples;
+    for(const ob of POLY.objs){ if((ob.layer||'main')!=='main') continue; const S=ob.samples;
       for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!polyEdgeWall(a,b)) continue;
         const vx=b.x-a.x, vy=b.y-a.y, L=vx*vx+vy*vy; if(L<0.01) continue;
         let t=((cx-a.x)*vx+(cy-a.y)*vy)/L; t=Math.max(0,Math.min(1,t)); const px=a.x+t*vx, py=a.y+t*vy;
@@ -1208,9 +1208,9 @@ function resolvePoly(prevFeet){
   } else { const c=polyCeilAbove(p.x,p.y-PH); if(c!==null && (p.y-PH)<c){ p.y=c+PH; p.vy=0; } }
   resolvePolyWalls();
 }
-function drawPoly(){ if(!POLY||!POLY.objs.length) return;
-  for(const ob of POLY.objs){ const S=ob.samples; if(S.length<2) continue;
-    ctx.save();
+function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
+  for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; const S=ob.samples; if(S.length<2) continue;
+    ctx.save(); ctx.globalAlpha = layer==='bg'?0.55:(layer==='fg'?0.85:1);
     ctx.beginPath(); ctx.moveTo(S[0].x-camX,S[0].y); for(let i=1;i<S.length;i++) ctx.lineTo(S[i].x-camX,S[i].y);
     if(ob.closed){ ctx.closePath(); } else { const baseY=WORLDH+320; ctx.lineTo(S[S.length-1].x-camX,baseY); ctx.lineTo(S[0].x-camX,baseY); ctx.closePath(); }
     const tg=ctx.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); ctx.fillStyle=tg; ctx.fill('evenodd');
@@ -3431,12 +3431,12 @@ function draw(){
   let _shx=0,_shy=0; if(shakeT>0){ const m=shakeMag*Math.min(1,shakeT/0.13); _shx=(Math.random()*2-1)*m; _shy=(Math.random()*2-1)*m; }
   ctx.setTransform(RS,0,0,RS,_shx*RS,_shy*RS);
   if (ST.theme==='crypt') caveBG(); else if (ST.theme==='plains') etherealBG(); else if (ST.theme==='witch') witchBG(); else if (ST.theme==='harbor') harborBG(); else if (ST.theme==='spire') spireBG(); else if (ST.theme==='charnel') charnelBG(); else if (ST.theme==='rift') riftBG(); else if (ST.theme==='castle') castleBG(); else { skyBG(); drawFence(); }
-  drawBackgrounds();   // parallax background image layers (cover the base when present)
+  drawBackgrounds(); drawPoly('bg');   // parallax background image layers (cover the base when present)
   vignette();
   ctx.save(); ctx.translate(0,-camY);
   drawSpikes();
   drawWorldProps();
-  drawPoly();
+  drawPoly('main');
   drawChecks();
   drawRocks();
   drawVolleys();
@@ -3605,7 +3605,7 @@ function draw(){
     const dk=Math.max(0,Math.min(1,camY/(WORLDH-H)))*0.40;
     ctx.fillStyle='rgba(2,1,6,'+dk.toFixed(2)+')'; ctx.fillRect(0,0,W,H);
   }
-  drawForegrounds();   // foreground occluder layers (player passes behind — secret areas)
+  drawForegrounds(); drawPoly('fg');   // foreground occluder layers (player passes behind — secret areas)
   // HUD
   drawPlayerHP();
   drawStoneMeter();
