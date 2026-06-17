@@ -1,4 +1,4 @@
-const ASSET_VER='1781810000';
+const ASSET_VER='1781820000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -197,7 +197,7 @@ const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[], GHURT=[], GSLAM=[], GBOUNCE=[];
 let POLY=null;   // optional polyline terrain for a stage (gated: null = classic flat terrain, zero change)
 const POLY_MAXSLOPE=1.3, POLY_STEP=18;
-const DEMO_POLY=[{x:60,y:380,wn:'auto',ha:true},{x:360,y:300,wn:'auto',ha:true},{x:640,y:380,wn:'auto',ha:true},{x:820,y:240,corner:true,wn:'auto',ha:true},{x:1000,y:380,wn:'auto',ha:true},{x:1180,y:382,wn:'auto',ha:true},{x:1230,y:200,corner:true,wn:'wall',ha:true},{x:1360,y:200,wn:'auto',ha:true},{x:1360,y:300,corner:true,wn:'wall',ha:true},{x:1280,y:300,corner:true,wn:'wall',ha:true},{x:1320,y:382,wn:'auto',ha:true},{x:1750,y:382,wn:'auto',ha:true}];
+const DEMO_POLY=[{x:60,y:380,wn:'auto',ha:true},{x:360,y:300,wn:'auto',ha:true},{x:640,y:380,wn:'auto',ha:true},{x:820,y:240,corner:true,wn:'auto',ha:true},{x:1000,y:380,wn:'auto',ha:true},{x:1180,y:382,wn:'auto',ha:true},{x:1230,y:200,corner:true,wn:'wall',ha:true},{x:1360,y:200,wn:'auto',ha:true},{x:1360,y:300,corner:true,wn:'wall',ha:true},{x:1280,y:300,corner:true,wn:'wall',ha:true},{x:1320,y:382,wn:'auto',ha:true},{x:3200,y:382,wn:'auto',ha:true}];
 let curses=[];   // Wood Witch aimed curse projectiles
 let flameWaves=[];   // Molten Skeleton crawling flame waves
 let STARS=[], TREES=[], GRAVES_BG=[];
@@ -299,7 +299,7 @@ function enterWorld(fromAct){
 function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
-  if(window.__polyDemo && !ST.poly) ST.poly=DEMO_POLY;
+  if(window.__polyDemo){ ST.poly=ST.poly||DEMO_POLY; SEG=[]; }
   POLY = (ST.poly && ST.poly.length>1) ? polyBuild(ST.poly) : null;
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
   OBST = ST.obst.map(o => { const def=OBJ[o.type]||{w:96,h:62}; const m={x:o.x, type:o.type, w:def.w, h:def.h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z, f:o.f}; if(o.type==='chest'){ m.state='closed'; m.openT=0; m.loot=o.loot||'gold'; } return m; });
@@ -1162,13 +1162,15 @@ function polyBuild(nodes){
 function polyEdgeWall(a,b){ const nd=POLY.nodes[a.seg]; const c=(nd&&nd.wn)||'auto';
   if(c==='wall') return true; if(c==='ground') return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
 function polyCross(x){ const S=POLY.samples, out=[];
-  for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); out.push(a.y+(b.y-a.y)*t); } }
-  out.sort((p,q)=>p-q); return out; }
-function polyFloorUnder(x,fy){ const cs=polyCross(x); for(let i=0;i<cs.length;i+=2){ if(cs[i]>=fy-POLY_STEP) return cs[i]; } return null; }
+  for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t, wall:polyEdgeWall(a,b)}); } }
+  out.sort((p,q)=>p.y-q.y); return out; }
+function polyFloorUnder(x,fy){ const cs=polyCross(x); for(let i=0;i<cs.length;i+=2){ if(!cs[i].wall && cs[i].y>=fy-POLY_STEP) return cs[i].y; } return null; }
 function polyFloorBetween(x,y0,y1){ const cs=polyCross(x); const lo=Math.min(y0,y1)-2, hi=Math.max(y0,y1)+0.5; let best=null;
-  for(let i=0;i<cs.length;i+=2){ if(cs[i]>=lo && cs[i]<=hi && (best===null||cs[i]<best)) best=cs[i]; } return best; }
-function polyCeilAbove(x,hy){ const cs=polyCross(x); let c=null; for(let i=1;i<cs.length;i+=2){ if(cs[i]<=hy+2) c=cs[i]; else break; } return c; }
-function polySolidAt(x,y){ const cs=polyCross(x); let c=0; for(const k of cs) if(k<y) c++; return (c&1)===1; }
+  for(let i=0;i<cs.length;i+=2){ if(!cs[i].wall && cs[i].y>=lo && cs[i].y<=hi && (best===null||cs[i].y<best)) best=cs[i].y; } return best; }
+function polyCeilAbove(x,hy){ const cs=polyCross(x); let c=null; for(let i=1;i<cs.length;i+=2){ if(cs[i].y<=hy+2) c=cs[i].y; else break; } return c; }
+function polySolidAt(x,y){ const cs=polyCross(x); let c=0; for(const k of cs) if(k.y<y) c++; return (c&1)===1; }
+function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(PW/2);
+  for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+8]){ if(polySolidAt(ex,yy)){ const g=polyFloorUnder(ex,p.y); if(g!==null && (p.y-g)<=POLY_STEP) return false; return true; } } return false; }
 function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2; const S=POLY.samples;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!polyEdgeWall(a,b)) continue;
@@ -1471,6 +1473,7 @@ function update(dt){
       }
     }
   }
+  if(POLY && polyBlock(nx)) nx=p.x;
   p.x=nx;
   const prevFeet=p.y; if (powerActive && equippedStone==='chaos' && chaosSpawnN>0 && !p.dead){ p.vy=0; p.onGround=false; } else if (p.flying){ p.vy=((keys['ArrowDown']||keys['KeyS']?1:0)-(keys['ArrowUp']||keys['KeyW']?1:0))*FLYSPD; } else if (p.diveT>0) p.vy=isDing(chosen)?DIVE_VY:BASH_VY; else if (p.slamT>0) p.vy=SLAM_VY; else p.vy+=GRAV; p.y+=p.vy;
   if (p.flying){ p.onGround=false; p.standPlat=null; }
