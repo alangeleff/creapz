@@ -16,9 +16,9 @@ function texturePrompt(prompt, style) {
 }
 function fringePrompt(prompt, style) {
   return `A horizontal border/edge row of: ${prompt}, for a 2D side-scrolling video game. `
-    + `The ${prompt} occupies the LOWER ~55% of the frame with detailed organic tips pointing straight UP; `
-    + `the rest is plain flat solid white empty space (it will be cut out). Centered, repeats left-to-right, `
-    + `flat even lighting, no shadows, no ground line, no scene, no characters.`
+    + `The ${prompt} fills the LOWER ~60% of the frame reaching the very bottom edge, with detailed organic tips pointing straight UP. `
+    + `The ENTIRE background and all empty space (top and between the tips) is pure solid magenta #FF00FF (rgb 255,0,255). `
+    + `The ${prompt} itself must contain NO magenta, pink, or purple. Flat even lighting, no shadows, no ground line, no scene, no characters, repeats left-to-right.`
     + (style ? ` Art style: ${style}.` : '');
 }
 
@@ -85,10 +85,8 @@ module.exports = async (req, res) => {
       const full = fringePrompt(prompt, style);
       const base = model === 'fal' ? await genFal(full) : await genGemini(full);
       if (base.err) return res.status(base.status || 500).json({ error: base.err, model, mode });
-      const dataUri = 'data:' + (base.mimeType || 'image/png') + ';base64,' + base.imageBase64;
-      const cut = await falRembg(dataUri);
-      if (cut.err) return res.status(cut.status || 500).json({ error: cut.err, model, mode });
-      return res.status(200).json({ imageBase64: cut.imageBase64, mimeType: 'image/png', model, mode });
+      // returns the magenta-background base; the editor chroma-keys it to transparent (crisper than a matte model)
+      return res.status(200).json({ imageBase64: base.imageBase64, mimeType: base.mimeType || 'image/png', model, mode });
     }
 
     const full = texturePrompt(prompt, style);

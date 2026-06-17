@@ -276,8 +276,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782090000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782090000');
+fetch('./assets/sprites.json?v=1782100000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782100000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1085,20 +1085,25 @@ function ensureTexModal(){ if(_texModal) return _texModal;
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
   ov.querySelector('#texGo').onclick=()=>{ const d=ov.querySelector('#texPrompt').value.trim(); if(!d){ toast('enter a description'); return; } ov.style.display='none'; doGenTex(d,_texModel,_texMode); };
   return ov; }
+function keyFringeB64(b64,mime){ return new Promise((resolve)=>{ const base=new Image(); base.onload=()=>{ try{ const c=document.createElement('canvas'); c.width=base.naturalWidth; c.height=base.naturalHeight; const x=c.getContext('2d'); x.drawImage(base,0,0); const d=x.getImageData(0,0,c.width,c.height), p=d.data;
+  for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2]; const dist=Math.abs(r-255)+g+Math.abs(b-255); if(dist<140){ p[i+3]=0; } else if(dist<260){ p[i+3]=Math.round(p[i+3]*(dist-140)/120); } }
+  x.putImageData(d,0,0); resolve(c.toDataURL('image/png').split(',')[1]); }catch(e){ resolve(b64); } };
+  base.onerror=()=>resolve(b64); base.src='data:'+(mime||'image/png')+';base64,'+b64; }); }
 function polyGenTex(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='texture'; const ov=ensureTexModal(); ov.querySelector('#texTitle').textContent='Skin this shape'; ov.querySelector('#texDesc').textContent='Describe the texture as a tileable surface material.'; const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
 function polyGenFringe(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='fringe'; const ov=ensureTexModal(); ov.querySelector('#texTitle').textContent='Generate fringe edge'; ov.querySelector('#texDesc').textContent='Describe the top edge — grass blades, mossy rim, rocky teeth. Generated transparent and placed along the surface.'; const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
 async function doGenTex(desc,model,mode){ mode=mode||'texture'; const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; }
   toast('generating ('+model+')…');
   try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model, mode})});
     const j=await r.json().catch(()=>({})); if(!r.ok||!j.imageBase64){ toast('gen failed: '+(j.error||'no image')); return; }
+    const outB64 = (mode==='fringe') ? await keyFringeB64(j.imageBase64, j.mimeType) : j.imageBase64;
     const id=(mode==='fringe'?'fringe_':'tex_')+Date.now().toString(36), path='./config/textures/'+id+'.png';
-    const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src='data:'+(j.mimeType||'image/png')+';base64,'+j.imageBase64; POLYTEX_ED[path]=im;   // instant preview
+    const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src='data:'+(mode==='fringe'?'image/png':(j.mimeType||'image/png'))+';base64,'+outB64; POLYTEX_ED[path]=im;   // instant preview
     histPush();
     if(mode==='fringe'){ o.fringeTex=path; o.edge='fringe'; if(!o.fringeH)o.fringeH=44; }
     else { o.texList=o.texList||(o.tex?[o.tex]:[]); o.texList.push(path); o.texIdx=o.texList.length-1; o.tex=path; }
     persist(); draw(); syncPolyUI();
     toast('committing texture\u2026');
-    const res=await commitFiles([{path:'config/textures/'+id+'.png', content:j.imageBase64, encoding:'base64'}], (mode==='fringe'?'fringe(':'texture(')+model+'): '+desc.slice(0,40));
+    const res=await commitFiles([{path:'config/textures/'+id+'.png', content:outB64, encoding:'base64'}], (mode==='fringe'?'fringe(':'texture(')+model+'): '+desc.slice(0,40));
     toast(res?'texture applied \u2713':'texture shown but not saved (commit failed)');
   }catch(e){ toast('gen error: '+e.message); } }
 function polyBBox(ns){ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for(const n of ns){ if(n.x<x0)x0=n.x; if(n.x>x1)x1=n.x; if(n.y<y0)y0=n.y; if(n.y>y1)y1=n.y; } return {x0,y0,x1,y1}; }
@@ -1144,8 +1149,8 @@ function drawEditorFringe(o,S){ const img=o.fringeTex?polyTexImgEd(o.fringeTex):
   let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
   const step=4, iw=img.naturalWidth, ih=img.naturalHeight;
   for(let x=Math.floor(x0); x<=x1; x+=step){ const ty=polyObjTopEd(S,x); if(ty==null) continue;
-    const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw);
-    ctx.drawImage(img, u,0, sw,ih, sx(x), sy(ty)-H*zoom, step*zoom+1, H*zoom); } }
+    const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw), drop=H*0.2*zoom;
+    ctx.drawImage(img, u,0, sw,ih, sx(x), sy(ty)-H*zoom+drop, step*zoom+1, H*zoom); } }
 function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
   const order=['bg','main','fg'], colof=L=>(L==='bg'?'#4a6a9a':(L==='fg'?'#3fcf9a':'#9d8ce0'));
   for(const L of order){ for(let pi=0;pi<M.poly.length;pi++){ const o=M.poly[pi]; if((o.layer||'main')!==L) continue; const active=(pi===polyActive); const S=polySamplesNs(o.nodes,!!o.closed); if(S.length<2) continue; const base=colof(L);

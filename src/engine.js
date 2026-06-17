@@ -1,4 +1,4 @@
-const ASSET_VER='1782090000';
+const ASSET_VER='1782100000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1245,8 +1245,8 @@ function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex)
   let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
   const step=4, iw=img.naturalWidth, ih=img.naturalHeight; ctx.save(); ctx.globalAlpha=alpha;
   for(let x=Math.floor(x0); x<=x1; x+=step){ const sy=polyObjTop(S,x); if(sy==null) continue;
-    const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw);
-    ctx.drawImage(img, u,0, sw,ih, x-camX, sy-H, step+1, H); }
+    const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw), drop=Math.round(H*0.2);
+    ctx.drawImage(img, u,0, sw,ih, x-camX, sy-H+drop, step+1, H); }
   ctx.restore(); }
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
   for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; const S=ob.samples; if(S.length<2) continue;
