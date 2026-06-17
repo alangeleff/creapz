@@ -1,4 +1,4 @@
-const ASSET_VER='1781970000';
+const ASSET_VER='1781980000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1166,7 +1166,7 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; built.push(b); } }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
@@ -1213,7 +1213,7 @@ function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
     ctx.save(); ctx.globalAlpha = layer==='bg'?0.55:(layer==='fg'?0.85:1);
     ctx.beginPath(); ctx.moveTo(S[0].x-camX,S[0].y); for(let i=1;i<S.length;i++) ctx.lineTo(S[i].x-camX,S[i].y);
     if(ob.closed){ ctx.closePath(); } else { const baseY=WORLDH+320; ctx.lineTo(S[S.length-1].x-camX,baseY); ctx.lineTo(S[0].x-camX,baseY); ctx.closePath(); }
-    const tg=ctx.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); ctx.fillStyle=tg; ctx.fill('evenodd');
+    if(ob.color){ ctx.fillStyle=ob.color; } else { const tg=ctx.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); ctx.fillStyle=tg; } ctx.fill('evenodd');
     ctx.lineWidth=5; ctx.lineCap='round';
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; const ax=a.x-camX,bx=b.x-camX; if((ax<-20&&bx<-20)||(ax>W+20&&bx>W+20)) continue;
       ctx.strokeStyle=polyEdgeWall(a,b)?'#7a5360':'#6a5ca0'; ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke(); }

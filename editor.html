@@ -180,6 +180,8 @@
    <button class="btn" id="mPLock" title="Terrain: lock a node">🔒</button>
    <button class="btn" id="mPLayer" title="Terrain: layer of selected shape (bg / main / fg)">▦ main</button>
    <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Wall angle: slopes steeper than this become walls">∠<input id="polyAngle" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:74px;vertical-align:middle"></label>
+   <button class="btn" id="mPText" title="Terrain: label / color the selected shape (no node edits)">🏷 Label</button>
+   <input id="polyColor" type="color" value="#6a5ca0" title="Fill color of selected shape" style="width:30px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;vertical-align:middle">
   </div>
   <div id="cvWrap">
    <canvas id="cv"></canvas>
@@ -266,8 +268,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1781970000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781970000');
+fetch('./assets/sprites.json?v=1781980000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781980000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1001,7 +1003,7 @@ function drawRuler(){ if(!ruler) return;
   ctx.fillStyle='#0a2233e8'; ctx.fillRect(mx-tw/2-7,my-26,tw+14,20); ctx.fillStyle='#bfe9ff'; ctx.textAlign='center'; ctx.fillText(txt,mx,my-12); ctx.textAlign='left';
 }
 // ===== POLYLINE TERRAIN TOOL (Phase 3a: multi-object) — M.poly = LIST of {nodes,closed}; additive =====
-let polyMode=false, polyBreakMode=false, polyWallMode=false, polyLockMode=false;
+let polyMode=false, polyBreakMode=false, polyWallMode=false, polyLockMode=false, polyLabelMode=false;
 let polyDrag=null, polyLastTapNode=null, polyLastTapT=0, polyActive=0;
 const POLY_MAXSLOPE_ED=1.3;
 function curNodes(){ return (M.poly && M.poly[polyActive]) ? M.poly[polyActive].nodes : null; }
@@ -1044,7 +1046,13 @@ function polyBodyHit(wxp,wyp){ for(let pi=M.poly.length-1;pi>=0;pi--){ const o=M
 function polyBBox(ns){ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for(const n of ns){ if(n.x<x0)x0=n.x; if(n.x>x1)x1=n.x; if(n.y<y0)y0=n.y; if(n.y>y1)y1=n.y; } return {x0,y0,x1,y1}; }
 function polyScaleHandlePos(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.nodes||!o.nodes.length) return null; const bb=polyBBox(o.nodes); return {x:bb.x1+18/zoom, y:bb.y1+18/zoom, cx:(bb.x0+bb.x1)/2, cy:(bb.y0+bb.y1)/2}; }
 function polyScaleHit(wxp,wyp){ if(polyWallMode||polyLockMode) return false; const h=polyScaleHandlePos(); return h && Math.hypot(wxp-h.x,wyp-h.y) < 15/zoom; }
+function polyLabelPos(o){ const bb=polyBBox(o.nodes); return {x:(o.lx!==undefined?o.lx:Math.round((bb.x0+bb.x1)/2)), y:(o.ly!==undefined?o.ly:Math.round((bb.y0+bb.y1)/2))}; }
 function polyDown(wxp,wyp,alt){ if(!M.poly||!M.poly.length) return false;
+  if(polyLabelMode){ let idx=polyBodyHit(wxp,wyp); if(idx<0){ const nr=polyNodeHitAny(wxp,wyp); idx=nr?nr.idx:-1; } if(idx<0){ const nc=polyNearestCurve(wxp,wyp); idx=nc?nc.idx:-1; } if(idx<0) return false;
+    polyActive=idx; const o=M.poly[idx];
+    if(o.label){ const lp=polyLabelPos(o); if(Math.hypot(wxp-lp.x,wyp-lp.y)<70/zoom){ histPush(); polyDrag={kind:'label',idx,pushed:true}; return true; } }
+    const t=prompt('Label for this shape:', o.label||''); if(t!==null){ histPush(); o.label=t.trim()||undefined; if(o.label && o.lx===undefined){ const lp=polyLabelPos(o); o.lx=lp.x; o.ly=lp.y; } persist(); draw(); }
+    return true; }
   if(polyWallMode){ const nc=polyNearestCurve(wxp,wyp); if(nc){ histPush(); polyActive=nc.idx; const ns=M.poly[nc.idx].nodes; const t=polyNearestT(ns,wxp,wyp,!!M.poly[nc.idx].closed); const nd=ns[t.seg]; nd.wn = nd.wn==='wall'?'ground':(nd.wn==='ground'?'auto':'wall'); persist(); draw(); return true; } return false; }
   if(polyLockMode){ const nr=polyNodeHitAny(wxp,wyp); if(nr){ histPush(); polyActive=nr.idx; nr.node.locked=!nr.node.locked; persist(); draw(); return true; } return false; }
   if(polyScaleHit(wxp,wyp)){ const o=M.poly[polyActive], sp=polyScaleHandlePos(); histPush(); polyDrag={kind:'scale',idx:polyActive,cx:sp.cx,cy:sp.cy,d0:Math.max(1,Math.hypot(wxp-sp.cx,wyp-sp.cy)),base:o.nodes.map(n=>({x:n.x,y:n.y,ho:{x:n.ho.x,y:n.ho.y},hi:{x:n.hi.x,y:n.hi.y}}))}; return true; }
@@ -1054,6 +1062,7 @@ function polyDown(wxp,wyp,alt){ if(!M.poly||!M.poly.length) return false;
   const bh=polyBodyHit(wxp,wyp); if(bh!==-1){ polyActive=bh; polyDrag={kind:'shape',idx:bh,lx:wxp,ly:wyp,pushed:false}; draw(); return true; }   // body: drag to move whole shape (no drag = focus)
   return false; }
 function polyMove(wxp,wyp){ if(!polyDrag) return;
+  if(polyDrag.kind==='label'){ const o=M.poly[polyDrag.idx]; if(o){ const bb=polyBBox(o.nodes); o.lx=Math.round(Math.max(bb.x0,Math.min(bb.x1,wxp))); o.ly=Math.round(Math.max(bb.y0,Math.min(bb.y1,wyp))); persist(); draw(); } return; }
   if(polyDrag.kind==='scale'){ const o=M.poly[polyDrag.idx]; if(o){ const d=Math.max(1,Math.hypot(wxp-polyDrag.cx,wyp-polyDrag.cy)); const f=Math.max(0.1,d/polyDrag.d0);
     for(let i=0;i<o.nodes.length;i++){ const b=polyDrag.base[i], n=o.nodes[i]; n.x=Math.round(polyDrag.cx+(b.x-polyDrag.cx)*f); n.y=Math.round(polyDrag.cy+(b.y-polyDrag.cy)*f); n.ho={x:b.ho.x*f,y:b.ho.y*f}; n.hi={x:b.hi.x*f,y:b.hi.y*f}; } persist(); draw(); } return; }
   if(polyDrag.kind==='shape'){ const o=M.poly[polyDrag.idx]; if(o){ if(!polyDrag.pushed){ histPush(); polyDrag.pushed=true; } const dx=wxp-polyDrag.lx, dy=wyp-polyDrag.ly; for(const n of o.nodes){ n.x+=dx; n.y+=dy; } } polyDrag.lx=wxp; polyDrag.ly=wyp; persist(); draw(); return; }
@@ -1073,7 +1082,7 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
     ctx.save();
     ctx.beginPath(); ctx.moveTo(sx(S[0].x),sy(S[0].y)); for(let i=1;i<S.length;i++) ctx.lineTo(sx(S[i].x),sy(S[i].y));
     if(o.closed){ ctx.closePath(); } else { ctx.lineTo(sx(S[S.length-1].x),sy(M.h)); ctx.lineTo(sx(S[0].x),sy(M.h)); ctx.closePath(); }
-    ctx.globalAlpha=active?0.28:0.12; ctx.fillStyle=base; ctx.fill('evenodd'); ctx.globalAlpha=1;
+    ctx.fillStyle=o.color||base; ctx.globalAlpha=o.color?(active?0.55:0.3):(active?0.28:0.12); ctx.fill('evenodd'); ctx.globalAlpha=1;
     ctx.lineWidth=active?3:2;
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; ctx.strokeStyle=polyEdgeWall(a,b)?'#e2563b':base; ctx.globalAlpha=active?1:0.55; ctx.beginPath(); ctx.moveTo(sx(a.x),sy(a.y)); ctx.lineTo(sx(b.x),sy(b.y)); ctx.stroke(); }
     ctx.globalAlpha=1; ctx.restore(); } }
@@ -1088,6 +1097,10 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
     else if(n.corner){ ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.moveTo(X,Y-6); ctx.lineTo(X+6,Y); ctx.lineTo(X,Y+6); ctx.lineTo(X-6,Y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     else { ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y,5,0,7); ctx.fill(); ctx.stroke(); } }
   if(!polyWallMode && !polyLockMode){ const sp=polyScaleHandlePos(); if(sp){ const X=sx(sp.x),Y=sy(sp.y); ctx.fillStyle='#ff8a3a'; ctx.strokeStyle='#15121f'; ctx.lineWidth=1.5; ctx.fillRect(X-6,Y-6,12,12); ctx.strokeRect(X-6,Y-6,12,12); ctx.strokeStyle='#15121f'; ctx.beginPath(); ctx.moveTo(X-3,Y+3); ctx.lineTo(X+3,Y-3); ctx.stroke(); } } }
+function drawPolyLabels(){ if(!M.poly) return; ctx.textAlign='center'; ctx.font='12px sans-serif';
+  for(const o of M.poly){ if(!o.label) continue; const lp=polyLabelPos(o); const X=sx(lp.x),Y=sy(lp.y); const w=ctx.measureText(o.label).width;
+    ctx.fillStyle='rgba(10,8,20,.72)'; ctx.fillRect(X-w/2-5,Y-9,w+10,18); ctx.fillStyle='#e8e6f5'; ctx.fillText(o.label,X,Y+4); }
+  ctx.textAlign='left'; }
 (function(){ const mk=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   mk('mPoly',function(){ polyMode=!polyMode; document.getElementById('mPoly').classList.toggle('on',polyMode); if(polyMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); } draw(); });
   { const pa=document.getElementById('polyAngle'); if(pa) pa.addEventListener('input',function(){ M.wallSlope=+this.value; persist(); draw(); }); }
@@ -1097,9 +1110,11 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
   mk('mPWall',function(){ polyWallMode=!polyWallMode; this.classList.toggle('on',polyWallMode); if(polyWallMode){ polyLockMode=false; const l=document.getElementById('mPLock'); if(l)l.classList.remove('on'); } draw(); });
   mk('mPLock',function(){ polyLockMode=!polyLockMode; this.classList.toggle('on',polyLockMode); if(polyLockMode){ polyWallMode=false; const w=document.getElementById('mPWall'); if(w)w.classList.remove('on'); } draw(); });
   mk('mPLayer',function(){ const o=M.poly&&M.poly[polyActive]; if(!o) return; histPush(); const cur=o.layer||'main'; o.layer = cur==='main'?'fg':(cur==='fg'?'bg':'main'); this.textContent='▦ '+o.layer; persist(); draw(); });
+  mk('mPText',function(){ polyLabelMode=!polyLabelMode; this.classList.toggle('on',polyLabelMode); if(polyLabelMode){ polyWallMode=false; polyLockMode=false; const w=document.getElementById('mPWall'),l=document.getElementById('mPLock'); if(w)w.classList.remove('on'); if(l)l.classList.remove('on'); } draw(); });
+  { const pc=document.getElementById('polyColor'); if(pc) pc.addEventListener('input',function(){ const o=M.poly&&M.poly[polyActive]; if(o){ histPush(); o.color=this.value; persist(); draw(); } }); }
 })();
 function draw(){
- syncFields(); ctx.clearRect(0,0,CW,CH);
+ syncFields(); ctx.clearRect(0,0,CW,CH); /*polylabels-after*/
  if(M.theme==='crypt'){ ctx.fillStyle='#0a0712'; ctx.fillRect(0,0,CW,CH); }
  else if(M.theme==='plains'||M.theme==='witch'||M.theme==='harbor'||M.theme==='spire'||M.theme==='charnel'||M.theme==='rift'||M.theme==='castle'){ const TG={plains:['#161a26','#7e8b98'],witch:['#0a120c','#34452f'],harbor:['#0e151c','#6b7d88'],spire:['#181630','#9a8fae'],charnel:['#180c0c','#7a3216'],rift:['#080510','#281640'],castle:['#100608','#5a1e26']}[M.theme]; const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,TG[0]); g.addColorStop(1,TG[1]); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); }
  else { ctx.fillStyle='#0c0a16'; ctx.fillRect(0,0,CW,CH); drawCemeteryBackdrop(); }
@@ -1120,7 +1135,7 @@ function draw(){
  for(let x=0;x<=M.world;x+=g){ ctx.moveTo(sx(x),sy(0)); ctx.lineTo(sx(x),sy(M.h)); }
  for(let y=0;y<=M.h;y+=g){ ctx.moveTo(sx(0),sy(y)); ctx.lineTo(sx(M.world),sy(y)); }
  ctx.stroke();
- drawEditorPoly();
+ drawEditorPoly(); drawPolyLabels();
  allProps().sort((a,b)=>a.z-b.z).forEach(pr=>{ if(pr.kind==='terrace')dTerr(pr.raw); else if(pr.kind==='plat')dPlat(pr.raw); else if(pr.kind==='haz')dHaz(pr.raw); else if(pr.kind==='tex')dTex(pr.raw); else dObst(pr.raw); });
  if(sel&&sel.type==='bulkswap'){ for(const r of sel.members){ const c=propCenterRaw(r); const X=sx(c[0]),Y=sy(c[1]); ctx.fillStyle='rgba(200,251,80,.16)'; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(X,Y,18,0,7); ctx.fill(); ctx.stroke(); } }
  for(const s of M.souls){ ctx.fillStyle=SOUL_COL_ED[s[2]||1]||'#7fe0ff'; ctx.beginPath(); ctx.arc(sx(s[0]),sy(s[1]),Math.max(3,6*zoom),0,7); ctx.fill(); }
