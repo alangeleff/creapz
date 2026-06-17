@@ -1,4 +1,4 @@
-const ASSET_VER='1782040000';
+const ASSET_VER='1782050000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1227,10 +1227,12 @@ function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
     if(ob.edge==='soft'){ const f=Math.max(2,ob.feather||24);
       const mk=_softMask(); mk.setTransform(RS,0,0,RS,0,0); mk.clearRect(0,0,_smaskC.width,_smaskC.height);
       mk.fillStyle='#fff'; polyPath(mk,S,ob.closed); mk.fill('evenodd');
-      mk.save(); mk.globalCompositeOperation='destination-out'; mk.lineJoin='round'; mk.lineCap='round'; mk.lineWidth=f*2; mk.strokeStyle='#fff'; polyPath(mk,S,ob.closed); mk.stroke(); mk.restore();
+      mk.globalCompositeOperation='destination-out'; mk.lineJoin='round'; mk.lineCap='round'; mk.strokeStyle='#000';
+      const N=16; for(let k=0;k<N;k++){ mk.globalAlpha=0.18; mk.lineWidth=(f*2)*(1-k/N); polyPath(mk,S,ob.closed); mk.stroke(); }
+      mk.globalAlpha=1; mk.globalCompositeOperation='source-over';
       const sc=_softLayer(); sc.setTransform(RS,0,0,RS,0,0); sc.clearRect(0,0,_soff.width,_soff.height);
       polyPaint(sc,ob,S);
-      sc.save(); sc.setTransform(1,0,0,1,0,0); sc.globalCompositeOperation='destination-in'; sc.filter='blur('+(f*RS)+'px)'; sc.drawImage(_smaskC,0,0); sc.filter='none'; sc.restore();
+      sc.save(); sc.setTransform(1,0,0,1,0,0); sc.globalCompositeOperation='destination-in'; sc.drawImage(_smaskC,0,0); sc.restore();
       ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=a; ctx.drawImage(_soff,0,0); ctx.restore(); }
     else { ctx.save(); ctx.globalAlpha=a; polyPaint(ctx,ob,S); ctx.restore(); } } }
 function worldWeaponBox(spr, fi, x, y, facing){
