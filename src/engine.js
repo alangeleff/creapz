@@ -1,4 +1,4 @@
-const ASSET_VER='1782220000';
+const ASSET_VER='1782230000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1166,7 +1166,7 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; built.push(b); } }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyCollides(ob){ return (ob.layer||'main')==='main'; }
