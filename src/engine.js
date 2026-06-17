@@ -1,4 +1,4 @@
-const ASSET_VER='1781830000';
+const ASSET_VER='1781840000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1184,8 +1184,9 @@ function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2; const S=POLY.samples;
       let t=((cx-a.x)*vx+(cy-a.y)*vy)/L; t=Math.max(0,Math.min(1,t)); const px=a.x+t*vx, py=a.y+t*vy;
       let dx=cx-px, dy=cy-py, dist=Math.hypot(dx,dy); if(dist<0.001){ dx=-vy; dy=vx; dist=Math.hypot(dx,dy)||1; }
       const ndx=dx/dist, ndy=dy/dist, reach=Math.abs(ndx)*hx+Math.abs(ndy)*hy, pen=reach-dist;
-      if(pen>0.01){ p.x+=ndx*pen; p.y+=ndy*pen; cx=p.x; cy=p.y-PH/2;
-        if(ndy<-0.4){ if(p.vy>0)p.vy=0; p.onGround=true; } else if(ndy>0.4){ if(p.vy<0)p.vy=0; } } } } }
+      if(pen>0.01){ p.x+=ndx*pen; cx=p.x;            // walls: push out sideways only (never lift the player UP the face = no climbing)
+        if(ndy>0.4){ p.y+=ndy*pen; cy=p.y-PH/2; if(p.vy<0)p.vy=0; }   // overhang underside: push down / bonk
+      } } } }
 function resolvePoly(prevFeet){
   if(p.flying||p.dead||p.won||p.winning||!POLY) return;
   if(p.vy>=0){
