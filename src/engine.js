@@ -1,4 +1,4 @@
-const ASSET_VER='1782180000';
+const ASSET_VER='1782190000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1241,12 +1241,13 @@ function polySoftCache(ob,S){ const f=Math.max(2,ob.feather||24), pad=Math.ceil(
   ob._cache={canvas:res, x0:x0, y0:y0, wCSS:wCSS, hCSS:hCSS};
 }
 function polyObjTop(S,x){ let top=null; for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); const y=a.y+(b.y-a.y)*t; if(top==null||y<top) top=y; } } return top; }
+function fringeBounds(img){ if(img._fb) return img._fb; try{ const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight; const x=c.getContext('2d'); x.drawImage(img,0,0); const d=x.getImageData(0,0,c.width,c.height).data; let top=c.height, bot=-1, lft=c.width, rgt=-1; for(let yy=0;yy<c.height;yy++){ const row=yy*c.width; for(let xx=0;xx<c.width;xx++){ if(d[(row+xx)*4+3]>30){ if(yy<top)top=yy; if(yy>bot)bot=yy; if(xx<lft)lft=xx; if(xx>rgt)rgt=xx; } } } if(bot<top){ top=0; bot=c.height-1; lft=0; rgt=c.width-1; } img._fb={ct:top/c.height, cb:(bot+1)/c.height, cl:lft/c.width, cr:(rgt+1)/c.width}; }catch(e){ img._fb={ct:0,cb:1,cl:0,cr:1}; } return img._fb; }
 function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex):null; if(!img) return; const H=ob.fringeH||44;
   let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
-  const iw=img.naturalWidth, ih=img.naturalHeight, tileW=H*iw/Math.max(1,ih), step=4; ctx.save(); ctx.globalAlpha=alpha;
+  const iw=img.naturalWidth, ih=img.naturalHeight, fb=fringeBounds(img), sY=fb.ct*ih, sH=Math.max(1,(fb.cb-fb.ct)*ih), sX0=fb.cl*iw, sW=Math.max(1,(fb.cr-fb.cl)*iw), tileW=H*sW/sH, step=4, drop=Math.min(Math.round(H*0.08),9); ctx.save(); ctx.globalAlpha=alpha;
   for(let x=Math.floor(x0); x<=x1; x+=step){ const sy=polyObjTop(S,Math.min(x1-0.5,Math.max(x0,x))); if(sy==null) continue;
-    const u=(0.05+(((x-x0)%tileW)/tileW)*0.9)*iw, sw=Math.max(1,(step/tileW)*0.9*iw), drop=Math.min(Math.round(H*0.08),9);
-    ctx.drawImage(img, u,0, sw,ih, x-camX, sy-H+drop, step+1, H); }
+    const u=sX0+(((x-x0)%tileW)/tileW)*sW, sw=Math.max(1,(step/tileW)*sW);
+    ctx.drawImage(img, u,sY, sw,sH, x-camX, sy-H+drop, step+1, H); }
   ctx.restore(); }
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
   for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; const S=ob.samples; if(S.length<2) continue;
