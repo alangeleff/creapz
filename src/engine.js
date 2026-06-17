@@ -1,4 +1,4 @@
-const ASSET_VER='1781900000';
+const ASSET_VER='1781910000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -300,7 +300,7 @@ function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
   if(window.__polyDemo){ ST.poly=ST.poly||DEMO_POLY; SEG=[]; }
-  POLY = (ST.poly && ST.poly.length>1) ? polyBuild(ST.poly) : null;
+  POLY = polyBuildAll(ST.poly);
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
   OBST = ST.obst.map(o => { const def=OBJ[o.type]||{w:96,h:62}; const m={x:o.x, type:o.type, w:def.w, h:def.h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z, f:o.f}; if(o.type==='chest'){ m.state='closed'; m.openT=0; m.loot=o.loot||'gold'; } return m; });
   loots=[];
@@ -1146,23 +1146,32 @@ function segFloorsAt(x){ const out=[]; for(const s of SEG){ if(x>=s[0]&&x<=s[1])
 function overlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 // ===== POLYLINE TERRAIN (gated; ported from the polyline tester) =====
-function polyBuild(nodes){
+function polyBuildOne(nodes, closed){
   const ns=nodes.map(n=>({x:n.x,y:n.y,corner:!!n.corner,wn:n.wn||'auto',
     ho:n.ho?{x:n.ho.x,y:n.ho.y}:{x:0,y:0}, hi:n.hi?{x:n.hi.x,y:n.hi.y}:{x:0,y:0}, ha:(n.ha!==false && !n.ho)}));
-  for(let i=0;i<ns.length;i++){ const n=ns[i]; if(n.ha){ const p=ns[i-1]||n,q=ns[i+1]||n; const tx=(q.x-p.x)/6,ty=(q.y-p.y)/6; n.ho={x:tx,y:ty}; n.hi={x:-tx,y:-ty}; } }
-  const samples=[];
-  for(let i=0;i<ns.length-1;i++){ const A=ns[i],B=ns[i+1];
+  const N=ns.length;
+  for(let i=0;i<N;i++){ const n=ns[i]; if(n.ha){ const p=ns[i-1]||(closed?ns[N-1]:n), q=ns[i+1]||(closed?ns[0]:n); const tx=(q.x-p.x)/6,ty=(q.y-p.y)/6; n.ho={x:tx,y:ty}; n.hi={x:-tx,y:-ty}; } }
+  const samples=[]; const segCount=closed?N:N-1;
+  for(let i=0;i<segCount;i++){ const A=ns[i], B=ns[(i+1)%N];
     const P1=A.corner?{x:A.x+(B.x-A.x)/3,y:A.y+(B.y-A.y)/3}:{x:A.x+A.ho.x,y:A.y+A.ho.y};
     const P2=B.corner?{x:B.x+(A.x-B.x)/3,y:B.y+(A.y-B.y)/3}:{x:B.x+B.hi.x,y:B.y+B.hi.y};
     const steps=Math.max(3,Math.min(170,Math.round(Math.hypot(B.x-A.x,B.y-A.y)/5)));
     for(let sp=(i===0?0:1);sp<=steps;sp++){ const t=sp/steps,u=1-t;
-      samples.push({x:u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, y:u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y, seg:i}); } }
-  return {nodes:ns, samples};
+      samples.push({x:u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, y:u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y, wn:A.wn}); } }
+  if(closed && samples.length) samples.push({x:samples[0].x, y:samples[0].y, wn:ns[N-1].wn});
+  return {samples, closed:!!closed};
 }
-function polyEdgeWall(a,b){ const nd=POLY.nodes[a.seg]; const c=(nd&&nd.wn)||'auto';
-  if(c==='wall') return true; if(c==='ground') return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
-function polyCross(x){ const S=POLY.samples, out=[];
-  for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t, wall:polyEdgeWall(a,b)}); } }
+function polyBuildAll(data){
+  if(!data || !data.length) return null;
+  const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
+  const built=[];
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1) built.push(polyBuildOne(o.nodes, !!o.closed)); }
+  return built.length ? {objs:built} : null;
+}
+function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
+function polyCross(x){ const out=[];
+  for(const ob of POLY.objs){ const S=ob.samples;
+    for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t, wall:polyEdgeWall(a,b)}); } } }
   out.sort((p,q)=>p.y-q.y); return out; }
 function polyFloorUnder(x,fy){ const cs=polyCross(x); for(let i=0;i<cs.length;i+=2){ if(!cs[i].wall && cs[i].y>=fy-POLY_STEP) return cs[i].y; } return null; }
 function polyFloorBetween(x,y0,y1){ const cs=polyCross(x); const lo=Math.min(y0,y1)-2, hi=Math.max(y0,y1)+0.5; let best=null;
@@ -1173,40 +1182,42 @@ function polyTop(x){ const cs=polyCross(x); return cs.length?cs[0].y:null; }
 function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(PW/2);
   for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+10]){
     if(polySolidAt(ex,yy)){ const top=polyTop(ex);
-      if(top!==null && (p.y-top) <= POLY_MAXSLOPE*(PW/2)+6) return false;  // walkable up-slope / small step-up
-      return true;                                                         // too steep/tall = wall
+      if(top!==null && (p.y-top) <= POLY_MAXSLOPE*(PW/2)+6) return false;
+      return true;
     } }
   return false; }
-function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2; const S=POLY.samples;
+function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
-    for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!polyEdgeWall(a,b)) continue;
-      const vx=b.x-a.x, vy=b.y-a.y, L=vx*vx+vy*vy; if(L<0.01) continue;
-      let t=((cx-a.x)*vx+(cy-a.y)*vy)/L; t=Math.max(0,Math.min(1,t)); const px=a.x+t*vx, py=a.y+t*vy;
-      let dx=cx-px, dy=cy-py, dist=Math.hypot(dx,dy); if(dist<0.001){ dx=-vy; dy=vx; dist=Math.hypot(dx,dy)||1; }
-      const ndx=dx/dist, ndy=dy/dist, reach=Math.abs(ndx)*hx+Math.abs(ndy)*hy, pen=reach-dist;
-      if(pen>0.01){ p.x+=ndx*pen; cx=p.x;            // walls: push out sideways only (never lift the player UP the face = no climbing)
-        if(ndy>0.4){ p.y+=ndy*pen; cy=p.y-PH/2; if(p.vy<0)p.vy=0; }   // overhang underside: push down / bonk
-      } } } }
+    for(const ob of POLY.objs){ const S=ob.samples;
+      for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!polyEdgeWall(a,b)) continue;
+        const vx=b.x-a.x, vy=b.y-a.y, L=vx*vx+vy*vy; if(L<0.01) continue;
+        let t=((cx-a.x)*vx+(cy-a.y)*vy)/L; t=Math.max(0,Math.min(1,t)); const px=a.x+t*vx, py=a.y+t*vy;
+        let dx=cx-px, dy=cy-py, dist=Math.hypot(dx,dy); if(dist<0.001){ dx=-vy; dy=vx; dist=Math.hypot(dx,dy)||1; }
+        const ndx=dx/dist, ndy=dy/dist, reach=Math.abs(ndx)*hx+Math.abs(ndy)*hy, pen=reach-dist;
+        if(pen>0.01){ p.x+=ndx*pen; cx=p.x;
+          if(ndy>0.4){ p.y+=ndy*pen; cy=p.y-PH/2; if(p.vy<0)p.vy=0; }
+        } } } } }
 function resolvePoly(prevFeet){
   if(p.flying||p.dead||p.won||p.winning||!POLY) return;
   if(p.vy>=0){
     let landed=false;
-    const g=polyFloorUnder(p.x,p.y);                                       // floor at/just below the feet
-    if(g!==null && (g-p.y)<=POLY_MAXSLOPE*RUN+12){ p.y=g; p.vy=0; p.onGround=true; landed=true; }   // follow slope up or gentle down
-    if(!landed){ const fb=polyFloorBetween(p.x,prevFeet,p.y); if(fb!==null){ p.y=fb; p.vy=0; p.onGround=true; landed=true; } }  // swept land (fast falls)
-    if(!landed) p.onGround=false;                                          // off a ledge -> fall
+    const g=polyFloorUnder(p.x,p.y);
+    if(g!==null && (g-p.y)<=POLY_MAXSLOPE*RUN+12){ p.y=g; p.vy=0; p.onGround=true; landed=true; }
+    if(!landed){ const fb=polyFloorBetween(p.x,prevFeet,p.y); if(fb!==null){ p.y=fb; p.vy=0; p.onGround=true; landed=true; } }
+    if(!landed) p.onGround=false;
   } else { const c=polyCeilAbove(p.x,p.y-PH); if(c!==null && (p.y-PH)<c){ p.y=c+PH; p.vy=0; } }
   resolvePolyWalls();
 }
-function drawPoly(){ if(!POLY||POLY.samples.length<2) return; const S=POLY.samples;
-  ctx.save();
-  ctx.beginPath(); ctx.moveTo(S[0].x-camX,S[0].y); for(let i=1;i<S.length;i++) ctx.lineTo(S[i].x-camX,S[i].y);
-  const baseY=WORLDH+320; ctx.lineTo(S[S.length-1].x-camX,baseY); ctx.lineTo(S[0].x-camX,baseY); ctx.closePath();
-  const tg=ctx.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); ctx.fillStyle=tg; ctx.fill('evenodd');
-  ctx.lineWidth=5; ctx.lineCap='round';
-  for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; const ax=a.x-camX,bx=b.x-camX; if((ax<-20&&bx<-20)||(ax>W+20&&bx>W+20)) continue;
-    ctx.strokeStyle=polyEdgeWall(a,b)?'#7a5360':'#6a5ca0'; ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke(); }
-  ctx.restore(); }
+function drawPoly(){ if(!POLY||!POLY.objs.length) return;
+  for(const ob of POLY.objs){ const S=ob.samples; if(S.length<2) continue;
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(S[0].x-camX,S[0].y); for(let i=1;i<S.length;i++) ctx.lineTo(S[i].x-camX,S[i].y);
+    if(ob.closed){ ctx.closePath(); } else { const baseY=WORLDH+320; ctx.lineTo(S[S.length-1].x-camX,baseY); ctx.lineTo(S[0].x-camX,baseY); ctx.closePath(); }
+    const tg=ctx.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); ctx.fillStyle=tg; ctx.fill('evenodd');
+    ctx.lineWidth=5; ctx.lineCap='round';
+    for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; const ax=a.x-camX,bx=b.x-camX; if((ax<-20&&bx<-20)||(ax>W+20&&bx>W+20)) continue;
+      ctx.strokeStyle=polyEdgeWall(a,b)?'#7a5360':'#6a5ca0'; ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke(); }
+    ctx.restore(); } }
 function worldWeaponBox(spr, fi, x, y, facing){
   const wb = spr.weapon ? spr.weapon[fi] : null; if(!wb) return null;
   const cx=spr.cxs[fi], ft=spr.foots[fi];
