@@ -256,8 +256,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782340000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782340000');
+fetch('./assets/sprites.json?v=1782350000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782350000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1047,7 +1047,8 @@ function polyEdPath(g,S,closed){ g.beginPath(); g.moveTo(sx(S[0].x),sy(S[0].y));
 function polySingleFillEd(g,img,S,closed){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } if(!closed) y1=M.h;
   const OS=1.12, bw=x1-x0, bh=y1-y0, iw=img.naturalWidth, ih=img.naturalHeight, sc=Math.max(bw/iw,bh/Math.max(1,ih))*OS, dw=iw*sc, dh=ih*sc, dx=x0+(bw-dw)/2, dy=y0+(bh-dh)/2;
   g.drawImage(img, sx(dx), sy(dy), dw*zoom, dh*zoom); }
-function polyEdFill(g,o,S,base){ polyEdPath(g,S,o.closed); const tImg=o.tex?polyTexImgEd(o.tex):null; if(tImg){ g.save(); g.clip('evenodd'); if(o.fillMode==='single') polySingleFillEd(g,tImg,S,o.closed); else polyTileFillEd(g,tImg,S,o.closed,o.texScale||1); g.restore(); } else { g.fillStyle=o.color||base; g.fill('evenodd'); } }
+function _unrotSE(S,rot){ if(!rot) return {Sf:S,cx:0,cy:0}; let cx=0,cy=0; for(const p of S){cx+=p.x;cy+=p.y;} cx/=S.length; cy/=S.length; const cs=Math.cos(-rot),sn=Math.sin(-rot); const Sf=S.map(p=>{const dx=p.x-cx,dy=p.y-cy;return{x:cx+dx*cs-dy*sn,y:cy+dx*sn+dy*cs};}); return {Sf,cx,cy}; }
+function polyEdFill(g,o,S,base){ polyEdPath(g,S,o.closed); const tImg=o.tex?polyTexImgEd(o.tex):null; if(tImg){ g.save(); g.clip('evenodd'); const rot=o.rot||0; let Sf=S; if(rot){ const u=_unrotSE(S,rot); Sf=u.Sf; g.translate(sx(u.cx),sy(u.cy)); g.rotate(rot); g.translate(-sx(u.cx),-sy(u.cy)); } if(o.fillMode==='single') polySingleFillEd(g,tImg,Sf,o.closed); else polyTileFillEd(g,tImg,Sf,o.closed,o.texScale||1); g.restore(); } else { g.fillStyle=o.color||base; g.fill('evenodd'); } }
 function polyCycleEdge(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } histPush(); o.edge=(!o.edge||o.edge==='hard')?'soft':(o.edge==='soft'?'fringe':'hard'); if(o.edge==='soft'&&!o.feather)o.feather=24; if(o.edge==='fringe'){ if(!o.fringeH)o.fringeH=44; if(!o.fringeTex) toast('fringe mode — tap 🌿 Fringe to generate the edge'); } persist(); draw(); syncPolyUI(); if(o.edge!=='fringe') toast('edges: '+o.edge); }
 let _histOv=null;
 function ensureHistOv(){ if(_histOv) return _histOv; const ov=document.createElement('div'); ov.id='histOv'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
@@ -1171,7 +1172,7 @@ function polyDown(wxp,wyp,alt){ if(!M.poly||!M.poly.length) return false;
     return true; }
   if(polyWallMode){ const nc=polyNearestCurve(wxp,wyp); if(nc){ histPush(); polyActive=nc.idx; const ns=M.poly[nc.idx].nodes; const t=polyNearestT(ns,wxp,wyp,!!M.poly[nc.idx].closed); const nd=ns[t.seg]; nd.wn = nd.wn==='wall'?'ground':(nd.wn==='ground'?'auto':'wall'); persist(); draw(); return true; } return false; }
   if(polyLockMode){ const nr=polyNodeHitAny(wxp,wyp); if(nr){ histPush(); polyActive=nr.idx; nr.node.locked=!nr.node.locked; persist(); draw(); return true; } return false; }
-  if(polyRotateHit(wxp,wyp)){ const o=M.poly[polyActive], rp=polyRotateHandlePos(); histPush(); polyDrag={kind:'rotate',idx:polyActive,cx:rp.cx,cy:rp.cy,a0:Math.atan2(wyp-rp.cy,wxp-rp.cx),base:o.nodes.map(n=>({x:n.x,y:n.y,ho:{x:n.ho.x,y:n.ho.y},hi:{x:n.hi.x,y:n.hi.y}}))}; return true; }
+  if(polyRotateHit(wxp,wyp)){ const o=M.poly[polyActive], rp=polyRotateHandlePos(); histPush(); polyDrag={kind:'rotate',idx:polyActive,cx:rp.cx,cy:rp.cy,a0:Math.atan2(wyp-rp.cy,wxp-rp.cx),rot0:(o.rot||0),base:o.nodes.map(n=>({x:n.x,y:n.y,ho:{x:n.ho.x,y:n.ho.y},hi:{x:n.hi.x,y:n.hi.y}}))}; return true; }
   if(polyScaleHit(wxp,wyp)){ const o=M.poly[polyActive], sp=polyScaleHandlePos(); histPush(); polyDrag={kind:'scale',idx:polyActive,cx:sp.cx,cy:sp.cy,d0:Math.max(1,Math.hypot(wxp-sp.cx,wyp-sp.cy)),base:o.nodes.map(n=>({x:n.x,y:n.y,ho:{x:n.ho.x,y:n.ho.y},hi:{x:n.hi.x,y:n.hi.y}}))}; return true; }
   const h=polyHandleAtActive(wxp,wyp); if(h){ histPush(); polyDrag={kind:'handle',n:h.n,side:h.side,brk:(polyBreakMode||alt)}; return true; }
   const nr=polyNodeHitAny(wxp,wyp); if(nr){ polyActive=nr.idx; if(nr.node.locked){ draw(); return true; } histPush(); polyDrag={kind:'node',n:nr.node,moved:false}; draw(); return true; }
@@ -1181,7 +1182,7 @@ function polyDown(wxp,wyp,alt){ if(!M.poly||!M.poly.length) return false;
 function polyMove(wxp,wyp){ if(!polyDrag) return;
   if(polyDrag.kind==='label'){ const o=M.poly[polyDrag.idx]; if(o){ const bb=polyBBox(o.nodes); o.lx=Math.round(Math.max(bb.x0,Math.min(bb.x1,wxp))); o.ly=Math.round(Math.max(bb.y0,Math.min(bb.y1,wyp))); persist(); draw(); } return; }
   if(polyDrag.kind==='rotate'){ const o=M.poly[polyDrag.idx]; if(o){ const a=Math.atan2(wyp-polyDrag.cy,wxp-polyDrag.cx), da=a-polyDrag.a0, cs=Math.cos(da), sn=Math.sin(da);
-    for(let i=0;i<o.nodes.length;i++){ const b=polyDrag.base[i], n=o.nodes[i], rx=b.x-polyDrag.cx, ry=b.y-polyDrag.cy; n.x=Math.round(polyDrag.cx+rx*cs-ry*sn); n.y=Math.round(polyDrag.cy+rx*sn+ry*cs); n.ho={x:b.ho.x*cs-b.ho.y*sn,y:b.ho.x*sn+b.ho.y*cs}; n.hi={x:b.hi.x*cs-b.hi.y*sn,y:b.hi.x*sn+b.hi.y*cs}; } persist(); draw(); } return; }
+    for(let i=0;i<o.nodes.length;i++){ const b=polyDrag.base[i], n=o.nodes[i], rx=b.x-polyDrag.cx, ry=b.y-polyDrag.cy; n.x=Math.round(polyDrag.cx+rx*cs-ry*sn); n.y=Math.round(polyDrag.cy+rx*sn+ry*cs); n.ho={x:b.ho.x*cs-b.ho.y*sn,y:b.ho.x*sn+b.ho.y*cs}; n.hi={x:b.hi.x*cs-b.hi.y*sn,y:b.hi.x*sn+b.hi.y*cs}; } o.rot=(polyDrag.rot0||0)+da; persist(); draw(); } return; }
   if(polyDrag.kind==='scale'){ const o=M.poly[polyDrag.idx]; if(o){ const d=Math.max(1,Math.hypot(wxp-polyDrag.cx,wyp-polyDrag.cy)); const f=Math.max(0.1,d/polyDrag.d0);
     for(let i=0;i<o.nodes.length;i++){ const b=polyDrag.base[i], n=o.nodes[i]; n.x=Math.round(polyDrag.cx+(b.x-polyDrag.cx)*f); n.y=Math.round(polyDrag.cy+(b.y-polyDrag.cy)*f); n.ho={x:b.ho.x*f,y:b.ho.y*f}; n.hi={x:b.hi.x*f,y:b.hi.y*f}; } persist(); draw(); } return; }
   if(polyDrag.kind==='shape'){ const o=M.poly[polyDrag.idx]; if(o){ if(!polyDrag.pushed){ histPush(); polyDrag.pushed=true; } const dx=wxp-polyDrag.lx, dy=wyp-polyDrag.ly; for(const n of o.nodes){ n.x+=dx; n.y+=dy; } } polyDrag.lx=wxp; polyDrag.ly=wyp; persist(); draw(); return; }
@@ -1218,7 +1219,7 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
       sc.save(); sc.globalCompositeOperation='destination-in'; sc.drawImage(_esmaskC,0,0); sc.restore();
       ctx.save(); ctx.globalAlpha=(active?1:0.85)*sa; ctx.drawImage(_esoff,0,0); ctx.restore(); }
     else { const tImg=o.tex?polyTexImgEd(o.tex):null;
-      if(tImg){ polyEdPath(ctx,S,o.closed); ctx.save(); ctx.globalAlpha=(active?1:0.7)*sa; ctx.clip('evenodd'); if(o.fillMode==='single') polySingleFillEd(ctx,tImg,S,o.closed); else polyTileFillEd(ctx,tImg,S,o.closed,o.texScale||1); ctx.restore(); ctx.globalAlpha=1; }
+      if(tImg){ polyEdPath(ctx,S,o.closed); ctx.save(); ctx.globalAlpha=(active?1:0.7)*sa; ctx.clip('evenodd'); const rot=o.rot||0; let Sf=S; if(rot){ const u=_unrotSE(S,rot); Sf=u.Sf; ctx.translate(sx(u.cx),sy(u.cy)); ctx.rotate(rot); ctx.translate(-sx(u.cx),-sy(u.cy)); } if(o.fillMode==='single') polySingleFillEd(ctx,tImg,Sf,o.closed); else polyTileFillEd(ctx,tImg,Sf,o.closed,o.texScale||1); ctx.restore(); ctx.globalAlpha=1; }
       else { polyEdPath(ctx,S,o.closed); ctx.fillStyle=o.color||base; ctx.globalAlpha=(o.color?(active?0.55:0.3):(active?0.28:0.12))*sa; ctx.fill('evenodd'); ctx.globalAlpha=1; } }
     ctx.lineWidth=active?3:2;
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; ctx.strokeStyle=polyEdgeWall(a,b)?'#e2563b':base; ctx.globalAlpha=active?1:0.55; ctx.beginPath(); ctx.moveTo(sx(a.x),sy(a.y)); ctx.lineTo(sx(b.x),sy(b.y)); ctx.stroke(); }
