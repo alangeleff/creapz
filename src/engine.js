@@ -1,4 +1,4 @@
-const ASSET_VER='1782080000';
+const ASSET_VER='1782090000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1166,7 +1166,7 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; built.push(b); } }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyCollides(ob){ return (ob.layer||'main')==='main'; }
@@ -1240,6 +1240,14 @@ function polySoftCache(ob,S){ const f=Math.max(2,ob.feather||24), pad=Math.ceil(
   rc.setTransform(1,0,0,1,0,0); rc.globalCompositeOperation='destination-in'; rc.drawImage(msk,0,0);
   ob._cache={canvas:res, x0:x0, y0:y0, wCSS:wCSS, hCSS:hCSS};
 }
+function polyObjTop(S,x){ let top=null; for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); const y=a.y+(b.y-a.y)*t; if(top==null||y<top) top=y; } } return top; }
+function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex):null; if(!img) return; const H=ob.fringeH||44; const tileW=160*(ob.fringeScale||1);
+  let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
+  const step=4, iw=img.naturalWidth, ih=img.naturalHeight; ctx.save(); ctx.globalAlpha=alpha;
+  for(let x=Math.floor(x0); x<=x1; x+=step){ const sy=polyObjTop(S,x); if(sy==null) continue;
+    const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw);
+    ctx.drawImage(img, u,0, sw,ih, x-camX, sy-H, step+1, H); }
+  ctx.restore(); }
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
   for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; const S=ob.samples; if(S.length<2) continue;
     const a=(layer==='bg'?0.55:(layer==='fg'?0.85:1))*(ob.alpha!==undefined?ob.alpha:1);
@@ -1257,7 +1265,8 @@ function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
         polyPaint(sc,ob,S);
         sc.save(); sc.setTransform(1,0,0,1,0,0); sc.globalCompositeOperation='destination-in'; sc.drawImage(_smaskC,0,0); sc.restore();
         ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=a; ctx.drawImage(_soff,0,0); ctx.restore(); } }
-    else { ctx.save(); ctx.globalAlpha=a; polyPaint(ctx,ob,S); ctx.restore(); } } }
+    else { ctx.save(); ctx.globalAlpha=a; polyPaint(ctx,ob,S); ctx.restore(); }
+    if(ob.edge==='fringe' && ob.fringeTex) drawFringe(ob,S,a); } }
 function worldWeaponBox(spr, fi, x, y, facing){
   const wb = spr.weapon ? spr.weapon[fi] : null; if(!wb) return null;
   const cx=spr.cxs[fi], ft=spr.foots[fi];
