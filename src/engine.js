@@ -1,4 +1,4 @@
-const ASSET_VER='1781940000';
+const ASSET_VER='1781950000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -196,7 +196,7 @@ const DIRT_SEAM_IMG=new Image(); DIRT_SEAM_IMG.src='./assets/dirt_seam1.png?v='+
 const BG_IMGS={cavebg:(()=>{const i=new Image(); i.src='./assets/cavebg1.png?v='+ASSET_VER; return i;})(), cavebg2:(()=>{const i=new Image(); i.src='./assets/cavebg2.png?v='+ASSET_VER; return i;})(), cryptbg:(()=>{const i=new Image(); i.src='./assets/cryptbg1.png?v='+ASSET_VER; return i;})(), rockwall:(()=>{const i=new Image(); i.src='./assets/rockwall1.png?v='+ASSET_VER; return i;})(), bonedirt:(()=>{const i=new Image(); i.src='./assets/bonedirt1.png?v='+ASSET_VER; return i;})()};
 let stageIdx = 0, ST, WORLD, GOAL_X, SEG, OBST, SOLID, TSOLID=[], PLAT_DEF, CHK, SOUL_POS, HAZ=[], rocks=[], volleys=[], TEX=[], BG=[], FG=[], GHURT=[], GSLAM=[], GBOUNCE=[];
 let POLY=null;   // optional polyline terrain for a stage (gated: null = classic flat terrain, zero change)
-const POLY_MAXSLOPE=1.3, POLY_STEP=18;
+let POLY_MAXSLOPE=1.3; const POLY_STEP=18;
 const DEMO_POLY=[{x:60,y:380,wn:'auto',ha:true},{x:360,y:300,wn:'auto',ha:true},{x:640,y:380,wn:'auto',ha:true},{x:820,y:240,corner:true,wn:'auto',ha:true},{x:1000,y:380,wn:'auto',ha:true},{x:1180,y:382,wn:'auto',ha:true},{x:1230,y:200,corner:true,wn:'wall',ha:true},{x:1360,y:200,wn:'auto',ha:true},{x:1360,y:300,corner:true,wn:'wall',ha:true},{x:1280,y:300,corner:true,wn:'wall',ha:true},{x:1320,y:382,wn:'auto',ha:true},{x:3200,y:382,wn:'auto',ha:true}];
 let curses=[];   // Wood Witch aimed curse projectiles
 let flameWaves=[];   // Molten Skeleton crawling flame waves
@@ -301,6 +301,7 @@ function loadStage(i){
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
   if(window.__polyDemo){ ST.poly=ST.poly||DEMO_POLY; SEG=[]; }
   POLY = polyBuildAll(ST.poly);
+  POLY_MAXSLOPE = (ST.wallSlope!==undefined ? +ST.wallSlope : 1.3);
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
   OBST = ST.obst.map(o => { const def=OBJ[o.type]||{w:96,h:62}; const m={x:o.x, type:o.type, w:def.w, h:def.h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z, f:o.f}; if(o.type==='chest'){ m.state='closed'; m.openT=0; m.loot=o.loot||'gold'; } return m; });
   loots=[];
@@ -1179,12 +1180,10 @@ function polyFloorBetween(x,y0,y1){ const cs=polyCross(x); const lo=Math.min(y0,
 function polyCeilAbove(x,hy){ const cs=polyCross(x); let c=null; for(let i=1;i<cs.length;i+=2){ if(cs[i].y<=hy+2) c=cs[i].y; else break; } return c; }
 function polySolidAt(x,y){ const cs=polyCross(x); let c=0; for(const k of cs) if(k.y<y) c++; return (c&1)===1; }
 function polyTop(x){ const cs=polyCross(x); return cs.length?cs[0].y:null; }
-function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(PW/2);
-  for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+10]){
-    if(polySolidAt(ex,yy)){ const top=polyTop(ex);
-      if(top!==null && (p.y-top) <= POLY_MAXSLOPE*(PW/2)+6) return false;
-      return true;
-    } }
+function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(PW/2); const run=Math.abs(ex-p.x)||1;
+  const g=polyFloorUnder(ex,p.y);                                   // walkable floor just ahead, near the feet (wall edges excluded)
+  if(g!==null){ const rise=p.y-g; return rise>0 && rise > POLY_MAXSLOPE*run+6; }   // block only if it ramps up steeper than the walkable angle
+  for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+10]){ if(polySolidAt(ex,yy)) return true; }   // no walkable floor but solid in the body's path = wall
   return false; }
 function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;

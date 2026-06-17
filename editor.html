@@ -179,6 +179,7 @@
    <button class="btn" id="mPWall" title="Terrain: paint wall segments">🧱</button>
    <button class="btn" id="mPLock" title="Terrain: lock a node">🔒</button>
    <button class="btn" id="mPLayer" title="Terrain: layer of selected shape (bg / main / fg)">▦ main</button>
+   <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Wall angle: slopes steeper than this become walls">∠<input id="polyAngle" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:74px;vertical-align:middle"></label>
   </div>
   <div id="cvWrap">
    <canvas id="cv"></canvas>
@@ -265,8 +266,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1781940000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781940000');
+fetch('./assets/sprites.json?v=1781950000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781950000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -407,7 +408,7 @@ function moveMemberBy(r,dx,dy){ if(Array.isArray(r)){ r[0]+=dx; r[1]+=dx; r[2]+=
 let eraseMode=false, bulkArm=false;
 let M=blankLevel();
 function blankLevel(){ return {name:'Crypt Depths',act:'I',music:'act2',theme:'crypt',world:3200,h:2900,
-  goal:3000,goalY:2480, seg:[], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[], bg:[], fg:[], poly:[]}; }
+  goal:3000,goalY:2480, seg:[], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[], bg:[], fg:[], poly:[], wallSlope:1.3}; }
 // upgrade legacy/flat levels (e.g. old Cemetery acts) to the current editor format so they render + edit
 function migrateLevel(d){ const G=360, FH=440, DEP=FH-G;
   if(Array.isArray(d.seg)) d.seg=d.seg.map((sg,i)=>{ if(Array.isArray(sg)&&sg.length<=2) return [sg[0],sg[1],G,DEP,(i+1)*10]; return sg; });
@@ -1014,7 +1015,7 @@ function polySamplesNs(ns,closed){ polyEnsureH(ns,closed); const out=[]; if(ns.l
     for(let sp=(i===0?0:1);sp<=steps;sp++){ const t=sp/steps,u=1-t; out.push({x:u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, y:u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y, seg:i, wn:A.wn}); } }
   if(closed&&out.length) out.push({x:out[0].x,y:out[0].y,seg:N-1,wn:ns[N-1].wn});
   return out; }
-function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE_ED; }
+function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>(M.wallSlope||1.3); }
 function polyNodeHitAny(wxp,wyp){ if(!M.poly) return null; const r=14/zoom; let best=null,bd=r; for(let pi=0;pi<M.poly.length;pi++){ for(const n of M.poly[pi].nodes){ const d=Math.hypot(n.x-wxp,n.y-wyp); if(d<bd){bd=d;best={idx:pi,node:n};} } } return best; }
 function polyHandleAtActive(wxp,wyp){ const ns=curNodes(); if(!ns||polyWallMode||polyLockMode) return null; const r=13/zoom; for(const n of ns){ if(n.corner||n.locked) continue;
   if(Math.hypot(wxp-(n.x+n.ho.x),wyp-(n.y+n.ho.y))<r) return {n,side:'o'}; if(Math.hypot(wxp-(n.x+n.hi.x),wyp-(n.y+n.hi.y))<r) return {n,side:'i'}; } return null; }
@@ -1046,9 +1047,10 @@ function polyDown(wxp,wyp,alt){ if(!M.poly||!M.poly.length) return false;
   const h=polyHandleAtActive(wxp,wyp); if(h){ histPush(); polyDrag={kind:'handle',n:h.n,side:h.side,brk:(polyBreakMode||alt)}; return true; }
   const nr=polyNodeHitAny(wxp,wyp); if(nr){ polyActive=nr.idx; if(nr.node.locked){ draw(); return true; } histPush(); polyDrag={kind:'node',n:nr.node,moved:false}; draw(); return true; }
   const nc=polyNearestCurve(wxp,wyp,14/zoom); if(nc){ histPush(); polyActive=nc.idx; const ns=M.poly[nc.idx].nodes; const cl=!!M.poly[nc.idx].closed; const t=polyNearestT(ns,wxp,wyp,cl); const m=polySplitNs(ns,t.seg,t.t,cl); polyDrag={kind:'node',n:m,moved:false}; persist(); draw(); return true; }
-  const bh=polyBodyHit(wxp,wyp); if(bh!==-1){ polyActive=bh; draw(); return true; }   // tap a shape's body -> focus only (no node)
+  const bh=polyBodyHit(wxp,wyp); if(bh!==-1){ polyActive=bh; polyDrag={kind:'shape',idx:bh,lx:wxp,ly:wyp,pushed:false}; draw(); return true; }   // body: drag to move whole shape (no drag = focus)
   return false; }
 function polyMove(wxp,wyp){ if(!polyDrag) return;
+  if(polyDrag.kind==='shape'){ const o=M.poly[polyDrag.idx]; if(o){ if(!polyDrag.pushed){ histPush(); polyDrag.pushed=true; } const dx=wxp-polyDrag.lx, dy=wyp-polyDrag.ly; for(const n of o.nodes){ n.x+=dx; n.y+=dy; } } polyDrag.lx=wxp; polyDrag.ly=wyp; persist(); draw(); return; }
   if(polyDrag.kind==='handle'){ const n=polyDrag.n; n.ha=false; const vx=wxp-n.x, vy=wyp-n.y;
     if(polyDrag.side==='o'){ n.ho={x:vx,y:vy}; if(!polyDrag.brk){ n.hi={x:-vx,y:-vy}; n.brk=false; } else n.brk=true; }
     else { n.hi={x:vx,y:vy}; if(!polyDrag.brk){ n.ho={x:-vx,y:-vy}; n.brk=false; } else n.brk=true; }
@@ -1080,7 +1082,8 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
     else if(n.corner){ ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.moveTo(X,Y-6); ctx.lineTo(X+6,Y); ctx.lineTo(X,Y+6); ctx.lineTo(X-6,Y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     else { ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y,5,0,7); ctx.fill(); ctx.stroke(); } } }
 (function(){ const mk=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  mk('mPoly',function(){ polyMode=!polyMode; document.getElementById('mPoly').classList.toggle('on',polyMode); if(polyMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); } draw(); });
+  mk('mPoly',function(){ polyMode=!polyMode; document.getElementById('mPoly').classList.toggle('on',polyMode); if(polyMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); } draw(); });
+  { const pa=document.getElementById('polyAngle'); if(pa) pa.addEventListener('input',function(){ M.wallSlope=+this.value; persist(); draw(); }); }
   mk('bAddPoly',addMainPoly);
   mk('bAddShape',addShape);
   mk('mPBreak',function(){ polyBreakMode=!polyBreakMode; this.classList.toggle('on',polyBreakMode); });
@@ -1364,7 +1367,7 @@ addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCas
   else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'){ e.preventDefault(); if(sel) dupSel(); } });
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
- o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; if(M.poly&&M.poly.length)o.poly=M.poly; return o; }
+ o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; if(M.poly&&M.poly.length)o.poly=M.poly; o.wallSlope=M.wallSlope||1.3; return o; }
 function encodeAsset(im, isBg){ let scale=Math.min(1, 2400/Math.max(im.naturalWidth, im.naturalHeight));
   for(let i=0;i<7;i++){ const cw=Math.max(1,Math.round(im.naturalWidth*scale)), ch=Math.max(1,Math.round(im.naturalHeight*scale));
     const c=document.createElement('canvas'); c.width=cw; c.height=ch; const cx=c.getContext('2d'); cx.imageSmoothingQuality='high'; cx.drawImage(im,0,0,cw,ch);
@@ -1509,7 +1512,7 @@ function createNew(){ const p=document.getElementById('newP');
       goal: theme==='crypt'?Math.round(w*0.85):w-120,
       goalY: theme==='crypt'?Math.max(G+200,h-180):G,
       seg: usePoly?[]:[ground], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[],
-      bg: theme==='crypt'?[{t:'cavebg',par:0.2}]:[], fg:[], poly:null };
+      bg: theme==='crypt'?[{t:'cavebg',par:0.2}]:[], fg:[], poly:null, wallSlope:1.3 };
   if(usePoly){ const nodes=[]; for(let i=0;i<6;i++) nodes.push({x:Math.round(i*w/5),y:380,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true}); M.poly=[{nodes,closed:false,layer:'main'}]; polyActive=0; polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); }
   loadFields(); sel=null; showSel(); camx=0; camy=0; zoom=Math.min(CW/Math.min(w,1600), CH/Math.min(h,900)); persist(); draw(); closeNew(); toast('new stage “'+name+'” created'); }
 document.getElementById('bNew').onclick=()=>{ const p=document.getElementById('newP'); if(p.style.display==='block')closeNew(); else openNew(); };
