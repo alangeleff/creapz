@@ -277,8 +277,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782170000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782170000');
+fetch('./assets/sprites.json?v=1782180000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782180000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1097,10 +1097,7 @@ function buildFringeInput(o){ return new Promise((resolve)=>{ const tImg = o.tex
   if(tImg.complete&&tImg.naturalWidth) go(); else { tImg.addEventListener('load',go,{once:true}); setTimeout(()=>{ if(!(tImg.complete&&tImg.naturalWidth)) resolve(null); },4000); } }); }
 function keyFringeB64(b64,mime){ return new Promise((resolve)=>{ const base=new Image(); base.onload=()=>{ try{ const c=document.createElement('canvas'); c.width=base.naturalWidth; c.height=base.naturalHeight; const x=c.getContext('2d'); x.drawImage(base,0,0); const d=x.getImageData(0,0,c.width,c.height), p=d.data;
   for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2]; const m=Math.min(r,b)-g; if(m>60){ p[i+3]=0; } else if(m>10){ const t=(m-10)/50; p[i+3]=Math.round(p[i+3]*(1-t)); p[i]=Math.round(g+(r-g)*(1-t)); p[i+2]=Math.round(g+(b-g)*(1-t)); } }
-  x.putImageData(d,0,0);
-  let minX=c.width, maxX=-1; for(let yy=0;yy<c.height;yy++){ const row=yy*c.width; for(let xx=0;xx<c.width;xx++){ if(p[(row+xx)*4+3]>22){ if(xx<minX)minX=xx; if(xx>maxX)maxX=xx; } } }
-  if(maxX>=minX && (minX>0||maxX<c.width-1)){ const cw=maxX-minX+1; const c2=document.createElement('canvas'); c2.width=cw; c2.height=c.height; c2.getContext('2d').drawImage(c, minX,0,cw,c.height, 0,0,cw,c.height); resolve(c2.toDataURL('image/png').split(',')[1]); return; }
-  resolve(c.toDataURL('image/png').split(',')[1]); }catch(e){ resolve(b64); } };
+  x.putImageData(d,0,0); resolve(c.toDataURL('image/png').split(',')[1]); }catch(e){ resolve(b64); } };
   base.onerror=()=>resolve(b64); base.src='data:'+(mime||'image/png')+';base64,'+b64; }); }
 function polyGenTex(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='texture'; const ov=ensureTexModal(); ov.querySelector('#texTitle').textContent='Skin this shape'; ov.querySelector('#texDesc').textContent='Describe the texture as a tileable surface material.'; const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
 function polyGenFringe(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='fringe'; const ov=ensureTexModal(); ov.querySelector('#texTitle').textContent='Generate fringe edge'; ov.querySelector('#texDesc').textContent='Describe the top edge — grass blades, mossy rim, rocky teeth. Generated transparent and placed along the surface.'; const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
@@ -1163,7 +1160,7 @@ function drawEditorFringe(o,S){ const img=o.fringeTex?polyTexImgEd(o.fringeTex):
   let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
   const iw=img.naturalWidth, ih=img.naturalHeight, tileW=H*iw/Math.max(1,ih), step=4;
   for(let x=Math.floor(x0); x<=x1; x+=step){ const ty=polyObjTopEd(S,Math.min(x1-0.5,Math.max(x0,x))); if(ty==null) continue;
-    const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw), drop=Math.min(H*0.08,9)*zoom;
+    const u=(0.05+(((x-x0)%tileW)/tileW)*0.9)*iw, sw=Math.max(1,(step/tileW)*0.9*iw), drop=Math.min(H*0.08,9)*zoom;
     ctx.drawImage(img, u,0, sw,ih, sx(x), sy(ty)-H*zoom+drop, step*zoom+1, H*zoom); } }
 function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
   const order=['bg','main','fg'], colof=L=>(L==='bg'?'#4a6a9a':(L==='fg'?'#3fcf9a':'#9d8ce0'));
