@@ -1,4 +1,4 @@
-const ASSET_VER='1782250000';
+const ASSET_VER='1782260000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1166,7 +1166,7 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; built.push(b); } }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; b.fillMode=o.fillMode||'pattern'; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyCollides(ob){ return (ob.layer||'main')==='main'; }
@@ -1219,8 +1219,11 @@ let _soff=null,_smaskC=null;
 function _softLayer(){ if(!_soff) _soff=document.createElement('canvas'); if(_soff.width!==cv.width||_soff.height!==cv.height){ _soff.width=cv.width; _soff.height=cv.height; } return _soff.getContext('2d'); }
 function _softMask(){ if(!_smaskC) _smaskC=document.createElement('canvas'); if(_smaskC.width!==cv.width||_smaskC.height!==cv.height){ _smaskC.width=cv.width; _smaskC.height=cv.height; } return _smaskC.getContext('2d'); }
 function polyPath(g,S,closed,ox){ if(ox===undefined)ox=camX; g.beginPath(); g.moveTo(S[0].x-ox,S[0].y); for(let i=1;i<S.length;i++) g.lineTo(S[i].x-ox,S[i].y); if(closed){ g.closePath(); } else { const baseY=WORLDH+320; g.lineTo(S[S.length-1].x-ox,baseY); g.lineTo(S[0].x-ox,baseY); g.closePath(); } }
+function polySingleFill(g,img,S,closed,ox){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } if(!closed) y1=WORLDH;
+  const bw=x1-x0, bh=y1-y0, iw=img.naturalWidth, ih=img.naturalHeight, sc=Math.max(bw/iw,bh/Math.max(1,ih)), dw=iw*sc, dh=ih*sc, dx=x0+(bw-dw)/2, dy=y0+(bh-dh)/2;
+  g.drawImage(img, dx-ox, dy, dw, dh); }
 function polyPaint(g,ob,S,ox){ polyPath(g,S,ob.closed,ox); const tImg=ob.tex?polyTexImg(ob.tex):null;
-  if(tImg){ g.save(); g.clip('evenodd'); polyTileFill(g,tImg,S,ob.closed,ob.texScale,ox); g.restore(); }
+  if(tImg){ g.save(); g.clip('evenodd'); if(ob.fillMode==='single') polySingleFill(g,tImg,S,ob.closed,ox); else polyTileFill(g,tImg,S,ob.closed,ob.texScale,ox); g.restore(); }
   else { if(ob.color){ g.fillStyle=ob.color; } else { const tg=g.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); g.fillStyle=tg; } g.fill('evenodd'); }
 }
 function polySoftCache(ob,S){ const f=Math.max(2,ob.feather||24), pad=Math.ceil(f+3);

@@ -8,6 +8,10 @@ const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models
 const FAL_FLUX = 'https://fal.run/fal-ai/flux/dev';
 const FAL_REMBG = 'https://fal.run/fal-ai/imageutils/rembg';
 
+function singlePrompt(prompt, style) {
+  return `A single complete ${prompt} as ONE image filling the entire frame edge to edge, 2D side-scrolling video-game art, stylized and painterly, centered and filling the frame. This is a single object/scene, NOT a repeating tile or pattern. No UI, no text, no border.`
+    + (style ? ` Art style: ${style}.` : '');
+}
 function texturePrompt(prompt, style) {
   return `A seamless, fully tileable repeating TEXTURE / surface material of: ${prompt}. `
     + `Flat 2D side-scrolling video-game art, stylized and painterly, evenly lit with no strong directional shadows, `
@@ -130,10 +134,10 @@ module.exports = async (req, res) => {
       return res.status(200).json({ imageBase64: base.imageBase64, mimeType: base.mimeType || 'image/png', model, mode, i2i: hasImg });
     }
 
-    const full = texturePrompt(prompt, style);
+    const full = (body.fill === 'single') ? singlePrompt(prompt, style) : texturePrompt(prompt, style);
     const out = model === 'fal' ? await genFal(full) : await genGemini(full);
     if (out.err) return res.status(out.status || 500).json({ error: out.err, model });
-    return res.status(200).json({ imageBase64: out.imageBase64, mimeType: out.mimeType, model, mode });
+    return res.status(200).json({ imageBase64: out.imageBase64, mimeType: out.mimeType, model, mode, fill: (body.fill==='single'?'single':'pattern') });
   } catch (e) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }

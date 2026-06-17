@@ -278,8 +278,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782250000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782250000');
+fetch('./assets/sprites.json?v=1782260000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782260000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1064,7 +1064,10 @@ let _esoff=null,_esmaskC=null;
 function _esoftLayer(){ if(!_esoff) _esoff=document.createElement('canvas'); if(_esoff.width!==cv.width||_esoff.height!==cv.height){ _esoff.width=cv.width; _esoff.height=cv.height; } return _esoff.getContext('2d'); }
 function _esoftMask(){ if(!_esmaskC) _esmaskC=document.createElement('canvas'); if(_esmaskC.width!==cv.width||_esmaskC.height!==cv.height){ _esmaskC.width=cv.width; _esmaskC.height=cv.height; } return _esmaskC.getContext('2d'); }
 function polyEdPath(g,S,closed){ g.beginPath(); g.moveTo(sx(S[0].x),sy(S[0].y)); for(let i=1;i<S.length;i++) g.lineTo(sx(S[i].x),sy(S[i].y)); if(closed){ g.closePath(); } else { g.lineTo(sx(S[S.length-1].x),sy(M.h)); g.lineTo(sx(S[0].x),sy(M.h)); g.closePath(); } }
-function polyEdFill(g,o,S,base){ polyEdPath(g,S,o.closed); const tImg=o.tex?polyTexImgEd(o.tex):null; if(tImg){ g.save(); g.clip('evenodd'); polyTileFillEd(g,tImg,S,o.closed,o.texScale||1); g.restore(); } else { g.fillStyle=o.color||base; g.fill('evenodd'); } }
+function polySingleFillEd(g,img,S,closed){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } if(!closed) y1=M.h;
+  const bw=x1-x0, bh=y1-y0, iw=img.naturalWidth, ih=img.naturalHeight, sc=Math.max(bw/iw,bh/Math.max(1,ih)), dw=iw*sc, dh=ih*sc, dx=x0+(bw-dw)/2, dy=y0+(bh-dh)/2;
+  g.drawImage(img, sx(dx), sy(dy), dw*zoom, dh*zoom); }
+function polyEdFill(g,o,S,base){ polyEdPath(g,S,o.closed); const tImg=o.tex?polyTexImgEd(o.tex):null; if(tImg){ g.save(); g.clip('evenodd'); if(o.fillMode==='single') polySingleFillEd(g,tImg,S,o.closed); else polyTileFillEd(g,tImg,S,o.closed,o.texScale||1); g.restore(); } else { g.fillStyle=o.color||base; g.fill('evenodd'); } }
 function polyCycleEdge(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } histPush(); o.edge=(!o.edge||o.edge==='hard')?'soft':(o.edge==='soft'?'fringe':'hard'); if(o.edge==='soft'&&!o.feather)o.feather=24; if(o.edge==='fringe'){ if(!o.fringeH)o.fringeH=44; if(!o.fringeTex) toast('fringe mode — tap 🌿 Fringe to generate the edge'); } persist(); draw(); syncPolyUI(); if(o.edge!=='fringe') toast('edges: '+o.edge); }
 let _histOv=null;
 function ensureHistOv(){ if(_histOv) return _histOv; const ov=document.createElement('div'); ov.id='histOv'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
@@ -1087,7 +1090,7 @@ function renderHist(kind){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('se
     const del=document.createElement('button'); del.textContent='\u00d7'; del.title='Delete this result'; del.style.cssText='position:absolute;top:4px;right:4px;width:26px;height:26px;border:2px solid #fff;border-radius:50%;background:#e2563b;color:#fff;font-size:16px;font-weight:bold;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 1px 5px rgba(0,0,0,.55);z-index:3';
     del.onclick=(e)=>{ e.stopPropagation(); deleteHist(kind,i); };
     cell.onclick=()=>{ applyHist(kind,i); };
-    grid.appendChild(cell); });
+    cell.appendChild(del); grid.appendChild(cell); });
   ov.style.display='flex'; }
 function applyHist(kind,i){ const o=M.poly&&M.poly[polyActive]; if(!o) return; histPush();
   if(kind==='fringe'){ o.fringeTex=o.fringeList[i]; o.fringeIdx=i; o.edge='fringe'; }
@@ -1101,7 +1104,7 @@ function deleteHist(kind,i){ const o=M.poly&&M.poly[polyActive]; if(!o) return; 
 function polyCycleTex(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.texList||o.texList.length<2){ toast('only one texture for this shape'); return; } o.texIdx=((o.texIdx==null?o.texList.length-1:o.texIdx)-1+o.texList.length)%o.texList.length; o.tex=o.texList[o.texIdx]; persist(); draw(); toast('texture '+(o.texIdx+1)+'/'+o.texList.length); }
 function polyCycleFringe(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.fringeList||o.fringeList.length<2){ toast('only one fringe for this shape'); return; } o.fringeIdx=((o.fringeIdx==null?o.fringeList.length-1:o.fringeIdx)-1+o.fringeList.length)%o.fringeList.length; o.fringeTex=o.fringeList[o.fringeIdx]; o.edge='fringe'; persist(); draw(); toast('fringe '+(o.fringeIdx+1)+'/'+o.fringeList.length); }
 function syncPolyUI(){ const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); const o=M.poly&&M.poly[polyActive]; const ts=document.getElementById('polyTexScale'); const op=document.getElementById('polyOpac'); const be=document.getElementById('bPolyEdge'); if(!o) return; if(ts) ts.value=(o.texScale||1); if(op) op.value=(o.alpha!==undefined?o.alpha:1); if(be) be.textContent=(o.edge==='fringe'?'\ud83c\udf3f fringe':('\u25e1 '+(o.edge||'hard'))); const pf=document.getElementById('polyFeather'); if(pf) pf.value=(o.feather||24); const fh=document.getElementById('polyFringeH'); if(fh) fh.value=(o.fringeH||44); const ft=document.getElementById('polyFringeTrim'); if(ft) ft.value=Math.round((o.fringeTrim||0)*100); }
-let _texModel='gemini', _texMode='texture', _texModal=null;
+let _texModel='gemini', _texMode='texture', _texFill='pattern', _texModal=null;
 function ensureTexModal(){ if(_texModal) return _texModal;
   const ov=document.createElement('div'); ov.id='texModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
   ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:18px;width:min(440px,92vw);box-shadow:0 18px 60px rgba(0,0,0,.5);font-family:sans-serif;color:#e8e6f5">'
@@ -1110,12 +1113,16 @@ function ensureTexModal(){ if(_texModal) return _texModal;
    +'<textarea id="texPrompt" rows="3" placeholder="mossy graveyard stone" style="width:100%;box-sizing:border-box;background:#0f0c1a;border:1px solid #2c2740;border-radius:8px;color:#e8e6f5;padding:8px;font-size:13px;resize:vertical"></textarea>'
    +'<div style="font-size:12px;color:#9b93b5;margin:12px 0 6px">Image model</div>'
    +'<div style="display:flex;gap:8px"><button id="texMGemini" class="texMbtn">Gemini</button><button id="texMFal" class="texMbtn">FAL / FLUX</button></div>'
+   +'<div id="texFillRow"><div style="font-size:12px;color:#9b93b5;margin:12px 0 6px">Fill</div><div style="display:flex;gap:8px"><button id="texFPattern" class="texMbtn">Pattern (tile)</button><button id="texFSingle" class="texMbtn">Single object</button></div></div>'
    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button id="texCancel" class="texCbtn">Cancel</button><button id="texGo" class="texGbtn">Generate</button></div></div>';
   document.body.appendChild(ov); _texModal=ov;
   const st=document.createElement('style'); st.textContent='.texMbtn{flex:1;background:#0f0c1a;border:1px solid #2c2740;color:#cfc9e6;border-radius:8px;padding:9px;font-size:13px;cursor:pointer}.texMbtn.sel{background:#c8fb50;color:#13160a;border-color:#c8fb50;font-weight:600}.texCbtn{background:#241f38;border:1px solid #3a3356;color:#cfc9e6;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}.texGbtn{background:#c8fb50;border:none;color:#13160a;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}'; document.head.appendChild(st);
   const gm=ov.querySelector('#texMGemini'), fl=ov.querySelector('#texMFal');
   function pick(m){ _texModel=m; gm.classList.toggle('sel',m==='gemini'); fl.classList.toggle('sel',m==='fal'); }
   gm.onclick=()=>pick('gemini'); fl.onclick=()=>pick('fal'); pick(_texModel);
+  const fp=ov.querySelector('#texFPattern'), fs=ov.querySelector('#texFSingle');
+  function pickF(m){ _texFill=m; fp.classList.toggle('sel',m==='pattern'); fs.classList.toggle('sel',m==='single'); }
+  fp.onclick=()=>pickF('pattern'); fs.onclick=()=>pickF('single'); pickF(_texFill);
   ov.querySelector('#texCancel').onclick=()=>{ ov.style.display='none'; };
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
   ov.querySelector('#texGo').onclick=()=>{ const d=ov.querySelector('#texPrompt').value.trim(); if(!d){ toast('enter a description'); return; } ov.style.display='none'; doGenTex(d,_texModel,_texMode); };
@@ -1132,19 +1139,19 @@ function keyFringeB64(b64,mime){ return new Promise((resolve)=>{ const base=new 
   for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2]; const m=Math.min(r,b)-g; if(m>60){ p[i+3]=0; } else if(m>10){ const t=(m-10)/50; p[i+3]=Math.round(p[i+3]*(1-t)); p[i]=Math.round(g+(r-g)*(1-t)); p[i+2]=Math.round(g+(b-g)*(1-t)); } }
   x.putImageData(d,0,0); resolve(c.toDataURL('image/png').split(',')[1]); }catch(e){ resolve(b64); } };
   base.onerror=()=>resolve(b64); base.src='data:'+(mime||'image/png')+';base64,'+b64; }); }
-function polyGenTex(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='texture'; const ov=ensureTexModal(); ov.querySelector('#texTitle').textContent='Skin this shape'; ov.querySelector('#texDesc').textContent='Describe the texture as a tileable surface material.'; const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
-function polyGenFringe(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='fringe'; const ov=ensureTexModal(); ov.querySelector('#texTitle').textContent='Generate fringe edge'; ov.querySelector('#texDesc').textContent='Describe the top edge — grass blades, mossy rim, rocky teeth. Generated transparent and placed along the surface.'; const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
+function polyGenTex(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='texture'; const ov=ensureTexModal(); ov.querySelector('#texTitle').textContent='Skin this shape'; ov.querySelector('#texDesc').textContent='Describe the skin. Pattern = repeating material; Single = one image fit to the shape (a scene, a boulder, etc).'; _texFill=o.fillMode||'pattern'; const ff=ov.querySelector('#texFillRow'); if(ff)ff.style.display='block'; ov.querySelector('#texFPattern').classList.toggle('sel',_texFill==='pattern'); ov.querySelector('#texFSingle').classList.toggle('sel',_texFill==='single'); const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
+function polyGenFringe(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='fringe'; const ov=ensureTexModal(); const ff=ov.querySelector('#texFillRow'); if(ff)ff.style.display='none'; ov.querySelector('#texTitle').textContent='Generate fringe edge'; ov.querySelector('#texDesc').textContent='Describe the top edge — grass blades, mossy rim, rocky teeth. Generated transparent and placed along the surface.'; const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
 async function doGenTex(desc,model,mode){ mode=mode||'texture'; const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; }
   let inputImg=null;   // img2img-from-texture disabled: it preserved a flat band instead of making blades; text-driven blades look better
   toast(mode==='fringe'&&inputImg?'generating fringe from your texture ('+model+')…':'generating ('+model+')…');
-  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model, mode, image:inputImg||undefined})});
+  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model, mode, fill:_texFill, image:inputImg||undefined})});
     const j=await r.json().catch(()=>({})); if(!r.ok||!j.imageBase64){ toast('gen failed: '+(j.error||'no image')); return; }
     const outB64 = (mode==='fringe') ? await keyFringeB64(j.imageBase64, j.mimeType) : j.imageBase64;
     const id=(mode==='fringe'?'fringe_':'tex_')+Date.now().toString(36), path='./config/textures/'+id+'.png';
     const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src='data:'+(mode==='fringe'?'image/png':(j.mimeType||'image/png'))+';base64,'+outB64; POLYTEX_ED[path]=im;   // instant preview
     histPush();
     if(mode==='fringe'){ o.fringeList=o.fringeList||(o.fringeTex?[o.fringeTex]:[]); o.fringeList.push(path); o.fringeIdx=o.fringeList.length-1; o.fringeTex=path; o.edge='fringe'; if(!o.fringeH)o.fringeH=44; }
-    else { o.texList=o.texList||(o.tex?[o.tex]:[]); o.texList.push(path); o.texIdx=o.texList.length-1; o.tex=path; }
+    else { o.texList=o.texList||(o.tex?[o.tex]:[]); o.texList.push(path); o.texIdx=o.texList.length-1; o.tex=path; o.fillMode=_texFill; }
     persist(); draw(); syncPolyUI();
     toast('committing texture\u2026');
     const res=await commitFiles([{path:'config/textures/'+id+'.png', content:outB64, encoding:'base64'}], (mode==='fringe'?'fringe(':'texture(')+model+'): '+desc.slice(0,40));
@@ -1211,7 +1218,7 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
       sc.save(); sc.globalCompositeOperation='destination-in'; sc.drawImage(_esmaskC,0,0); sc.restore();
       ctx.save(); ctx.globalAlpha=(active?1:0.85)*sa; ctx.drawImage(_esoff,0,0); ctx.restore(); }
     else { const tImg=o.tex?polyTexImgEd(o.tex):null;
-      if(tImg){ polyEdPath(ctx,S,o.closed); ctx.save(); ctx.globalAlpha=(active?1:0.7)*sa; ctx.clip('evenodd'); polyTileFillEd(ctx,tImg,S,o.closed,o.texScale||1); ctx.restore(); ctx.globalAlpha=1; }
+      if(tImg){ polyEdPath(ctx,S,o.closed); ctx.save(); ctx.globalAlpha=(active?1:0.7)*sa; ctx.clip('evenodd'); if(o.fillMode==='single') polySingleFillEd(ctx,tImg,S,o.closed); else polyTileFillEd(ctx,tImg,S,o.closed,o.texScale||1); ctx.restore(); ctx.globalAlpha=1; }
       else { polyEdPath(ctx,S,o.closed); ctx.fillStyle=o.color||base; ctx.globalAlpha=(o.color?(active?0.55:0.3):(active?0.28:0.12))*sa; ctx.fill('evenodd'); ctx.globalAlpha=1; } }
     ctx.lineWidth=active?3:2;
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; ctx.strokeStyle=polyEdgeWall(a,b)?'#e2563b':base; ctx.globalAlpha=active?1:0.55; ctx.beginPath(); ctx.moveTo(sx(a.x),sy(a.y)); ctx.lineTo(sx(b.x),sy(b.y)); ctx.stroke(); }
