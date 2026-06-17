@@ -1,4 +1,4 @@
-const ASSET_VER='1781990000';
+const ASSET_VER='1782000000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1166,7 +1166,7 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; built.push(b); } }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
@@ -1208,12 +1208,20 @@ function resolvePoly(prevFeet){
   } else { const c=polyCeilAbove(p.x,p.y-PH); if(c!==null && (p.y-PH)<c){ p.y=c+PH; p.vy=0; } }
   resolvePolyWalls();
 }
+const POLYTEX={};
+function polyTexImg(path){ if(!path) return null; if(!POLYTEX[path]){ const im=new Image(); im.src=path+(path.indexOf('?')<0?('?v='+ASSET_VER):''); POLYTEX[path]=im; } const im=POLYTEX[path]; return (im.complete&&im.naturalWidth)?im:null; }
+function polyTileFill(img,S,closed,scale){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } if(!closed) y1=WORLDH;
+  const tw=256*(scale||1), th=tw*img.naturalHeight/Math.max(1,img.naturalWidth);
+  const ax=Math.floor(x0/tw)*tw, ay=Math.floor(y0/th)*th;
+  for(let ty=ay; ty<y1; ty+=th) for(let tx=ax; tx<x1+tw; tx+=tw) ctx.drawImage(img, tx-camX, ty, tw, th); }
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
   for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; const S=ob.samples; if(S.length<2) continue;
     ctx.save(); ctx.globalAlpha = layer==='bg'?0.55:(layer==='fg'?0.85:1);
     ctx.beginPath(); ctx.moveTo(S[0].x-camX,S[0].y); for(let i=1;i<S.length;i++) ctx.lineTo(S[i].x-camX,S[i].y);
     if(ob.closed){ ctx.closePath(); } else { const baseY=WORLDH+320; ctx.lineTo(S[S.length-1].x-camX,baseY); ctx.lineTo(S[0].x-camX,baseY); ctx.closePath(); }
-    if(ob.color){ ctx.fillStyle=ob.color; } else { const tg=ctx.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); ctx.fillStyle=tg; } ctx.fill('evenodd');
+    const tImg=ob.tex?polyTexImg(ob.tex):null;
+    if(tImg){ ctx.save(); ctx.clip('evenodd'); polyTileFill(tImg,S,ob.closed,ob.texScale); ctx.restore(); }
+    else { if(ob.color){ ctx.fillStyle=ob.color; } else { const tg=ctx.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); ctx.fillStyle=tg; } ctx.fill('evenodd'); }
     ctx.lineWidth=5; ctx.lineCap='round';
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; const ax=a.x-camX,bx=b.x-camX; if((ax<-20&&bx<-20)||(ax>W+20&&bx>W+20)) continue;
       ctx.strokeStyle=polyEdgeWall(a,b)?'#7a5360':'#6a5ca0'; ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke(); }
