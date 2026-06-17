@@ -1,4 +1,4 @@
-const ASSET_VER='1782050000';
+const ASSET_VER='1782060000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1169,9 +1169,10 @@ function polyBuildAll(data){
   for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
+function polyCollides(ob){ return (ob.layer||'main')==='main' && ob.edge!=='soft'; }
 function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
 function polyCross(x){ const out=[];
-  for(const ob of POLY.objs){ if((ob.layer||'main')!=='main') continue; const S=ob.samples;
+  for(const ob of POLY.objs){ if(!polyCollides(ob)) continue; const S=ob.samples;
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t, wall:polyEdgeWall(a,b)}); } } }
   out.sort((p,q)=>p.y-q.y); return out; }
 function polyFloorUnder(x,fy){ const cs=polyCross(x); for(let i=0;i<cs.length;i+=2){ if(!cs[i].wall && cs[i].y>=fy-POLY_STEP) return cs[i].y; } return null; }
@@ -1188,7 +1189,7 @@ function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(
   return false; }
 function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
-    for(const ob of POLY.objs){ if((ob.layer||'main')!=='main') continue; const S=ob.samples;
+    for(const ob of POLY.objs){ if(!polyCollides(ob)) continue; const S=ob.samples;
       for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!polyEdgeWall(a,b)) continue;
         const vx=b.x-a.x, vy=b.y-a.y, L=vx*vx+vy*vy; if(L<0.01) continue;
         let t=((cx-a.x)*vx+(cy-a.y)*vy)/L; t=Math.max(0,Math.min(1,t)); const px=a.x+t*vx, py=a.y+t*vy;
@@ -1228,7 +1229,7 @@ function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
       const mk=_softMask(); mk.setTransform(RS,0,0,RS,0,0); mk.clearRect(0,0,_smaskC.width,_smaskC.height);
       mk.fillStyle='#fff'; polyPath(mk,S,ob.closed); mk.fill('evenodd');
       mk.globalCompositeOperation='destination-out'; mk.lineJoin='round'; mk.lineCap='round'; mk.strokeStyle='#000';
-      const N=16; for(let k=0;k<N;k++){ mk.globalAlpha=0.18; mk.lineWidth=(f*2)*(1-k/N); polyPath(mk,S,ob.closed); mk.stroke(); }
+      const N=36; for(let k=0;k<N;k++){ mk.globalAlpha=0.094; mk.lineWidth=(f*2)*(1-k/N); polyPath(mk,S,ob.closed); mk.stroke(); }
       mk.globalAlpha=1; mk.globalCompositeOperation='source-over';
       const sc=_softLayer(); sc.setTransform(RS,0,0,RS,0,0); sc.clearRect(0,0,_soff.width,_soff.height);
       polyPaint(sc,ob,S);
