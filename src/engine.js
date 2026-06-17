@@ -1,4 +1,4 @@
-const ASSET_VER='1781820000';
+const ASSET_VER='1781830000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1169,8 +1169,14 @@ function polyFloorBetween(x,y0,y1){ const cs=polyCross(x); const lo=Math.min(y0,
   for(let i=0;i<cs.length;i+=2){ if(!cs[i].wall && cs[i].y>=lo && cs[i].y<=hi && (best===null||cs[i].y<best)) best=cs[i].y; } return best; }
 function polyCeilAbove(x,hy){ const cs=polyCross(x); let c=null; for(let i=1;i<cs.length;i+=2){ if(cs[i].y<=hy+2) c=cs[i].y; else break; } return c; }
 function polySolidAt(x,y){ const cs=polyCross(x); let c=0; for(const k of cs) if(k.y<y) c++; return (c&1)===1; }
+function polyTop(x){ const cs=polyCross(x); return cs.length?cs[0].y:null; }
 function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(PW/2);
-  for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+8]){ if(polySolidAt(ex,yy)){ const g=polyFloorUnder(ex,p.y); if(g!==null && (p.y-g)<=POLY_STEP) return false; return true; } } return false; }
+  for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+10]){
+    if(polySolidAt(ex,yy)){ const top=polyTop(ex);
+      if(top!==null && (p.y-top) <= POLY_MAXSLOPE*(PW/2)+6) return false;  // walkable up-slope / small step-up
+      return true;                                                         // too steep/tall = wall
+    } }
+  return false; }
 function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2; const S=POLY.samples;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!polyEdgeWall(a,b)) continue;
@@ -1183,10 +1189,11 @@ function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2; const S=POLY.samples;
 function resolvePoly(prevFeet){
   if(p.flying||p.dead||p.won||p.winning||!POLY) return;
   if(p.vy>=0){
-    const fb=polyFloorBetween(p.x, prevFeet, p.y);
-    if(fb!==null){ p.y=fb; p.vy=0; p.onGround=true; }
-    else if(p.onGround){ const g=polyFloorUnder(p.x,p.y); if(g!==null && (g-p.y)<=POLY_MAXSLOPE*RUN+10){ p.y=g; p.vy=0; } else p.onGround=false; }
-    else { const g=polyFloorUnder(p.x,p.y); if(g!==null && p.y>=g){ p.y=g; p.vy=0; p.onGround=true; } }
+    let landed=false;
+    const g=polyFloorUnder(p.x,p.y);                                       // floor at/just below the feet
+    if(g!==null && (g-p.y)<=POLY_MAXSLOPE*RUN+12){ p.y=g; p.vy=0; p.onGround=true; landed=true; }   // follow slope up or gentle down
+    if(!landed){ const fb=polyFloorBetween(p.x,prevFeet,p.y); if(fb!==null){ p.y=fb; p.vy=0; p.onGround=true; landed=true; } }  // swept land (fast falls)
+    if(!landed) p.onGround=false;                                          // off a ledge -> fall
   } else { const c=polyCeilAbove(p.x,p.y-PH); if(c!==null && (p.y-PH)<c){ p.y=c+PH; p.vy=0; } }
   resolvePolyWalls();
 }
