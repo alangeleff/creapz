@@ -1222,9 +1222,6 @@ function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
     const tImg=ob.tex?polyTexImg(ob.tex):null;
     if(tImg){ ctx.save(); ctx.clip('evenodd'); polyTileFill(tImg,S,ob.closed,ob.texScale); ctx.restore(); }
     else { if(ob.color){ ctx.fillStyle=ob.color; } else { const tg=ctx.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); ctx.fillStyle=tg; } ctx.fill('evenodd'); }
-    ctx.lineWidth=5; ctx.lineCap='round';
-    for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; const ax=a.x-camX,bx=b.x-camX; if((ax<-20&&bx<-20)||(ax>W+20&&bx>W+20)) continue;
-      ctx.strokeStyle=polyEdgeWall(a,b)?'#7a5360':'#6a5ca0'; ctx.beginPath(); ctx.moveTo(ax,a.y); ctx.lineTo(bx,b.y); ctx.stroke(); }
     ctx.restore(); } }
 function worldWeaponBox(spr, fi, x, y, facing){
   const wb = spr.weapon ? spr.weapon[fi] : null; if(!wb) return null;
