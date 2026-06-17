@@ -22,6 +22,43 @@ function fringePrompt(prompt, style) {
     + (style ? ` Art style: ${style}.` : '');
 }
 
+function fringeI2IPrompt(prompt, style) {
+  return `This image: the LOWER portion is a ground/surface material; the UPPER portion is pure solid magenta #FF00FF. `
+    + `Transform the TOP edge of the material into: ${prompt} — detailed organic tips/blades made of THAT SAME material, rising UP into the magenta. `
+    + `Keep the entire magenta area pure solid magenta #FF00FF and empty. Flat 2D side-scrolling game art, even flat lighting, no shadows, no scene, no characters.`
+    + (style ? ` Art style: ${style}.` : '');
+}
+const FAL_FLUX_I2I = 'https://fal.run/fal-ai/flux/dev/image-to-image';
+async function genFalI2I(full, imageDataUri, strength) {
+  const key = process.env.FAL_KEY;
+  if (!key) return { err: 'FAL_KEY is not set on the server' };
+  const r = await fetch(FAL_FLUX_I2I, { method: 'POST',
+    headers: { 'Authorization': 'Key ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: full, image_url: imageDataUri, strength: (strength || 0.78), num_images: 1, enable_safety_checker: true }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) return { err: (j.detail && (j.detail.message || JSON.stringify(j.detail))) || 'fal i2i error', status: r.status };
+  const url = j.images && j.images[0] && j.images[0].url;
+  if (!url) return { err: 'fal i2i returned no image', status: 502 };
+  const ir = await fetch(url); if (!ir.ok) return { err: 'could not fetch fal image', status: 502 };
+  const ab = await ir.arrayBuffer();
+  return { imageBase64: Buffer.from(ab).toString('base64'), mimeType: ir.headers.get('content-type') || 'image/png' };
+}
+async function genGeminiI2I(full, imageDataUri) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return { err: 'GEMINI_API_KEY is not set on the server' };
+  const mm = /^data:([^;]+);base64,(.*)$/.exec(imageDataUri) || [];
+  const mime = mm[1] || 'image/png', data = mm[2] || imageDataUri;
+  const payload = { contents: [{ role: 'user', parts: [{ inlineData: { mimeType: mime, data } }, { text: full }] }],
+    generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '1:1' } } };
+  const r = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(key)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) return { err: (j.error && j.error.message) || 'Gemini i2i error', status: r.status };
+  const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
+  const img = parts.find(p => p.inlineData && p.inlineData.data);
+  if (!img) return { err: 'Gemini returned no image', status: 502 };
+  return { imageBase64: img.inlineData.data, mimeType: img.inlineData.mimeType || 'image/png' };
+}
 async function genGemini(full) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return { err: 'GEMINI_API_KEY is not set on the server' };
@@ -82,11 +119,15 @@ module.exports = async (req, res) => {
     if (!prompt) return res.status(400).json({ error: 'prompt required' });
 
     if (mode === 'fringe') {
-      const full = fringePrompt(prompt, style);
-      const base = model === 'fal' ? await genFal(full) : await genGemini(full);
+      const hasImg = typeof body.image === 'string' && body.image.length > 200;   // composed input (texture bottom + magenta top) => derive blades from the real surface
+      let base;
+      if (hasImg) { const full = fringeI2IPrompt(prompt, style);
+        base = model === 'fal' ? await genFalI2I(full, body.image) : await genGeminiI2I(full, body.image); }
+      else { const full = fringePrompt(prompt, style);
+        base = model === 'fal' ? await genFal(full) : await genGemini(full); }
       if (base.err) return res.status(base.status || 500).json({ error: base.err, model, mode });
-      // returns the magenta-background base; the editor chroma-keys it to transparent (crisper than a matte model)
-      return res.status(200).json({ imageBase64: base.imageBase64, mimeType: base.mimeType || 'image/png', model, mode });
+      // returns magenta-background base; the editor chroma-keys it to transparent
+      return res.status(200).json({ imageBase64: base.imageBase64, mimeType: base.mimeType || 'image/png', model, mode, i2i: hasImg });
     }
 
     const full = texturePrompt(prompt, style);
