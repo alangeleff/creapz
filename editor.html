@@ -278,8 +278,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782230000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782230000');
+fetch('./assets/sprites.json?v=1782240000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782240000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1066,6 +1066,38 @@ function _esoftMask(){ if(!_esmaskC) _esmaskC=document.createElement('canvas'); 
 function polyEdPath(g,S,closed){ g.beginPath(); g.moveTo(sx(S[0].x),sy(S[0].y)); for(let i=1;i<S.length;i++) g.lineTo(sx(S[i].x),sy(S[i].y)); if(closed){ g.closePath(); } else { g.lineTo(sx(S[S.length-1].x),sy(M.h)); g.lineTo(sx(S[0].x),sy(M.h)); g.closePath(); } }
 function polyEdFill(g,o,S,base){ polyEdPath(g,S,o.closed); const tImg=o.tex?polyTexImgEd(o.tex):null; if(tImg){ g.save(); g.clip('evenodd'); polyTileFillEd(g,tImg,S,o.closed,o.texScale||1); g.restore(); } else { g.fillStyle=o.color||base; g.fill('evenodd'); } }
 function polyCycleEdge(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } histPush(); o.edge=(!o.edge||o.edge==='hard')?'soft':(o.edge==='soft'?'fringe':'hard'); if(o.edge==='soft'&&!o.feather)o.feather=24; if(o.edge==='fringe'){ if(!o.fringeH)o.fringeH=44; if(!o.fringeTex) toast('fringe mode — tap 🌿 Fringe to generate the edge'); } persist(); draw(); syncPolyUI(); if(o.edge!=='fringe') toast('edges: '+o.edge); }
+let _histOv=null;
+function ensureHistOv(){ if(_histOv) return _histOv; const ov=document.createElement('div'); ov.id='histOv'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
+  ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:16px;width:min(540px,94vw);max-height:82vh;overflow:auto;font-family:sans-serif;color:#e8e6f5">'
+   +'<div id="histTitle" style="font-size:15px;font-weight:600;margin-bottom:4px">History</div>'
+   +'<div style="font-size:12px;color:#9b93b5;margin-bottom:12px">Tap a result to apply it. Tap \u00d7 to delete a bad one.</div>'
+   +'<div id="histGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px"></div>'
+   +'<div style="text-align:right;margin-top:14px"><button id="histClose" style="background:#241f38;border:1px solid #3a3356;color:#cfc9e6;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer">Close</button></div></div>';
+  document.body.appendChild(ov); _histOv=ov;
+  ov.querySelector('#histClose').onclick=()=>{ ov.style.display='none'; };
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
+  return ov; }
+function renderHist(kind){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; }
+  const list=kind==='fringe'?(o.fringeList||[]):(o.texList||[]); const cur=kind==='fringe'?o.fringeTex:o.tex;
+  if(!list.length){ toast(kind==='fringe'?'no fringes generated yet':'no skins generated yet'); return; }
+  const ov=ensureHistOv(); ov.querySelector('#histTitle').textContent=(kind==='fringe'?'Fringe history':'Skin history')+' ('+list.length+')';
+  const grid=ov.querySelector('#histGrid'); grid.innerHTML='';
+  list.forEach((path,i)=>{ const cell=document.createElement('div'); cell.style.cssText='position:relative;border:2px solid '+(path===cur?'#c8fb50':'#2c2740')+';border-radius:8px;overflow:hidden;cursor:pointer;background:#0f0c1a;aspect-ratio:1';
+    const im=document.createElement('img'); im.src=(POLYTEX_ED[path]&&POLYTEX_ED[path].src)?POLYTEX_ED[path].src:path; im.style.cssText='width:100%;height:100%;object-fit:cover;display:block'; cell.appendChild(im);
+    const del=document.createElement('button'); del.textContent='\u00d7'; del.title='Delete this result'; del.style.cssText='position:absolute;top:3px;right:3px;width:24px;height:24px;border:none;border-radius:50%;background:rgba(15,8,22,.82);color:#ff8a8a;font-size:16px;line-height:1;cursor:pointer';
+    del.onclick=(e)=>{ e.stopPropagation(); deleteHist(kind,i); };
+    cell.onclick=()=>{ applyHist(kind,i); };
+    grid.appendChild(cell); });
+  ov.style.display='flex'; }
+function applyHist(kind,i){ const o=M.poly&&M.poly[polyActive]; if(!o) return; histPush();
+  if(kind==='fringe'){ o.fringeTex=o.fringeList[i]; o.fringeIdx=i; o.edge='fringe'; }
+  else { o.tex=o.texList[i]; o.texIdx=i; }
+  persist(); draw(); syncPolyUI(); if(_histOv)_histOv.style.display='none'; toast('applied'); }
+function deleteHist(kind,i){ const o=M.poly&&M.poly[polyActive]; if(!o) return; histPush();
+  const list=kind==='fringe'?o.fringeList:o.texList; if(!list||i>=list.length) return; const removed=list[i]; list.splice(i,1);
+  if(kind==='fringe'){ if(o.fringeTex===removed){ o.fringeTex=list.length?list[Math.min(i,list.length-1)]:null; if(!o.fringeTex && o.edge==='fringe') o.edge='hard'; } o.fringeIdx=o.fringeTex?list.indexOf(o.fringeTex):0; }
+  else { if(o.tex===removed){ o.tex=list.length?list[Math.min(i,list.length-1)]:null; } o.texIdx=o.tex?list.indexOf(o.tex):0; }
+  persist(); draw(); syncPolyUI(); if(list.length) renderHist(kind); else { if(_histOv)_histOv.style.display='none'; toast('history empty'); } }
 function polyCycleTex(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.texList||o.texList.length<2){ toast('only one texture for this shape'); return; } o.texIdx=((o.texIdx==null?o.texList.length-1:o.texIdx)-1+o.texList.length)%o.texList.length; o.tex=o.texList[o.texIdx]; persist(); draw(); toast('texture '+(o.texIdx+1)+'/'+o.texList.length); }
 function polyCycleFringe(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.fringeList||o.fringeList.length<2){ toast('only one fringe for this shape'); return; } o.fringeIdx=((o.fringeIdx==null?o.fringeList.length-1:o.fringeIdx)-1+o.fringeList.length)%o.fringeList.length; o.fringeTex=o.fringeList[o.fringeIdx]; o.edge='fringe'; persist(); draw(); toast('fringe '+(o.fringeIdx+1)+'/'+o.fringeList.length); }
 function syncPolyUI(){ const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); const o=M.poly&&M.poly[polyActive]; const ts=document.getElementById('polyTexScale'); const op=document.getElementById('polyOpac'); const be=document.getElementById('bPolyEdge'); if(!o) return; if(ts) ts.value=(o.texScale||1); if(op) op.value=(o.alpha!==undefined?o.alpha:1); if(be) be.textContent=(o.edge==='fringe'?'\ud83c\udf3f fringe':('\u25e1 '+(o.edge||'hard'))); const pf=document.getElementById('polyFeather'); if(pf) pf.value=(o.feather||24); const fh=document.getElementById('polyFringeH'); if(fh) fh.value=(o.fringeH||44); const ft=document.getElementById('polyFringeTrim'); if(ft) ft.value=Math.round((o.fringeTrim||0)*100); }
@@ -1215,9 +1247,9 @@ function drawPolyLabels(){ if(!M.poly) return; ctx.textAlign='center'; ctx.font=
   { const ts=document.getElementById('polyTexScale'); if(ts) ts.addEventListener('input',function(){ const o=M.poly&&M.poly[polyActive]; if(o){ o.texScale=+this.value; persist(); draw(); } }); }
   { const op=document.getElementById('polyOpac'); if(op) op.addEventListener('input',function(){ const o=M.poly&&M.poly[polyActive]; if(o){ o.alpha=+this.value; persist(); draw(); } }); }
   { const pf=document.getElementById('polyFeather'); if(pf) pf.addEventListener('input',function(){ const o=M.poly&&M.poly[polyActive]; if(o){ o.feather=+this.value; if(o.edge!=='soft'){ o.edge='soft'; const be=document.getElementById('bPolyEdge'); if(be) be.textContent='\u25e1 soft'; } persist(); draw(); } }); }
-  mk('bPolyEdge',polyCycleEdge); mk('bPolyTexHist',polyCycleTex); mk('bPolyFringe',polyGenFringe);
+  mk('bPolyEdge',polyCycleEdge); mk('bPolyTexHist',()=>renderHist('tex')); mk('bPolyFringe',polyGenFringe);
   { const fh=document.getElementById('polyFringeH'); if(fh) fh.addEventListener('input',function(){ const o=M.poly&&M.poly[polyActive]; if(o){ o.fringeH=+this.value; if(o.edge!=='fringe'&&o.fringeTex)o.edge='fringe'; persist(); draw(); } }); }
-  mk('bPolyFringeHist',polyCycleFringe);
+  mk('bPolyFringeHist',()=>renderHist('fringe'));
   { const ft=document.getElementById('polyFringeTrim'); if(ft) ft.addEventListener('input',function(){ const o=M.poly&&M.poly[polyActive]; if(o){ o.fringeTrim=(+this.value)/100; if(o.edge!=='fringe'&&o.fringeTex)o.edge='fringe'; persist(); draw(); } }); }
 })();
 function draw(){
