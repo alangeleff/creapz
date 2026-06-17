@@ -1,4 +1,4 @@
-const ASSET_VER='1782190000';
+const ASSET_VER='1782200000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1246,7 +1246,8 @@ function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex)
   let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
   const iw=img.naturalWidth, ih=img.naturalHeight, fb=fringeBounds(img), sY=fb.ct*ih, sH=Math.max(1,(fb.cb-fb.ct)*ih), sX0=fb.cl*iw, sW=Math.max(1,(fb.cr-fb.cl)*iw), tileW=H*sW/sH, step=4, drop=Math.min(Math.round(H*0.08),9); ctx.save(); ctx.globalAlpha=alpha;
   for(let x=Math.floor(x0); x<=x1; x+=step){ const sy=polyObjTop(S,Math.min(x1-0.5,Math.max(x0,x))); if(sy==null) continue;
-    const u=sX0+(((x-x0)%tileW)/tileW)*sW, sw=Math.max(1,(step/tileW)*sW);
+    let frac=((x-x0)%tileW)/tileW; if(Math.floor((x-x0)/tileW)&1) frac=1-frac;
+    const u=sX0+frac*sW, sw=Math.max(1,(step/tileW)*sW);
     ctx.drawImage(img, u,sY, sw,sH, x-camX, sy-H+drop, step+1, H); }
   ctx.restore(); }
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
