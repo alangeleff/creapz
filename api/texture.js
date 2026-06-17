@@ -8,6 +8,7 @@ const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models
 const FAL_FLUX = 'https://fal.run/fal-ai/flux/dev';
 const FAL_REMBG = 'https://fal.run/fal-ai/imageutils/rembg';
 
+function singleI2IPrompt(prompt, style){ return `The image is a WHITE silhouette on a BLACK background. Repaint the white silhouette as: ${prompt} — a single detailed ${prompt} that completely FILLS the silhouette and exactly matches its shape (the silhouette IS the object's outline). Keep the BLACK background pure black and empty. 2D side-scrolling game art, flat even lighting, no scene, no ground, no extra objects, no text.`+(style?` Art style: ${style}.`:''); }
 function singlePrompt(prompt, style) {
   return `A single complete ${prompt} as ONE image filling the entire frame edge to edge, 2D side-scrolling video-game art, stylized and painterly, centered and filling the frame. This is a single object/scene, NOT a repeating tile or pattern. No UI, no text, no border.`
     + (style ? ` Art style: ${style}.` : '');
@@ -134,10 +135,13 @@ module.exports = async (req, res) => {
       return res.status(200).json({ imageBase64: base.imageBase64, mimeType: base.mimeType || 'image/png', model, mode, i2i: hasImg });
     }
 
-    const full = (body.fill === 'single') ? singlePrompt(prompt, style) : texturePrompt(prompt, style);
-    const out = model === 'fal' ? await genFal(full) : await genGemini(full);
+    const single = body.fill === 'single';
+    const hasImg = typeof body.image === 'string' && body.image.length > 200;
+    let out;
+    if (single && hasImg) { const full = singleI2IPrompt(prompt, style); out = model === 'fal' ? await genFalI2I(full, body.image, 0.85) : await genGeminiI2I(full, body.image); }
+    else { const full = single ? singlePrompt(prompt, style) : texturePrompt(prompt, style); out = model === 'fal' ? await genFal(full) : await genGemini(full); }
     if (out.err) return res.status(out.status || 500).json({ error: out.err, model });
-    return res.status(200).json({ imageBase64: out.imageBase64, mimeType: out.mimeType, model, mode, fill: (body.fill==='single'?'single':'pattern') });
+    return res.status(200).json({ imageBase64: out.imageBase64, mimeType: out.mimeType, model, mode, fill: (single?'single':'pattern'), i2i: (single&&hasImg) });
   } catch (e) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }

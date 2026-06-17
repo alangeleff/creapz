@@ -278,8 +278,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782260000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782260000');
+fetch('./assets/sprites.json?v=1782270000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782270000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1127,6 +1127,14 @@ function ensureTexModal(){ if(_texModal) return _texModal;
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
   ov.querySelector('#texGo').onclick=()=>{ const d=ov.querySelector('#texPrompt').value.trim(); if(!d){ toast('enter a description'); return; } ov.style.display='none'; doGenTex(d,_texModel,_texMode); };
   return ov; }
+function buildSingleInput(o){ try{ const S=polySamplesNs(o.nodes, !!o.closed); if(!S||S.length<2) return null;
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } if(!o.closed) y1=M.h;
+  const bw=Math.max(1,x1-x0), bh=Math.max(1,y1-y0), sc=1024/Math.max(bw,bh), W=Math.max(8,Math.round(bw*sc)), H=Math.max(8,Math.round(bh*sc));
+  const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+  x.fillStyle='#000'; x.fillRect(0,0,W,H); x.fillStyle='#fff'; x.beginPath(); x.moveTo((S[0].x-x0)*sc,(S[0].y-y0)*sc);
+  for(let i=1;i<S.length;i++) x.lineTo((S[i].x-x0)*sc,(S[i].y-y0)*sc);
+  if(o.closed){ x.closePath(); } else { x.lineTo((S[S.length-1].x-x0)*sc,(M.h-y0)*sc); x.lineTo((S[0].x-x0)*sc,(M.h-y0)*sc); x.closePath(); }
+  x.fill('evenodd'); return c.toDataURL('image/png'); }catch(e){ return null; } }
 function buildFringeInput(o){ return new Promise((resolve)=>{ const tImg = o.tex?POLYTEX_ED[o.tex]:null; if(!tImg){ resolve(null); return; }
   const go=()=>{ try{ const Sz=1024, band=Math.round(Sz*0.6), top=Sz-band; const c=document.createElement('canvas'); c.width=Sz; c.height=Sz; const x=c.getContext('2d');
     x.fillStyle='#ff00ff'; x.fillRect(0,0,Sz,Sz);
@@ -1142,8 +1150,9 @@ function keyFringeB64(b64,mime){ return new Promise((resolve)=>{ const base=new 
 function polyGenTex(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='texture'; const ov=ensureTexModal(); ov.querySelector('#texTitle').textContent='Skin this shape'; ov.querySelector('#texDesc').textContent='Describe the skin. Pattern = repeating material; Single = one image fit to the shape (a scene, a boulder, etc).'; _texFill=o.fillMode||'pattern'; const ff=ov.querySelector('#texFillRow'); if(ff)ff.style.display='block'; ov.querySelector('#texFPattern').classList.toggle('sel',_texFill==='pattern'); ov.querySelector('#texFSingle').classList.toggle('sel',_texFill==='single'); const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
 function polyGenFringe(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='fringe'; const ov=ensureTexModal(); const ff=ov.querySelector('#texFillRow'); if(ff)ff.style.display='none'; ov.querySelector('#texTitle').textContent='Generate fringe edge'; ov.querySelector('#texDesc').textContent='Describe the top edge — grass blades, mossy rim, rocky teeth. Generated transparent and placed along the surface.'; const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
 async function doGenTex(desc,model,mode){ mode=mode||'texture'; const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; }
-  let inputImg=null;   // img2img-from-texture disabled: it preserved a flat band instead of making blades; text-driven blades look better
-  toast(mode==='fringe'&&inputImg?'generating fringe from your texture ('+model+')…':'generating ('+model+')…');
+  let inputImg=null;
+  if(mode==='texture' && _texFill==='single'){ inputImg=buildSingleInput(o); }   // single fill: condition the gen on the shape's silhouette
+  toast(inputImg?'generating to fit your shape ('+model+')…':'generating ('+model+')…');
   try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model, mode, fill:_texFill, image:inputImg||undefined})});
     const j=await r.json().catch(()=>({})); if(!r.ok||!j.imageBase64){ toast('gen failed: '+(j.error||'no image')); return; }
     const outB64 = (mode==='fringe') ? await keyFringeB64(j.imageBase64, j.mimeType) : j.imageBase64;
