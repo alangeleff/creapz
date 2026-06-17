@@ -276,8 +276,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782100000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782100000');
+fetch('./assets/sprites.json?v=1782110000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782110000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1086,7 +1086,7 @@ function ensureTexModal(){ if(_texModal) return _texModal;
   ov.querySelector('#texGo').onclick=()=>{ const d=ov.querySelector('#texPrompt').value.trim(); if(!d){ toast('enter a description'); return; } ov.style.display='none'; doGenTex(d,_texModel,_texMode); };
   return ov; }
 function keyFringeB64(b64,mime){ return new Promise((resolve)=>{ const base=new Image(); base.onload=()=>{ try{ const c=document.createElement('canvas'); c.width=base.naturalWidth; c.height=base.naturalHeight; const x=c.getContext('2d'); x.drawImage(base,0,0); const d=x.getImageData(0,0,c.width,c.height), p=d.data;
-  for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2]; const dist=Math.abs(r-255)+g+Math.abs(b-255); if(dist<140){ p[i+3]=0; } else if(dist<260){ p[i+3]=Math.round(p[i+3]*(dist-140)/120); } }
+  for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2]; const m=Math.min(r,b)-g; if(m>60){ p[i+3]=0; } else if(m>10){ const t=(m-10)/50; p[i+3]=Math.round(p[i+3]*(1-t)); p[i]=Math.round(g+(r-g)*(1-t)); p[i+2]=Math.round(g+(b-g)*(1-t)); } }
   x.putImageData(d,0,0); resolve(c.toDataURL('image/png').split(',')[1]); }catch(e){ resolve(b64); } };
   base.onerror=()=>resolve(b64); base.src='data:'+(mime||'image/png')+';base64,'+b64; }); }
 function polyGenTex(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } _texMode='texture'; const ov=ensureTexModal(); ov.querySelector('#texTitle').textContent='Skin this shape'; ov.querySelector('#texDesc').textContent='Describe the texture as a tileable surface material.'; const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
@@ -1145,9 +1145,9 @@ function addShape(){ histPush(); const cx=Math.round(camx+(CW/2)/zoom), cy=Math.
 function addMainPoly(){ histPush(); const y=380, Wd=M.world, nodes=[]; for(let i=0;i<6;i++) nodes.push({x:Math.round(i*Wd/5),y,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true});
   M.poly=M.poly||[]; M.poly.push({nodes,closed:false,layer:'main'}); polyActive=M.poly.length-1; polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); persist(); draw(); if(typeof toast==='function')toast('polyline added (shape '+(polyActive+1)+') — tap a shape to select it'); }
 function polyObjTopEd(S,x){ let top=null; for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); const y=a.y+(b.y-a.y)*t; if(top==null||y<top) top=y; } } return top; }
-function drawEditorFringe(o,S){ const img=o.fringeTex?polyTexImgEd(o.fringeTex):null; if(!img) return; const H=o.fringeH||44; const tileW=160*(o.fringeScale||1);
+function drawEditorFringe(o,S){ const img=o.fringeTex?polyTexImgEd(o.fringeTex):null; if(!img) return; const H=o.fringeH||44;
   let x0=1e9,x1=-1e9; for(const sm of S){ if(sm.x<x0)x0=sm.x; if(sm.x>x1)x1=sm.x; }
-  const step=4, iw=img.naturalWidth, ih=img.naturalHeight;
+  const iw=img.naturalWidth, ih=img.naturalHeight, tileW=H*iw/Math.max(1,ih), step=4;
   for(let x=Math.floor(x0); x<=x1; x+=step){ const ty=polyObjTopEd(S,x); if(ty==null) continue;
     const u=(((x-x0)%tileW)/tileW)*iw, sw=Math.max(1,(step/tileW)*iw), drop=H*0.2*zoom;
     ctx.drawImage(img, u,0, sw,ih, sx(x), sy(ty)-H*zoom+drop, step*zoom+1, H*zoom); } }
