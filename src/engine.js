@@ -1,4 +1,4 @@
-const ASSET_VER='1782030000';
+const ASSET_VER='1782040000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();

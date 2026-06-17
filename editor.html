@@ -274,8 +274,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782030000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782030000');
+fetch('./assets/sprites.json?v=1782040000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782040000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1064,16 +1064,35 @@ function polyEdFill(g,o,S,base){ polyEdPath(g,S,o.closed); const tImg=o.tex?poly
 function polyCycleEdge(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } histPush(); o.edge=(o.edge==='soft')?'hard':'soft'; if(o.edge==='soft'&&!o.feather)o.feather=24; persist(); draw(); syncPolyUI(); toast('edges: '+o.edge); }
 function polyCycleTex(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.texList||o.texList.length<2){ toast('only one texture for this shape'); return; } o.texIdx=((o.texIdx==null?o.texList.length-1:o.texIdx)-1+o.texList.length)%o.texList.length; o.tex=o.texList[o.texIdx]; persist(); draw(); toast('texture '+(o.texIdx+1)+'/'+o.texList.length); }
 function syncPolyUI(){ const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); const o=M.poly&&M.poly[polyActive]; const ts=document.getElementById('polyTexScale'); const op=document.getElementById('polyOpac'); const be=document.getElementById('bPolyEdge'); if(!o) return; if(ts) ts.value=(o.texScale||1); if(op) op.value=(o.alpha!==undefined?o.alpha:1); if(be) be.textContent='\u25e1 '+(o.edge||'hard'); const pf=document.getElementById('polyFeather'); if(pf) pf.value=(o.feather||24); }
-async function polyGenTex(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; }
-  const desc=prompt('Describe this shape\'s texture (e.g. "mossy graveyard stone", "stormy purple clouds", "gnarled dark bark"):'); if(!desc) return;
-  toast('generating texture\u2026');
-  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||''})});
+let _texModel='gemini', _texModal=null;
+function ensureTexModal(){ if(_texModal) return _texModal;
+  const ov=document.createElement('div'); ov.id='texModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
+  ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:18px;width:min(440px,92vw);box-shadow:0 18px 60px rgba(0,0,0,.5);font-family:sans-serif;color:#e8e6f5">'
+   +'<div style="font-size:15px;font-weight:600;margin-bottom:4px">Skin this shape</div>'
+   +'<div style="font-size:12px;color:#9b93b5;margin-bottom:10px">Describe the texture as a tileable surface material.</div>'
+   +'<textarea id="texPrompt" rows="3" placeholder="mossy graveyard stone" style="width:100%;box-sizing:border-box;background:#0f0c1a;border:1px solid #2c2740;border-radius:8px;color:#e8e6f5;padding:8px;font-size:13px;resize:vertical"></textarea>'
+   +'<div style="font-size:12px;color:#9b93b5;margin:12px 0 6px">Image model</div>'
+   +'<div style="display:flex;gap:8px"><button id="texMGemini" class="texMbtn">Gemini</button><button id="texMFal" class="texMbtn">FAL / FLUX</button></div>'
+   +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button id="texCancel" class="texCbtn">Cancel</button><button id="texGo" class="texGbtn">Generate</button></div></div>';
+  document.body.appendChild(ov); _texModal=ov;
+  const st=document.createElement('style'); st.textContent='.texMbtn{flex:1;background:#0f0c1a;border:1px solid #2c2740;color:#cfc9e6;border-radius:8px;padding:9px;font-size:13px;cursor:pointer}.texMbtn.sel{background:#c8fb50;color:#13160a;border-color:#c8fb50;font-weight:600}.texCbtn{background:#241f38;border:1px solid #3a3356;color:#cfc9e6;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}.texGbtn{background:#c8fb50;border:none;color:#13160a;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}'; document.head.appendChild(st);
+  const gm=ov.querySelector('#texMGemini'), fl=ov.querySelector('#texMFal');
+  function pick(m){ _texModel=m; gm.classList.toggle('sel',m==='gemini'); fl.classList.toggle('sel',m==='fal'); }
+  gm.onclick=()=>pick('gemini'); fl.onclick=()=>pick('fal'); pick(_texModel);
+  ov.querySelector('#texCancel').onclick=()=>{ ov.style.display='none'; };
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
+  ov.querySelector('#texGo').onclick=()=>{ const d=ov.querySelector('#texPrompt').value.trim(); if(!d){ toast('enter a description'); return; } ov.style.display='none'; doGenTex(d,_texModel); };
+  return ov; }
+function polyGenTex(){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; } const ov=ensureTexModal(); const t=ov.querySelector('#texPrompt'); if(t)t.value=''; ov.style.display='flex'; setTimeout(()=>{ if(t)t.focus(); },30); }
+async function doGenTex(desc,model){ const o=M.poly&&M.poly[polyActive]; if(!o){ toast('select a shape first'); return; }
+  toast('generating ('+model+')…');
+  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model})});
     const j=await r.json().catch(()=>({})); if(!r.ok||!j.imageBase64){ toast('gen failed: '+(j.error||'no image')); return; }
     const id='tex_'+Date.now().toString(36), path='./config/textures/'+id+'.png';
     const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src='data:'+(j.mimeType||'image/png')+';base64,'+j.imageBase64; POLYTEX_ED[path]=im;   // instant preview
     histPush(); o.texList=o.texList||(o.tex?[o.tex]:[]); o.texList.push(path); o.texIdx=o.texList.length-1; o.tex=path; persist(); draw();
     toast('committing texture\u2026');
-    const res=await commitFiles([{path:'config/textures/'+id+'.png', content:j.imageBase64, encoding:'base64'}], 'texture: '+desc.slice(0,40));
+    const res=await commitFiles([{path:'config/textures/'+id+'.png', content:j.imageBase64, encoding:'base64'}], 'texture('+model+'): '+desc.slice(0,40));
     toast(res?'texture applied \u2713':'texture shown but not saved (commit failed)');
   }catch(e){ toast('gen error: '+e.message); } }
 function polyBBox(ns){ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for(const n of ns){ if(n.x<x0)x0=n.x; if(n.x>x1)x1=n.x; if(n.y<y0)y0=n.y; if(n.y>y1)y1=n.y; } return {x0,y0,x1,y1}; }
