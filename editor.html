@@ -173,6 +173,9 @@
    <button class="btn" id="bNew">✦ New Stage</button>
    <button class="btn" id="mPoly" title="Terrain sculpt mode (polyline ground)">⛰ Terrain</button>
    <button class="btn" id="bAddPoly" title="Add a main ground polyline across the stage">+ Polyline</button>
+   <button class="btn" id="mPBreak" title="Terrain: break handle (independent in/out curve)">✂</button>
+   <button class="btn" id="mPWall" title="Terrain: paint wall segments">🧱</button>
+   <button class="btn" id="mPLock" title="Terrain: lock a node">🔒</button>
   </div>
   <div id="cvWrap">
    <canvas id="cv"></canvas>
@@ -259,8 +262,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1781870000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781870000');
+fetch('./assets/sprites.json?v=1781880000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781880000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -774,7 +777,7 @@ cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.s
  if(ptrs.size===2){ const p=[...ptrs.values()]; pinch={d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),z:zoom,
    mx:(p[0].x+p[1].x)/2,my:(p[0].y+p[1].y)/2, bx:wx((p[0].x+p[1].x)/2),by:wy((p[0].y+p[1].y)/2)}; act=null; return; }
  const c=cvxy(e), wxp=wx(c.x),wyp=wy(c.y);
- if(polyMode){ if(!polyDown(wxp,wyp)){ act={mode:'pan',px:c.x,py:c.y,cx:camx,cy:camy}; } return; }
+ if(polyMode){ if(!polyDown(wxp,wyp,e.altKey)){ act={mode:'pan',px:c.x,py:c.y,cx:camx,cy:camy}; } return; }
  if(ruler){ const e1=Math.hypot(c.x-sx(ruler.x1),c.y-sy(ruler.y1)), e2=Math.hypot(c.x-sx(ruler.x2),c.y-sy(ruler.y2)); if(e1<18){ act={mode:'ruler',pt:1}; return; } if(e2<18){ act={mode:'ruler',pt:2}; return; } }
  if(eraseMode){ const h=hit(wxp,wyp); if(h){ histPush(); delObj(h); persist(); draw(); } return; }
  if(bulkArm){ const h=hit(wxp,wyp); bulkArm=false; const mb=document.getElementById('mBulk'); if(mb)mb.classList.remove('on');
@@ -803,7 +806,10 @@ cv.addEventListener('pointermove',e=>{
  if(act.mode==='ruler'){ if(act.pt===1){ ruler.x1=snap(wx(c.x)); ruler.y1=snap(wy(c.y)); } else { ruler.x2=snap(wx(c.x)); ruler.y2=snap(wy(c.y)); } draw(); return; }
 });
 function endPtr(e){ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null;
- if(polyDrag){ polyDrag=null; persist(); }
+ if(polyDrag){ if(polyDrag.kind==='node' && !polyDrag.moved){ const n=polyDrag.n, now=performance.now();
+     if(polyLastTapNode===n && now-polyLastTapT<350){ const i=M.poly.indexOf(n); if(i>=0 && M.poly.length>2) M.poly.splice(i,1); polyLastTapNode=null; }
+     else { n.corner=!n.corner; polyLastTapNode=n; polyLastTapT=now; } }
+   polyDrag=null; persist(); draw(); }
  if(ptrs.size===0){ if(act&&(act.mode==='move'||act.mode==='handle'||act.mode==='gmove')&&act.moved&&act.pre){ undoStack.push(act.pre); if(undoStack.length>80)undoStack.shift(); redoStack.length=0; updHist(); } act=null; } }
 cv.addEventListener('pointerup',endPtr); cv.addEventListener('pointercancel',endPtr);
 
@@ -989,8 +995,10 @@ function drawRuler(){ if(!ruler) return;
   ctx.font='bold 13px sans-serif'; const tw=ctx.measureText(txt).width;
   ctx.fillStyle='#0a2233e8'; ctx.fillRect(mx-tw/2-7,my-26,tw+14,20); ctx.fillStyle='#bfe9ff'; ctx.textAlign='center'; ctx.fillText(txt,mx,my-12); ctx.textAlign='left';
 }
-// ===== POLYLINE TERRAIN TOOL (Phase 2a: data + render + node add/drag; additive, only touches M.poly) =====
-let polyMode=false, polyDrag=null;
+// ===== POLYLINE TERRAIN TOOL (Phase 2b) — additive, only touches M.poly =====
+let polyMode=false, polyBreakMode=false, polyWallMode=false, polyLockMode=false;
+let polyDrag=null, polyLastTapNode=null, polyLastTapT=0;
+const POLY_MAXSLOPE_ED=1.3;
 function polyEnsureH(ns){ for(let i=0;i<ns.length;i++){ const n=ns[i]; if(!n.ho){n.ho={x:0,y:0};n.hi={x:0,y:0};n.ha=true;}
   if(n.ha){ const p=ns[i-1]||n,q=ns[i+1]||n; const tx=(q.x-p.x)/6,ty=(q.y-p.y)/6; n.ho={x:tx,y:ty}; n.hi={x:-tx,y:-ty}; } } }
 function polySamplesFor(ns){ polyEnsureH(ns); const out=[]; if(ns.length<2) return out;
@@ -998,31 +1006,65 @@ function polySamplesFor(ns){ polyEnsureH(ns); const out=[]; if(ns.length<2) retu
     const P1=A.corner?{x:A.x+(B.x-A.x)/3,y:A.y+(B.y-A.y)/3}:{x:A.x+A.ho.x,y:A.y+A.ho.y};
     const P2=B.corner?{x:B.x+(A.x-B.x)/3,y:B.y+(A.y-B.y)/3}:{x:B.x+B.hi.x,y:B.y+B.hi.y};
     const steps=Math.max(3,Math.min(120,Math.round(Math.hypot(B.x-A.x,B.y-A.y)/8)));
-    for(let sp=(i===0?0:1);sp<=steps;sp++){ const t=sp/steps,u=1-t; out.push({x:u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, y:u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y}); } }
+    for(let sp=(i===0?0:1);sp<=steps;sp++){ const t=sp/steps,u=1-t; out.push({x:u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, y:u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y, seg:i}); } }
   return out; }
+function polyEdgeWall(a,b){ const nd=M.poly[a.seg]; const c=(nd&&nd.wn)||'auto'; if(c==='wall')return true; if(c==='ground')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE_ED; }
 function polyNodeAt(wxp,wyp){ if(!M.poly) return null; const r=14/zoom; let best=null,bd=r; for(const n of M.poly){ const d=Math.hypot(n.x-wxp,n.y-wyp); if(d<bd){bd=d;best=n;} } return best; }
-function polyDistToCurve(wxp,wyp){ if(!M.poly||M.poly.length<2) return 1e9; const S=polySamplesFor(M.poly); let bd=1e9;
-  for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; const vx=b.x-a.x,vy=b.y-a.y,L=vx*vx+vy*vy||1; let t=Math.max(0,Math.min(1,((wxp-a.x)*vx+(wyp-a.y)*vy)/L)); const d=Math.hypot(wxp-(a.x+t*vx),wyp-(a.y+t*vy)); if(d<bd)bd=d; } return bd; }
-function polyDown(wxp,wyp){ if(!M.poly||M.poly.length===0) return false;
-  const hit=polyNodeAt(wxp,wyp); if(hit){ histPush(); polyDrag=hit; return true; }                 // grab a node
-  if(polyDistToCurve(wxp,wyp) < 24/zoom){ histPush();                                               // tapped ON/near the line -> insert
-    const n={x:Math.round(wxp),y:Math.round(wyp),corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true};
-    M.poly.push(n); M.poly.sort((a,b)=>a.x-b.x); polyDrag=n; persist(); draw(); return true; }
-  return false; }                                                                                   // empty space -> not handled (pan)
-function polyMove(wxp,wyp){ if(!polyDrag) return; polyDrag.x=Math.round(wxp); polyDrag.y=Math.round(wyp); persist(); draw(); }
-function addMainPoly(){ histPush(); const y=380, Wd=M.world; M.poly=[]; const n=6;
-  for(let i=0;i<n;i++) M.poly.push({x:Math.round(i*Wd/(n-1)),y,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true});
-  polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); persist(); draw(); if(typeof toast==='function')toast('main polyline added — Terrain mode on'); }
+function polyHandleAt(wxp,wyp){ if(!M.poly||polyWallMode||polyLockMode) return null; const r=13/zoom; for(const n of M.poly){ if(n.corner||n.locked) continue;
+  if(Math.hypot(wxp-(n.x+n.ho.x),wyp-(n.y+n.ho.y))<r) return {n,side:'o'}; if(Math.hypot(wxp-(n.x+n.hi.x),wyp-(n.y+n.hi.y))<r) return {n,side:'i'}; } return null; }
+function polyDistSeg(px,py,a,b){ const vx=b.x-a.x,vy=b.y-a.y,L=vx*vx+vy*vy||1; let t=Math.max(0,Math.min(1,((px-a.x)*vx+(py-a.y)*vy)/L)); return Math.hypot(px-(a.x+t*vx),py-(a.y+t*vy)); }
+function polyNearestSegIdx(wxp,wyp){ if(!M.poly||M.poly.length<2) return -1; const S=polySamplesFor(M.poly); let bs=-1,bd=24/zoom; for(let i=1;i<S.length;i++){ const d=polyDistSeg(wxp,wyp,S[i-1],S[i]); if(d<bd){bd=d;bs=S[i].seg;} } return bs; }
+function polyDistToCurve(wxp,wyp){ if(!M.poly||M.poly.length<2) return 1e9; const S=polySamplesFor(M.poly); let bd=1e9; for(let i=1;i<S.length;i++){ const d=polyDistSeg(wxp,wyp,S[i-1],S[i]); if(d<bd)bd=d; } return bd; }
+function polyEffOut(i){ const A=M.poly[i],B=M.poly[i+1]; if(!B)return{x:0,y:0}; return A.corner?{x:(B.x-A.x)/3,y:(B.y-A.y)/3}:{x:A.ho.x,y:A.ho.y}; }
+function polyEffIn(i){ const A=M.poly[i],P=M.poly[i-1]; if(!P)return{x:0,y:0}; return A.corner?{x:(P.x-A.x)/3,y:(P.y-A.y)/3}:{x:A.hi.x,y:A.hi.y}; }
+function polyNearestCurve(wxp,wyp){ let bi=-1,bt=0,bd=1e9; for(let i=0;i<M.poly.length-1;i++){ const A=M.poly[i],B=M.poly[i+1],ao=polyEffOut(i),bn=polyEffIn(i+1); const P1={x:A.x+ao.x,y:A.y+ao.y},P2={x:B.x+bn.x,y:B.y+bn.y}; for(let s=0;s<=24;s++){ const t=s/24,u=1-t; const qx=u*u*u*A.x+3*u*u*t*P1.x+3*u*t*t*P2.x+t*t*t*B.x, qy=u*u*u*A.y+3*u*u*t*P1.y+3*u*t*t*P2.y+t*t*t*B.y; const d=Math.hypot(wxp-qx,wyp-qy); if(d<bd){bd=d;bi=i;bt=t;} } } return {seg:bi,t:bt}; }
+function polySplitAt(i,t){ const A=M.poly[i],B=M.poly[i+1]; const aIn=polyEffIn(i),aOut=polyEffOut(i),bIn=polyEffIn(i+1),bOut=polyEffOut(i+1);
+  const P0={x:A.x,y:A.y},P1={x:A.x+aOut.x,y:A.y+aOut.y},P2={x:B.x+bIn.x,y:B.y+bIn.y},P3={x:B.x,y:B.y};
+  const lp=(u,v)=>({x:u.x+(v.x-u.x)*t,y:u.y+(v.y-u.y)*t});
+  const Q0=lp(P0,P1),Q1=lp(P1,P2),Q2=lp(P2,P3),R0=lp(Q0,Q1),R1=lp(Q1,Q2),S=lp(R0,R1);
+  let M2;
+  if(A.corner&&B.corner){ M2={x:Math.round(S.x),y:Math.round(S.y),corner:true,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true}; }
+  else { A.corner=false; A.ha=false; A.brk=true; A.ho={x:Q0.x-A.x,y:Q0.y-A.y}; A.hi={x:aIn.x,y:aIn.y};
+    B.corner=false; B.ha=false; B.brk=true; B.hi={x:Q2.x-B.x,y:Q2.y-B.y}; B.ho={x:bOut.x,y:bOut.y};
+    M2={x:Math.round(S.x),y:Math.round(S.y),corner:false,wn:'auto',ha:false,brk:true,hi:{x:R0.x-S.x,y:R0.y-S.y},ho:{x:R1.x-S.x,y:R1.y-S.y}}; }
+  M.poly.splice(i+1,0,M2); return M2; }
+function polyDown(wxp,wyp,alt){ if(!M.poly||M.poly.length===0) return false;
+  if(polyWallMode){ const seg=polyNearestSegIdx(wxp,wyp); if(seg>=0){ histPush(); const nd=M.poly[seg]; nd.wn = nd.wn==='wall'?'ground':(nd.wn==='ground'?'auto':'wall'); persist(); draw(); return true; } return false; }
+  if(polyLockMode){ const n=polyNodeAt(wxp,wyp); if(n){ histPush(); n.locked=!n.locked; persist(); draw(); return true; } return false; }
+  const h=polyHandleAt(wxp,wyp); if(h){ histPush(); polyDrag={kind:'handle',n:h.n,side:h.side,brk:(polyBreakMode||alt)}; return true; }
+  const n=polyNodeAt(wxp,wyp); if(n){ if(n.locked) return true; histPush(); polyDrag={kind:'node',n,moved:false}; return true; }
+  if(polyDistToCurve(wxp,wyp) < 24/zoom){ histPush(); const nc=polyNearestCurve(wxp,wyp); const m=polySplitAt(nc.seg,nc.t); polyDrag={kind:'node',n:m,moved:false}; persist(); draw(); return true; }
+  return false; }
+function polyMove(wxp,wyp){ if(!polyDrag) return;
+  if(polyDrag.kind==='handle'){ const n=polyDrag.n; n.ha=false; const vx=wxp-n.x, vy=wyp-n.y;
+    if(polyDrag.side==='o'){ n.ho={x:vx,y:vy}; if(!polyDrag.brk){ n.hi={x:-vx,y:-vy}; n.brk=false; } else n.brk=true; }
+    else { n.hi={x:vx,y:vy}; if(!polyDrag.brk){ n.ho={x:-vx,y:-vy}; n.brk=false; } else n.brk=true; }
+    persist(); draw(); return; }
+  polyDrag.n.x=Math.round(wxp); polyDrag.n.y=Math.round(wyp); polyDrag.moved=true; persist(); draw(); }
+function addMainPoly(){ histPush(); const y=380, Wd=M.world; M.poly=[]; const n=6; for(let i=0;i<n;i++) M.poly.push({x:Math.round(i*Wd/(n-1)),y,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true}); polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); persist(); draw(); if(typeof toast==='function')toast('main polyline added — Terrain mode on'); }
 function drawEditorPoly(){ if(!M.poly||M.poly.length<1) return; const S=polySamplesFor(M.poly);
   if(S.length>1){ ctx.save();
     ctx.beginPath(); ctx.moveTo(sx(S[0].x),sy(S[0].y)); for(let i=1;i<S.length;i++) ctx.lineTo(sx(S[i].x),sy(S[i].y));
     ctx.lineTo(sx(S[S.length-1].x),sy(M.h)); ctx.lineTo(sx(S[0].x),sy(M.h)); ctx.closePath();
     ctx.fillStyle='rgba(106,92,160,0.30)'; ctx.fill('evenodd');
-    ctx.strokeStyle='#9d8ce0'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(sx(S[0].x),sy(S[0].y)); for(let i=1;i<S.length;i++) ctx.lineTo(sx(S[i].x),sy(S[i].y)); ctx.stroke();
+    ctx.lineWidth=3;
+    for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; ctx.strokeStyle=polyEdgeWall(a,b)?'#e2563b':'#9d8ce0'; ctx.beginPath(); ctx.moveTo(sx(a.x),sy(a.y)); ctx.lineTo(sx(b.x),sy(b.y)); ctx.stroke(); }
     ctx.restore(); }
-  if(polyMode){ for(const n of M.poly){ ctx.fillStyle=n.corner?'#ffd24a':'#c8fb50'; ctx.strokeStyle='#15121f'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(sx(n.x),sy(n.y),5,0,7); ctx.fill(); ctx.stroke(); } } }
-(function(){ const mp=document.getElementById('mPoly'); if(mp) mp.onclick=function(){ polyMode=!polyMode; this.classList.toggle('on',polyMode); if(polyMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); } draw(); };
-  const ap=document.getElementById('bAddPoly'); if(ap) ap.onclick=addMainPoly; })();
+  if(polyMode && !polyWallMode && !polyLockMode){ for(const n of M.poly){ if(n.corner||n.locked) continue;
+    const ox=sx(n.x+n.ho.x),oy=sy(n.y+n.ho.y),ix=sx(n.x+n.hi.x),iy=sy(n.y+n.hi.y);
+    ctx.strokeStyle=n.brk?'rgba(255,178,74,.7)':'rgba(95,216,255,.7)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(ix,iy); ctx.lineTo(sx(n.x),sy(n.y)); ctx.lineTo(ox,oy); ctx.stroke();
+    ctx.fillStyle=n.brk?'#ffb24a':'#5fd8ff'; ctx.beginPath(); ctx.arc(ox,oy,4,0,7); ctx.fill(); ctx.beginPath(); ctx.arc(ix,iy,4,0,7); ctx.fill(); } }
+  if(polyMode){ for(const n of M.poly){ const X=sx(n.x),Y=sy(n.y); ctx.strokeStyle='#15121f'; ctx.lineWidth=1.5;
+    if(n.locked){ ctx.fillStyle='#9aa3b8'; ctx.fillRect(X-4,Y-4,8,8); ctx.strokeRect(X-4,Y-4,8,8); }
+    else if(n.corner){ ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.moveTo(X,Y-6); ctx.lineTo(X+6,Y); ctx.lineTo(X,Y+6); ctx.lineTo(X-6,Y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else { ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y,5,0,7); ctx.fill(); ctx.stroke(); } } } }
+(function(){ const mk=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  mk('mPoly',function(){ polyMode=!polyMode; document.getElementById('mPoly').classList.toggle('on',polyMode); if(polyMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); } draw(); });
+  mk('bAddPoly',addMainPoly);
+  mk('mPBreak',function(){ polyBreakMode=!polyBreakMode; this.classList.toggle('on',polyBreakMode); });
+  mk('mPWall',function(){ polyWallMode=!polyWallMode; this.classList.toggle('on',polyWallMode); if(polyWallMode){ polyLockMode=false; const l=document.getElementById('mPLock'); if(l)l.classList.remove('on'); } draw(); });
+  mk('mPLock',function(){ polyLockMode=!polyLockMode; this.classList.toggle('on',polyLockMode); if(polyLockMode){ polyWallMode=false; const w=document.getElementById('mPWall'); if(w)w.classList.remove('on'); } draw(); });
+})();
 function draw(){
  syncFields(); ctx.clearRect(0,0,CW,CH);
  if(M.theme==='crypt'){ ctx.fillStyle='#0a0712'; ctx.fillRect(0,0,CW,CH); }
