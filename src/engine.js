@@ -1,4 +1,4 @@
-const ASSET_VER='1782070000';
+const ASSET_VER='1782080000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1211,30 +1211,52 @@ function resolvePoly(prevFeet){
 }
 const POLYTEX={};
 function polyTexImg(path){ if(!path) return null; if(!POLYTEX[path]){ const im=new Image(); im.src=path+(path.indexOf('?')<0?('?v='+ASSET_VER):''); POLYTEX[path]=im; } const im=POLYTEX[path]; return (im.complete&&im.naturalWidth)?im:null; }
-function polyTileFill(g,img,S,closed,scale){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } if(!closed) y1=WORLDH;
+function polyTileFill(g,img,S,closed,scale,ox){ if(ox===undefined)ox=camX; let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; } if(!closed) y1=WORLDH;
   const tw=256*(scale||1), th=tw*img.naturalHeight/Math.max(1,img.naturalWidth);
   const ax=Math.floor(x0/tw)*tw, ay=Math.floor(y0/th)*th;
-  for(let ty=ay; ty<y1; ty+=th) for(let tx=ax; tx<x1+tw; tx+=tw) g.drawImage(img, tx-camX, ty, tw, th); }
+  for(let ty=ay; ty<y1; ty+=th) for(let tx=ax; tx<x1+tw; tx+=tw) g.drawImage(img, tx-ox, ty, tw, th); }
 let _soff=null,_smaskC=null;
 function _softLayer(){ if(!_soff) _soff=document.createElement('canvas'); if(_soff.width!==cv.width||_soff.height!==cv.height){ _soff.width=cv.width; _soff.height=cv.height; } return _soff.getContext('2d'); }
 function _softMask(){ if(!_smaskC) _smaskC=document.createElement('canvas'); if(_smaskC.width!==cv.width||_smaskC.height!==cv.height){ _smaskC.width=cv.width; _smaskC.height=cv.height; } return _smaskC.getContext('2d'); }
-function polyPath(g,S,closed){ g.beginPath(); g.moveTo(S[0].x-camX,S[0].y); for(let i=1;i<S.length;i++) g.lineTo(S[i].x-camX,S[i].y); if(closed){ g.closePath(); } else { const baseY=WORLDH+320; g.lineTo(S[S.length-1].x-camX,baseY); g.lineTo(S[0].x-camX,baseY); g.closePath(); } }
-function polyPaint(g,ob,S){ polyPath(g,S,ob.closed); const tImg=ob.tex?polyTexImg(ob.tex):null;
-  if(tImg){ g.save(); g.clip('evenodd'); polyTileFill(g,tImg,S,ob.closed,ob.texScale); g.restore(); }
-  else { if(ob.color){ g.fillStyle=ob.color; } else { const tg=g.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); g.fillStyle=tg; } g.fill('evenodd'); } }
+function polyPath(g,S,closed,ox){ if(ox===undefined)ox=camX; g.beginPath(); g.moveTo(S[0].x-ox,S[0].y); for(let i=1;i<S.length;i++) g.lineTo(S[i].x-ox,S[i].y); if(closed){ g.closePath(); } else { const baseY=WORLDH+320; g.lineTo(S[S.length-1].x-ox,baseY); g.lineTo(S[0].x-ox,baseY); g.closePath(); } }
+function polyPaint(g,ob,S,ox){ polyPath(g,S,ob.closed,ox); const tImg=ob.tex?polyTexImg(ob.tex):null;
+  if(tImg){ g.save(); g.clip('evenodd'); polyTileFill(g,tImg,S,ob.closed,ob.texScale,ox); g.restore(); }
+  else { if(ob.color){ g.fillStyle=ob.color; } else { const tg=g.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); g.fillStyle=tg; } g.fill('evenodd'); }
+}
+function polySoftCache(ob,S){ const f=Math.max(2,ob.feather||24), pad=Math.ceil(f+3);
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const s of S){ if(s.x<x0)x0=s.x; if(s.x>x1)x1=s.x; if(s.y<y0)y0=s.y; if(s.y>y1)y1=s.y; }
+  if(!ob.closed) y1=Math.min(WORLDH, y1+pad);
+  x0-=pad; x1+=pad; y0-=pad; y1+=pad;
+  const wCSS=x1-x0, hCSS=y1-y0, w=Math.ceil(wCSS*RS), h=Math.ceil(hCSS*RS);
+  if(w<8||h<8||w>2600||h>2600){ ob._cache=null; return; }   // too big -> live-render fallback
+  const res=document.createElement('canvas'); res.width=w; res.height=h; const rc=res.getContext('2d');
+  const msk=document.createElement('canvas'); msk.width=w; msk.height=h; const mc=msk.getContext('2d');
+  rc.setTransform(RS,0,0,RS,-x0*RS,-y0*RS); mc.setTransform(RS,0,0,RS,-x0*RS,-y0*RS);
+  polyPaint(rc,ob,S,0);
+  mc.fillStyle='#fff'; polyPath(mc,S,ob.closed,0); mc.fill('evenodd');
+  mc.globalCompositeOperation='destination-out'; mc.lineJoin='round'; mc.lineCap='round'; mc.strokeStyle='#000';
+  const N=64; for(let k=0;k<N;k++){ mc.globalAlpha=0.055; mc.lineWidth=(f*2)*(1-k/N); polyPath(mc,S,ob.closed,0); mc.stroke(); }
+  mc.globalAlpha=1;
+  rc.setTransform(1,0,0,1,0,0); rc.globalCompositeOperation='destination-in'; rc.drawImage(msk,0,0);
+  ob._cache={canvas:res, x0:x0, y0:y0, wCSS:wCSS, hCSS:hCSS};
+}
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
   for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; const S=ob.samples; if(S.length<2) continue;
     const a=(layer==='bg'?0.55:(layer==='fg'?0.85:1))*(ob.alpha!==undefined?ob.alpha:1);
-    if(ob.edge==='soft'){ const f=Math.max(2,ob.feather||24);
-      const mk=_softMask(); mk.setTransform(RS,0,0,RS,0,0); mk.clearRect(0,0,_smaskC.width,_smaskC.height);
-      mk.fillStyle='#fff'; polyPath(mk,S,ob.closed); mk.fill('evenodd');
-      mk.globalCompositeOperation='destination-out'; mk.lineJoin='round'; mk.lineCap='round'; mk.strokeStyle='#000';
-      const N=36; for(let k=0;k<N;k++){ mk.globalAlpha=0.094; mk.lineWidth=(f*2)*(1-k/N); polyPath(mk,S,ob.closed); mk.stroke(); }
-      mk.globalAlpha=1; mk.globalCompositeOperation='source-over';
-      const sc=_softLayer(); sc.setTransform(RS,0,0,RS,0,0); sc.clearRect(0,0,_soff.width,_soff.height);
-      polyPaint(sc,ob,S);
-      sc.save(); sc.setTransform(1,0,0,1,0,0); sc.globalCompositeOperation='destination-in'; sc.drawImage(_smaskC,0,0); sc.restore();
-      ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=a; ctx.drawImage(_soff,0,0); ctx.restore(); }
+    if(ob.edge==='soft'){
+      const texReady = !ob.tex || !!polyTexImg(ob.tex);
+      if(ob._cache===undefined && texReady) polySoftCache(ob,S);
+      if(ob._cache){ const c=ob._cache; ctx.save(); ctx.globalAlpha=a; ctx.drawImage(c.canvas, c.x0-camX, c.y0, c.wCSS, c.hCSS); ctx.restore(); }
+      else { const f=Math.max(2,ob.feather||24);                         // fallback: live render (texture still loading, or shape too big to cache)
+        const mk=_softMask(); mk.setTransform(RS,0,0,RS,0,0); mk.clearRect(0,0,_smaskC.width,_smaskC.height);
+        mk.fillStyle='#fff'; polyPath(mk,S,ob.closed); mk.fill('evenodd');
+        mk.globalCompositeOperation='destination-out'; mk.lineJoin='round'; mk.lineCap='round'; mk.strokeStyle='#000';
+        const N=64; for(let k=0;k<N;k++){ mk.globalAlpha=0.055; mk.lineWidth=(f*2)*(1-k/N); polyPath(mk,S,ob.closed); mk.stroke(); }
+        mk.globalAlpha=1; mk.globalCompositeOperation='source-over';
+        const sc=_softLayer(); sc.setTransform(RS,0,0,RS,0,0); sc.clearRect(0,0,_soff.width,_soff.height);
+        polyPaint(sc,ob,S);
+        sc.save(); sc.setTransform(1,0,0,1,0,0); sc.globalCompositeOperation='destination-in'; sc.drawImage(_smaskC,0,0); sc.restore();
+        ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=a; ctx.drawImage(_soff,0,0); ctx.restore(); } }
     else { ctx.save(); ctx.globalAlpha=a; polyPaint(ctx,ob,S); ctx.restore(); } } }
 function worldWeaponBox(spr, fi, x, y, facing){
   const wb = spr.weapon ? spr.weapon[fi] : null; if(!wb) return null;
