@@ -266,8 +266,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1781950000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781950000');
+fetch('./assets/sprites.json?v=1781960000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1781960000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1041,15 +1041,21 @@ function polyBodyHit(wxp,wyp){ for(let pi=M.poly.length-1;pi>=0;pi--){ const o=M
     let topy=null; for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=wxp&&wxp<b.x)||(b.x<=wxp&&wxp<a.x)){ const t=(wxp-a.x)/((b.x-a.x)||1e-6); const yy=a.y+(b.y-a.y)*t; if(topy===null||yy<topy)topy=yy; } }
     if(topy!==null && wyp>=topy-2 && wyp<=M.h) return pi; }
   return -1; }
+function polyBBox(ns){ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for(const n of ns){ if(n.x<x0)x0=n.x; if(n.x>x1)x1=n.x; if(n.y<y0)y0=n.y; if(n.y>y1)y1=n.y; } return {x0,y0,x1,y1}; }
+function polyScaleHandlePos(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.nodes||!o.nodes.length) return null; const bb=polyBBox(o.nodes); return {x:bb.x1+18/zoom, y:bb.y1+18/zoom, cx:(bb.x0+bb.x1)/2, cy:(bb.y0+bb.y1)/2}; }
+function polyScaleHit(wxp,wyp){ if(polyWallMode||polyLockMode) return false; const h=polyScaleHandlePos(); return h && Math.hypot(wxp-h.x,wyp-h.y) < 15/zoom; }
 function polyDown(wxp,wyp,alt){ if(!M.poly||!M.poly.length) return false;
   if(polyWallMode){ const nc=polyNearestCurve(wxp,wyp); if(nc){ histPush(); polyActive=nc.idx; const ns=M.poly[nc.idx].nodes; const t=polyNearestT(ns,wxp,wyp,!!M.poly[nc.idx].closed); const nd=ns[t.seg]; nd.wn = nd.wn==='wall'?'ground':(nd.wn==='ground'?'auto':'wall'); persist(); draw(); return true; } return false; }
   if(polyLockMode){ const nr=polyNodeHitAny(wxp,wyp); if(nr){ histPush(); polyActive=nr.idx; nr.node.locked=!nr.node.locked; persist(); draw(); return true; } return false; }
+  if(polyScaleHit(wxp,wyp)){ const o=M.poly[polyActive], sp=polyScaleHandlePos(); histPush(); polyDrag={kind:'scale',idx:polyActive,cx:sp.cx,cy:sp.cy,d0:Math.max(1,Math.hypot(wxp-sp.cx,wyp-sp.cy)),base:o.nodes.map(n=>({x:n.x,y:n.y,ho:{x:n.ho.x,y:n.ho.y},hi:{x:n.hi.x,y:n.hi.y}}))}; return true; }
   const h=polyHandleAtActive(wxp,wyp); if(h){ histPush(); polyDrag={kind:'handle',n:h.n,side:h.side,brk:(polyBreakMode||alt)}; return true; }
   const nr=polyNodeHitAny(wxp,wyp); if(nr){ polyActive=nr.idx; if(nr.node.locked){ draw(); return true; } histPush(); polyDrag={kind:'node',n:nr.node,moved:false}; draw(); return true; }
   const nc=polyNearestCurve(wxp,wyp,14/zoom); if(nc){ histPush(); polyActive=nc.idx; const ns=M.poly[nc.idx].nodes; const cl=!!M.poly[nc.idx].closed; const t=polyNearestT(ns,wxp,wyp,cl); const m=polySplitNs(ns,t.seg,t.t,cl); polyDrag={kind:'node',n:m,moved:false}; persist(); draw(); return true; }
   const bh=polyBodyHit(wxp,wyp); if(bh!==-1){ polyActive=bh; polyDrag={kind:'shape',idx:bh,lx:wxp,ly:wyp,pushed:false}; draw(); return true; }   // body: drag to move whole shape (no drag = focus)
   return false; }
 function polyMove(wxp,wyp){ if(!polyDrag) return;
+  if(polyDrag.kind==='scale'){ const o=M.poly[polyDrag.idx]; if(o){ const d=Math.max(1,Math.hypot(wxp-polyDrag.cx,wyp-polyDrag.cy)); const f=Math.max(0.1,d/polyDrag.d0);
+    for(let i=0;i<o.nodes.length;i++){ const b=polyDrag.base[i], n=o.nodes[i]; n.x=Math.round(polyDrag.cx+(b.x-polyDrag.cx)*f); n.y=Math.round(polyDrag.cy+(b.y-polyDrag.cy)*f); n.ho={x:b.ho.x*f,y:b.ho.y*f}; n.hi={x:b.hi.x*f,y:b.hi.y*f}; } persist(); draw(); } return; }
   if(polyDrag.kind==='shape'){ const o=M.poly[polyDrag.idx]; if(o){ if(!polyDrag.pushed){ histPush(); polyDrag.pushed=true; } const dx=wxp-polyDrag.lx, dy=wyp-polyDrag.ly; for(const n of o.nodes){ n.x+=dx; n.y+=dy; } } polyDrag.lx=wxp; polyDrag.ly=wyp; persist(); draw(); return; }
   if(polyDrag.kind==='handle'){ const n=polyDrag.n; n.ha=false; const vx=wxp-n.x, vy=wyp-n.y;
     if(polyDrag.side==='o'){ n.ho={x:vx,y:vy}; if(!polyDrag.brk){ n.hi={x:-vx,y:-vy}; n.brk=false; } else n.brk=true; }
@@ -1080,7 +1086,8 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
   for(const n of ns){ const X=sx(n.x),Y=sy(n.y); ctx.strokeStyle='#15121f'; ctx.lineWidth=1.5;
     if(n.locked){ ctx.fillStyle='#9aa3b8'; ctx.fillRect(X-4,Y-4,8,8); ctx.strokeRect(X-4,Y-4,8,8); }
     else if(n.corner){ ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.moveTo(X,Y-6); ctx.lineTo(X+6,Y); ctx.lineTo(X,Y+6); ctx.lineTo(X-6,Y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-    else { ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y,5,0,7); ctx.fill(); ctx.stroke(); } } }
+    else { ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y,5,0,7); ctx.fill(); ctx.stroke(); } }
+  if(!polyWallMode && !polyLockMode){ const sp=polyScaleHandlePos(); if(sp){ const X=sx(sp.x),Y=sy(sp.y); ctx.fillStyle='#ff8a3a'; ctx.strokeStyle='#15121f'; ctx.lineWidth=1.5; ctx.fillRect(X-6,Y-6,12,12); ctx.strokeRect(X-6,Y-6,12,12); ctx.strokeStyle='#15121f'; ctx.beginPath(); ctx.moveTo(X-3,Y+3); ctx.lineTo(X+3,Y-3); ctx.stroke(); } } }
 (function(){ const mk=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
   mk('mPoly',function(){ polyMode=!polyMode; document.getElementById('mPoly').classList.toggle('on',polyMode); if(polyMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); } draw(); });
   { const pa=document.getElementById('polyAngle'); if(pa) pa.addEventListener('input',function(){ M.wallSlope=+this.value; persist(); draw(); }); }
