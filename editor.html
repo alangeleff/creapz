@@ -67,6 +67,10 @@
  .grp-skin{background:rgba(123,92,255,.12);border-color:#473774}
  .grp-fringe{background:rgba(200,251,80,.08);border-color:#56652e}
  #bar.noterr .termode{display:none}
+ .texMbtn{flex:1;background:#0f0c1a;border:1px solid #2c2740;color:#cfc9e6;border-radius:8px;padding:9px;font-size:13px;cursor:pointer}
+ .texMbtn.sel{background:#c8fb50;color:#13160a;border-color:#c8fb50;font-weight:600}
+ .texCbtn{background:#241f38;border:1px solid #3a3356;color:#cfc9e6;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}
+ .texGbtn{background:#c8fb50;border:none;color:#13160a;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
  .btn.on{background:var(--lime);color:#15121f;border-color:var(--lime);font-weight:700}
  .btn.go{background:var(--lime);color:#10210a;border-color:var(--lime);font-weight:700}
  .btn.warn{border-color:#e23b3b;color:#ff9a9a}
@@ -256,8 +260,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782360000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782360000');
+fetch('./assets/sprites.json?v=1782370000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782370000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
