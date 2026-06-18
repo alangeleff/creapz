@@ -111,7 +111,7 @@ async function falRembg(dataUri) {
 }
 
 async function genFalUpscale(imageDataUri){ const key=process.env.FAL_KEY; if(!key) return {err:'FAL_KEY is not set on the server'};
-  const r=await fetch(FAL_UPSCALE,{method:'POST',headers:{'Authorization':'Key '+key,'Content-Type':'application/json'},body:JSON.stringify({image_url:imageDataUri, upscaling_factor:4})});
+  const r=await fetch(FAL_UPSCALE,{method:'POST',headers:{'Authorization':'Key '+key,'Content-Type':'application/json'},body:JSON.stringify({image_url:imageDataUri, upscaling_factor:2})});
   const j=await r.json().catch(()=>({})); if(!r.ok) return {err:(j.detail&&(j.detail.message||JSON.stringify(j.detail)))||'fal upscale error',status:r.status};
   const url=(j.image&&j.image.url)||(j.images&&j.images[0]&&j.images[0].url); if(!url) return {err:'upscaler returned no image',status:502};
   const ir=await fetch(url); if(!ir.ok) return {err:'could not fetch upscaled image',status:502}; const ab=await ir.arrayBuffer();
