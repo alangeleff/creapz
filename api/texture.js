@@ -66,6 +66,21 @@ async function genGeminiI2I(full, imageDataUri) {
   if (!img) return { err: 'Gemini returned no image', status: 502 };
   return { imageBase64: img.inlineData.data, mimeType: img.inlineData.mimeType || 'image/png' };
 }
+async function genGeminiStyled(full, refs) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return { err: 'GEMINI_API_KEY is not set on the server' };
+  const parts = [];
+  for (const rr of refs) { const m = /^data:([^;]+);base64,(.*)$/.exec(rr) || []; if (m[2]) parts.push({ inlineData: { mimeType: m[1] || 'image/png', data: m[2] } }); }
+  parts.push({ text: full + ' IMPORTANT: match the ART STYLE of the reference image(s) above — same color palette, shading, linework/outline weight, and level of detail. Keep the established look consistent; do NOT copy their subject, only the style.' });
+  const payload = { contents: [{ role: 'user', parts }], generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '1:1' } } };
+  const r = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(key)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) return { err: (j.error && j.error.message) || 'Gemini style error', status: r.status };
+  const ps = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
+  const img = ps.find(p => p.inlineData && p.inlineData.data);
+  if (!img) return { err: 'Gemini returned no image', status: 502 };
+  return { imageBase64: img.inlineData.data, mimeType: img.inlineData.mimeType || 'image/png' };
+}
 async function genGemini(full) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return { err: 'GEMINI_API_KEY is not set on the server' };
@@ -130,12 +145,13 @@ module.exports = async (req, res) => {
     const { prompt, style } = body;
     const model = (body.model === 'fal') ? 'fal' : 'gemini';
     const mode = (body.mode === 'fringe') ? 'fringe' : (body.mode === 'object' ? 'object' : (body.mode === 'upscale' ? 'upscale' : 'texture'));
+    const styleRefs = Array.isArray(body.styleRefs) ? body.styleRefs.filter(x => typeof x === 'string' && x.length > 100).slice(0, 2) : [];
     if (mode === 'upscale') { if (typeof body.image !== 'string' || body.image.length < 200) return res.status(400).json({ error: 'image required' }); const u = await genFalUpscale(body.image); if (u.err) return res.status(u.status||500).json({ error: u.err, mode }); return res.status(200).json({ imageBase64: u.imageBase64, mimeType: u.mimeType, mode }); }
     if (!prompt) return res.status(400).json({ error: 'prompt required' });
 
     if (mode === 'object') {
       const full = objectPrompt(prompt, style);
-      const base = model === 'fal' ? await genFal(full) : await genGemini(full);
+      const base = styleRefs.length ? await genGeminiStyled(full, styleRefs) : (model === 'fal' ? await genFal(full) : await genGemini(full));
       if (base.err) return res.status(base.status || 500).json({ error: base.err, model, mode });
       return res.status(200).json({ imageBase64: base.imageBase64, mimeType: base.mimeType || 'image/png', model, mode });
     }
@@ -145,7 +161,7 @@ module.exports = async (req, res) => {
       if (hasImg) { const full = fringeI2IPrompt(prompt, style);
         base = model === 'fal' ? await genFalI2I(full, body.image) : await genGeminiI2I(full, body.image); }
       else { const full = fringePrompt(prompt, style);
-        base = model === 'fal' ? await genFal(full) : await genGemini(full); }
+        base = styleRefs.length ? await genGeminiStyled(full, styleRefs) : (model === 'fal' ? await genFal(full) : await genGemini(full)); }
       if (base.err) return res.status(base.status || 500).json({ error: base.err, model, mode });
       // returns magenta-background base; the editor chroma-keys it to transparent
       return res.status(200).json({ imageBase64: base.imageBase64, mimeType: base.mimeType || 'image/png', model, mode, i2i: hasImg });
@@ -155,7 +171,7 @@ module.exports = async (req, res) => {
     const hasImg = typeof body.image === 'string' && body.image.length > 200;
     let out;
     if (single && hasImg) { const full = singleI2IPrompt(prompt, style); out = model === 'fal' ? await genFalI2I(full, body.image, 0.92) : await genGeminiI2I(full, body.image); }
-    else { const full = single ? singlePrompt(prompt, style) : texturePrompt(prompt, style); out = model === 'fal' ? await genFal(full) : await genGemini(full); }
+    else { const full = single ? singlePrompt(prompt, style) : texturePrompt(prompt, style); out = styleRefs.length ? await genGeminiStyled(full, styleRefs) : (model === 'fal' ? await genFal(full) : await genGemini(full)); }
     if (out.err) return res.status(out.status || 500).json({ error: out.err, model });
     return res.status(200).json({ imageBase64: out.imageBase64, mimeType: out.mimeType, model, mode, fill: (single?'single':'pattern'), i2i: (single&&hasImg) });
   } catch (e) {

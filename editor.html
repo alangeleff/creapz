@@ -168,7 +168,7 @@
    <span class="grp grp-stage"><span class="glabel">Stage</span><label>name</label><input id="fName" size="9" value="Crypt Depths"><label>act</label><input id="fAct" size="2" value="I"><label>theme</label><select id="fTheme"><option value="crypt">crypt</option><option value="plains">ethereal plains</option><option value="witch">witchwood</option><option value="harbor">drowned harbor</option><option value="spire">bell spire</option><option value="charnel">charnel peak</option><option value="rift">the rift</option><option value="castle">blood moon castle</option><option value="">surface</option></select><label>music</label><select id="fMusic"><option>act1</option><option>act2</option><option>crypt1</option><option>crypt2</option><option>ethereal1</option><option>ethereal2</option><option>title</option></select><label>W</label><input id="fW" size="4" value="3200"><label>H</label><input id="fH" size="4" value="2900"><label>idx</label><input id="fIdx" size="2" value="2"><button class="btn" id="bNew"><i data-lucide="file-plus-2">✦</i> New</button></span>
    <span class="grp grp-save"><span class="glabel">Save</span><button class="btn" id="bBench" title="Committed stage bench — permanent, every device"><i data-lucide="archive">🗄</i> Bench</button><button class="btn" id="bMap" title="World Map — assign bench stages to zones/acts"><i data-lucide="map">🗺</i> Map</button><select class="btn" id="bLoad" title="Load an existing level to edit"><option value="">Load level…</option><option value="stage1.js|0">Cemetery · Act I</option><option value="stage2.js|1">Cemetery · Act II</option><option value="crypt1.js|2">Crypt Depths · Act I</option><option value="crypt2.js|3">Crypt Depths · Act II</option></select><button class="btn" id="bExport" title="Export a full backup — this stage + all custom assets + every bench stage"><i data-lucide="download">⭳</i> Backup</button><button class="btn" id="bImport" title="Import a level file"><i data-lucide="file-up">⭱</i> Import</button></span>
    <span class="grp grp-edit"><span class="glabel">Edit</span><button class="btn" id="bUndo" title="Undo (Ctrl+Z)"><i data-lucide="undo-2">↶</i></button><button class="btn" id="bRedo" title="Redo (Ctrl+Y)"><i data-lucide="redo-2">↷</i></button><button class="btn" id="bRuler" title="Measure / jump-reach ruler"><i data-lucide="ruler">📏</i></button><button class="btn" id="bSnap" title="Magnetic edge snapping"><i data-lucide="magnet">🧲</i></button></span>
-   <span class="grp grp-assets"><span class="glabel">Assets</span><button class="btn" id="bUpload" title="Upload a custom asset"><i data-lucide="upload">⬆</i> Upload</button><button class="btn" id="bMusic" title="Upload a background music track"><i data-lucide="music">🎵</i> Music</button><button class="btn" id="bObject" title="Create an AI object/prop with auto-traced collision"><i data-lucide="sparkles">✨</i> Object</button></span>
+   <span class="grp grp-assets"><span class="glabel">Assets</span><button class="btn" id="bUpload" title="Upload a custom asset"><i data-lucide="upload">⬆</i> Upload</button><button class="btn" id="bMusic" title="Upload a background music track"><i data-lucide="music">🎵</i> Music</button><button class="btn" id="bObject" title="Create an AI object/prop with auto-traced collision"><i data-lucide="sparkles">✨</i> Object</button><button class="btn" id="bStyle" title="Style Bank — reference art for consistent generation"><i data-lucide="images">🎭</i> Style</button></span>
    <button class="btn" id="mPoly" title="Terrain sculpt mode (polyline ground)"><i data-lucide="mountain">⛰</i> Terrain</button>
    <span class="grp grp-terrain termode"><span class="glabel">Terrain</span><button class="btn" id="bAddPoly" title="Add a main ground polyline across the stage"><i data-lucide="spline">+</i> Polyline</button><button class="btn" id="bAddShape" title="Add a closed free-floating shape (platform / pillar / ceiling)"><i data-lucide="hexagon">+</i> Shape</button><button class="btn" id="mPBreak" title="Terrain: break handle (independent in/out curve)"><i data-lucide="scissors">✂</i></button><button class="btn" id="mPWall" title="Terrain: paint wall segments"><i data-lucide="brick-wall">🧱</i></button><button class="btn" id="mPLock" title="Terrain: lock a node"><i data-lucide="lock">🔒</i></button><select class="btn" id="polyLayerSel" title="Layer of the selected shape"><option value="main">▦ Main · collides</option><option value="bg">▦ Background</option><option value="fg">▦ Foreground</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Wall angle: slopes steeper than this become walls">∠<input id="polyAngle" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:64px;vertical-align:middle"></label></span>
    <span class="grp grp-skin termode"><span class="glabel">Skin</span><button class="btn" id="mPText" title="Terrain: label / color the selected shape (no node edits)"><i data-lucide="tag">🏷</i> Label</button><input id="polyColor" type="color" value="#6a5ca0" title="Fill color of selected shape" style="width:30px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;vertical-align:middle"><button class="btn" id="bPolyTex" title="Generate an AI texture for the selected shape"><i data-lucide="palette">🎨</i> Skin</button><button class="btn" id="bPolyTexHist" title="View this shape's skin history — tap to apply, × to delete"><i data-lucide="history">⟳</i> Tex</button><button class="btn" id="bSharpen" title="Upscale/sharpen the selected shape's image (keeps the same style)"><i data-lucide="wand-sparkles">🔍</i> Sharpen</button><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Texture tile size of selected shape">tile<input id="polyTexScale" type="range" min="0.25" max="4" step="0.05" value="1" style="width:64px;vertical-align:middle"></label><button class="btn" id="bPolyEdge" title="Edge style: hard / soft (feathered, for fog & clouds)">◡ hard</button><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Transparency of selected shape">α<input id="polyOpac" type="range" min="0.1" max="1" step="0.05" value="1" style="width:58px;vertical-align:middle"></label><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Soft-edge fade distance (only affects soft edges)">fade<input id="polyFeather" type="range" min="2" max="90" step="1" value="24" style="width:64px;vertical-align:middle"></label></span>
@@ -260,8 +260,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782440000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782440000');
+fetch('./assets/sprites.json?v=1782450000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782450000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -429,7 +429,7 @@ function cvxy(e){ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left
 const pal=document.getElementById('palList');
 const COMMIT_API='https://creapz.vercel.app/api/commit';
 const TEXTURE_API='https://creapz.vercel.app/api/texture';
-let BCONFIG={version:1,customAssets:[],categories:[],bench:[],worldMap:{}};
+let BCONFIG={version:1,customAssets:[],categories:[],bench:[],worldMap:{},styleBank:[]};
 function getCommitSecret(force){ let s=localStorage.getItem('creapz_commit_secret'); if(force||!s){ s=prompt('Builder commit password (your Vercel COMMIT_SECRET):',''); if(s) localStorage.setItem('creapz_commit_secret',s); } return s; }
 async function commitFiles(files, message){ const secret=getCommitSecret(); if(!secret){ toast('commit cancelled'); return null; }
   toast('committing\u2026');
@@ -1107,6 +1107,46 @@ function traceObjectImage(img, rays){
 function cropObjectB64(img, t){ const sx0=t.x0/t.W*t.natW, sy0=t.y0/t.H*t.natH, sw=(t.x1-t.x0+1)/t.W*t.natW, sh=(t.y1-t.y0+1)/t.H*t.natH;
   const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(sw)); c.height=Math.max(1,Math.round(sh)); c.getContext('2d').drawImage(img, sx0,sy0,sw,sh, 0,0,c.width,c.height);
   return c.toDataURL('image/png').split(',')[1]; }
+let _styleOv=null; const STYLEIMG={};
+function styleActiveIds(){ try{ return JSON.parse(localStorage.getItem('creapz_style_active')||'[]'); }catch(e){ return []; } }
+function setStyleActive(ids){ try{ localStorage.setItem('creapz_style_active',JSON.stringify(ids)); }catch(e){} }
+function styleOnFlag(){ return localStorage.getItem('creapz_style_on')!=='0'; }
+async function getStyleRefs(){ if(!styleOnFlag()) return []; const ids=styleActiveIds(); const out=[];
+  for(const e of (BCONFIG.styleBank||[])){ if(!ids.includes(e.id)) continue; try{ const im=await _loadImg(STYLEIMG[e.path]||e.path); const mx=640,k=Math.min(1,mx/Math.max(im.naturalWidth,im.naturalHeight)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*k)); c.height=Math.max(1,Math.round(im.naturalHeight*k)); c.getContext('2d').drawImage(im,0,0,c.width,c.height); out.push(c.toDataURL('image/jpeg',0.88)); }catch(e2){} if(out.length>=2) break; }
+  return out; }
+function ensureStyleOv(){ if(_styleOv) return _styleOv; const ov=document.createElement('div'); ov.id='styleOv'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
+  ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:16px;width:min(540px,94vw);max-height:84vh;overflow:auto;font-family:sans-serif;color:#e8e6f5">'
+   +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:15px;font-weight:600">Style Bank</div><button id="styleMaster" class="texMbtn" style="flex:0;padding:7px 12px"></button></div>'
+   +'<div style="font-size:12px;color:#9b93b5;margin-bottom:12px">Add your key art (characters, hero pieces). Highlighted refs (max 2) are matched on every generation when matching is ON.</div>'
+   +'<div id="styleGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px"></div>'
+   +'<div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px"><button id="styleAddBtn" class="texGbtn">+ Add reference</button><button id="styleClose" class="texCbtn">Close</button></div></div>';
+  document.body.appendChild(ov); _styleOv=ov;
+  ov.querySelector('#styleClose').onclick=()=>{ ov.style.display='none'; };
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
+  ov.querySelector('#styleAddBtn').onclick=styleAdd;
+  ov.querySelector('#styleMaster').onclick=()=>{ localStorage.setItem('creapz_style_on', styleOnFlag()?'0':'1'); renderStyle(); };
+  return ov; }
+function renderStyle(){ const ov=ensureStyleOv(); const on=styleOnFlag(); const mb=ov.querySelector('#styleMaster'); mb.textContent=on?'Matching: ON':'Matching: OFF'; mb.classList.toggle('sel',on);
+  const ids=styleActiveIds(), grid=ov.querySelector('#styleGrid'); grid.innerHTML=''; const list=BCONFIG.styleBank||[];
+  if(!list.length){ grid.innerHTML='<div style="grid-column:1/-1;color:#9b93b5;font-size:12px;text-align:center;padding:18px 0">No references yet. Add your main character or key art.</div>'; }
+  list.forEach(e=>{ const act=ids.includes(e.id); const cell=document.createElement('div'); cell.style.cssText='position:relative;border:2px solid '+(act?'#c8fb50':'#2c2740')+';border-radius:8px;overflow:hidden;cursor:pointer;background:#0f0c1a;aspect-ratio:1';
+    const im=document.createElement('img'); im.src=STYLEIMG[e.path]||e.path; im.style.cssText='width:100%;height:100%;object-fit:cover;display:block'; cell.appendChild(im);
+    const del=document.createElement('button'); del.textContent='×'; del.title='Delete'; del.style.cssText='position:absolute;top:4px;right:4px;width:24px;height:24px;border:2px solid #fff;border-radius:50%;background:#e2563b;color:#fff;font-size:15px;font-weight:bold;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0';
+    del.onclick=(ev)=>{ ev.stopPropagation(); styleDelete(e.id); };
+    if(act){ const b=document.createElement('div'); b.textContent='✓ matching'; b.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(20,30,8,.82);color:#c8fb50;font-size:10px;text-align:center;padding:2px'; cell.appendChild(b); }
+    cell.onclick=()=>styleToggleActive(e.id);
+    grid.appendChild(cell); }); }
+function styleToggleActive(id){ let ids=styleActiveIds(); if(ids.includes(id)) ids=ids.filter(x=>x!==id); else { ids.push(id); if(ids.length>2) ids=ids.slice(ids.length-2); } setStyleActive(ids); renderStyle(); }
+function styleDelete(id){ if(!confirm('Remove this reference from the Style Bank?')) return; BCONFIG.styleBank=(BCONFIG.styleBank||[]).filter(e=>e.id!==id); setStyleActive(styleActiveIds().filter(x=>x!==id)); renderStyle(); commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'stylebank: remove '+id).then(r=>{ if(r) toast('removed'); }); }
+function styleAdd(){ const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.onchange=async()=>{ const file=inp.files&&inp.files[0]; if(!file) return; toast('adding reference');
+  try{ const url=await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); });
+    const im=await _loadImg(url); const mx=768,k=Math.min(1,mx/Math.max(im.naturalWidth,im.naturalHeight)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*k)); c.height=Math.max(1,Math.round(im.naturalHeight*k)); c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    const dataUrl=c.toDataURL('image/png'), b64=dataUrl.split(',')[1]; const id='sb_'+Date.now().toString(36), path='./config/stylebank/'+id+'.png'; STYLEIMG[path]=dataUrl;
+    BCONFIG.styleBank=BCONFIG.styleBank||[]; BCONFIG.styleBank.push({id, name:(file.name||'ref').replace(/\.[^.]+$/,''), path}); let ids=styleActiveIds(); ids.push(id); if(ids.length>2) ids=ids.slice(ids.length-2); setStyleActive(ids); renderStyle();
+    const res=await commitFiles([{path:'config/stylebank/'+id+'.png',content:b64,encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'stylebank: add '+id);
+    toast(res?'reference added ✓':'added (commit failed — try again)');
+  }catch(e){ toast('add error: '+e.message); } }; inp.click(); }
+function openStyle(){ ensureStyleOv(); renderStyle(); _styleOv.style.display='flex'; }
 function ensureObjModal(){ if(_objModal) return _objModal; const ov=document.createElement('div'); ov.id='objModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
   ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:18px;width:min(460px,94vw);font-family:sans-serif;color:#e8e6f5">'
    +'<div style="font-size:15px;font-weight:600;margin-bottom:4px">Create an Object</div>'
@@ -1151,8 +1191,9 @@ async function sharpenSelected(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.
   }catch(e){ toast('sharpen error: '+e.message); } }
 function openObjModal(){ const ov=ensureObjModal(); ov.querySelector('#objInput').style.display='block'; ov.querySelector('#objPreview').style.display='none'; ov.style.display='flex'; setTimeout(()=>{ const t=ov.querySelector('#objPromptI'); if(t)t.focus(); },30); }
 async function objGenerate(){ const ov=_objModal; const desc=(ov.querySelector('#objPromptI').value||'').trim(); if(!desc){ toast('describe the object'); return; }
-  toast('generating object ('+_objModel+')'); 
-  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model:_objModel, mode:'object'})});
+  let styleRefs=[]; try{ styleRefs=await getStyleRefs(); }catch(e){}
+  toast(styleRefs.length?'generating object (style-matched)':'generating object ('+_objModel+')'); 
+  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model:_objModel, mode:'object', styleRefs})});
     const j=await r.json().catch(()=>({})); if(!r.ok||!j.imageBase64){ toast('gen failed: '+(j.error||'no image')); return; }
     _objKeyedB64=await keyFringeB64(j.imageBase64, j.mimeType);
     ov.querySelector('#objImg').src='data:image/png;base64,'+_objKeyedB64;
@@ -1223,8 +1264,9 @@ async function doGenTex(desc,model,mode){ mode=mode||'texture'; const o=M.poly&&
   let inputImg=null;
   if(mode==='texture' && _texFill==='single'){ inputImg=buildSingleInput(o); }   // single fill: condition the gen on the shape's silhouette
   else if(mode==='fringe' && _fringeI2I){ inputImg=await buildFringeInput(o); }   // optional: grow fringe from the shape's real texture
+  let styleRefs=[]; try{ styleRefs=await getStyleRefs(); }catch(e){}
   toast(inputImg?(mode==='fringe'?'growing fringe from your texture ('+model+')…':'generating to fit your shape ('+model+')…'):'generating ('+model+')…');
-  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model, mode, fill:_texFill, image:inputImg||undefined})});
+  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model, mode, fill:_texFill, image:inputImg||undefined, styleRefs})});
     const j=await r.json().catch(()=>({})); if(!r.ok||!j.imageBase64){ toast('gen failed: '+(j.error||'no image')); return; }
     const outB64 = (mode==='fringe') ? await keyFringeB64(j.imageBase64, j.mimeType) : j.imageBase64;
     const id=(mode==='fringe'?'fringe_':'tex_')+Date.now().toString(36), path='./config/textures/'+id+'.png';
@@ -1727,6 +1769,7 @@ document.getElementById('bExport').onclick=async()=>{ toast('building backup\u20
  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(backup)],{type:'application/json'}));
  a.download='creapz-backup-'+new Date().toISOString().slice(0,10)+'.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('backup exported \u2014 '+Object.keys(backup.bench).length+' bench stages + assets'); };
 document.getElementById('bObject').onclick=openObjModal;
+document.getElementById('bStyle').onclick=openStyle;
 document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file';
  inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{ let j=tx.trim(); const i=j.indexOf('={'); if(i>=0)j=j.slice(i+1,j.lastIndexOf('}')+1);
    histPush(); M=Object.assign(blankLevel(),migrateLevel(JSON.parse(j))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
