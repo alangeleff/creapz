@@ -1,4 +1,4 @@
-const ASSET_VER='1782400000';
+const ASSET_VER='1782410000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1190,7 +1190,7 @@ function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(
 function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
     for(const ob of POLY.objs){ if(!polyCollides(ob)) continue; const S=ob.samples;
-      for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!polyEdgeWall(a,b)) continue;
+      for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!ob.closed && !polyEdgeWall(a,b)) continue;
         const vx=b.x-a.x, vy=b.y-a.y, L=vx*vx+vy*vy; if(L<0.01) continue;
         let t=((cx-a.x)*vx+(cy-a.y)*vy)/L; t=Math.max(0,Math.min(1,t)); const px=a.x+t*vx, py=a.y+t*vy;
         let dx=cx-px, dy=cy-py, dist=Math.hypot(dx,dy); if(dist<0.001){ dx=-vy; dy=vx; dist=Math.hypot(dx,dy)||1; }
