@@ -7,6 +7,7 @@ const GEMINI_MODEL = 'gemini-2.5-flash-image';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const FAL_FLUX = 'https://fal.run/fal-ai/flux/dev';
 const FAL_REMBG = 'https://fal.run/fal-ai/imageutils/rembg';
+const FAL_UPSCALE = 'https://fal.run/fal-ai/aura-sr';
 
 function objectPrompt(prompt, style){ return `A single ${prompt}, centered and complete, filling most of the frame as ONE game prop. The ENTIRE background is pure solid magenta #FF00FF (rgb 255,0,255); the ${prompt} contains NO magenta/pink/purple. 2D side-scrolling video-game art, stylized, flat even lighting, no shadow, no ground, no scene, no text.`+(style?` Art style: ${style}.`:''); }
 function singleI2IPrompt(prompt, style){ return `The image is a WHITE silhouette on a BLACK background. Repaint the white silhouette as: ${prompt} — a single detailed ${prompt} that completely FILLS the silhouette edge-to-edge and exactly matches its shape (the silhouette IS the object's outline). The ${prompt} must reach ALL the way to the white silhouette boundary with NO black gap or border between the object and the silhouette edge. Keep the area OUTSIDE the silhouette pure black. 2D side-scrolling game art, flat even lighting, no scene, no ground, no extra objects, no text.`+(style?` Art style: ${style}.`:''); }
@@ -109,6 +110,13 @@ async function falRembg(dataUri) {
   return { imageBase64: Buffer.from(ab).toString('base64'), mimeType: 'image/png' };
 }
 
+async function genFalUpscale(imageDataUri){ const key=process.env.FAL_KEY; if(!key) return {err:'FAL_KEY is not set on the server'};
+  const r=await fetch(FAL_UPSCALE,{method:'POST',headers:{'Authorization':'Key '+key,'Content-Type':'application/json'},body:JSON.stringify({image_url:imageDataUri, upscaling_factor:4})});
+  const j=await r.json().catch(()=>({})); if(!r.ok) return {err:(j.detail&&(j.detail.message||JSON.stringify(j.detail)))||'fal upscale error',status:r.status};
+  const url=(j.image&&j.image.url)||(j.images&&j.images[0]&&j.images[0].url); if(!url) return {err:'upscaler returned no image',status:502};
+  const ir=await fetch(url); if(!ir.ok) return {err:'could not fetch upscaled image',status:502}; const ab=await ir.arrayBuffer();
+  return {imageBase64:Buffer.from(ab).toString('base64'), mimeType:ir.headers.get('content-type')||'image/png'};
+}
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -121,7 +129,8 @@ module.exports = async (req, res) => {
     if (!body || typeof body !== 'object') body = {};
     const { prompt, style } = body;
     const model = (body.model === 'fal') ? 'fal' : 'gemini';
-    const mode = (body.mode === 'fringe') ? 'fringe' : (body.mode === 'object' ? 'object' : 'texture');
+    const mode = (body.mode === 'fringe') ? 'fringe' : (body.mode === 'object' ? 'object' : (body.mode === 'upscale' ? 'upscale' : 'texture'));
+    if (mode === 'upscale') { if (typeof body.image !== 'string' || body.image.length < 200) return res.status(400).json({ error: 'image required' }); const u = await genFalUpscale(body.image); if (u.err) return res.status(u.status||500).json({ error: u.err, mode }); return res.status(200).json({ imageBase64: u.imageBase64, mimeType: u.mimeType, mode }); }
     if (!prompt) return res.status(400).json({ error: 'prompt required' });
 
     if (mode === 'object') {
