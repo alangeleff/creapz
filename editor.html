@@ -168,7 +168,7 @@
    <span class="grp grp-stage"><span class="glabel">Stage</span><label>name</label><input id="fName" size="9" value="Crypt Depths"><label>act</label><input id="fAct" size="2" value="I"><label>theme</label><select id="fTheme"><option value="crypt">crypt</option><option value="plains">ethereal plains</option><option value="witch">witchwood</option><option value="harbor">drowned harbor</option><option value="spire">bell spire</option><option value="charnel">charnel peak</option><option value="rift">the rift</option><option value="castle">blood moon castle</option><option value="">surface</option></select><label>music</label><select id="fMusic"><option>act1</option><option>act2</option><option>crypt1</option><option>crypt2</option><option>ethereal1</option><option>ethereal2</option><option>title</option></select><label>W</label><input id="fW" size="4" value="3200"><label>H</label><input id="fH" size="4" value="2900"><label>idx</label><input id="fIdx" size="2" value="2"><button class="btn" id="bNew"><i data-lucide="file-plus-2">✦</i> New</button></span>
    <span class="grp grp-save"><span class="glabel">Save</span><button class="btn" id="bBench" title="Committed stage bench — permanent, every device"><i data-lucide="archive">🗄</i> Bench</button><button class="btn" id="bMap" title="World Map — assign bench stages to zones/acts"><i data-lucide="map">🗺</i> Map</button><select class="btn" id="bLoad" title="Load an existing level to edit"><option value="">Load level…</option><option value="stage1.js|0">Cemetery · Act I</option><option value="stage2.js|1">Cemetery · Act II</option><option value="crypt1.js|2">Crypt Depths · Act I</option><option value="crypt2.js|3">Crypt Depths · Act II</option></select><button class="btn" id="bExport" title="Export a full backup — this stage + all custom assets + every bench stage"><i data-lucide="download">⭳</i> Backup</button><button class="btn" id="bImport" title="Import a level file"><i data-lucide="file-up">⭱</i> Import</button></span>
    <span class="grp grp-edit"><span class="glabel">Edit</span><button class="btn" id="bUndo" title="Undo (Ctrl+Z)"><i data-lucide="undo-2">↶</i></button><button class="btn" id="bRedo" title="Redo (Ctrl+Y)"><i data-lucide="redo-2">↷</i></button><button class="btn" id="bRuler" title="Measure / jump-reach ruler"><i data-lucide="ruler">📏</i></button><button class="btn" id="bSnap" title="Magnetic edge snapping"><i data-lucide="magnet">🧲</i></button></span>
-   <span class="grp grp-assets"><span class="glabel">Assets</span><button class="btn" id="bUpload" title="Upload a custom asset"><i data-lucide="upload">⬆</i> Upload</button><button class="btn" id="bMusic" title="Upload a background music track"><i data-lucide="music">🎵</i> Music</button><button class="btn" id="bObject" title="Create an AI object/prop with auto-traced collision"><i data-lucide="sparkles">✨</i> Object</button><button class="btn" id="bStyle" title="Style Bank — reference art for consistent generation"><i data-lucide="images">🎭</i> Style</button></span>
+   <span class="grp grp-assets"><span class="glabel">Assets</span><button class="btn" id="bUpload" title="Upload a custom asset"><i data-lucide="upload">⬆</i> Upload</button><button class="btn" id="bMusic" title="Upload a background music track"><i data-lucide="music">🎵</i> Music</button><button class="btn" id="bObject" title="Create an AI object/prop with auto-traced collision"><i data-lucide="sparkles">✨</i> Object</button><button class="btn" id="bStyle" title="Style Bank — reference art for consistent generation"><i data-lucide="images">🎭</i> Style</button><button class="btn" id="bChar" title="Character Creator + cloud library"><i data-lucide="ghost">🐉</i> Characters</button></span>
    <button class="btn" id="mPoly" title="Terrain sculpt mode (polyline ground)"><i data-lucide="mountain">⛰</i> Terrain</button>
    <span class="grp grp-terrain termode"><span class="glabel">Terrain</span><button class="btn" id="bAddPoly" title="Add a main ground polyline across the stage"><i data-lucide="spline">+</i> Polyline</button><button class="btn" id="bAddShape" title="Add a closed free-floating shape (platform / pillar / ceiling)"><i data-lucide="hexagon">+</i> Shape</button><button class="btn" id="mPBreak" title="Terrain: break handle (independent in/out curve)"><i data-lucide="scissors">✂</i></button><button class="btn" id="mPWall" title="Terrain: paint wall segments"><i data-lucide="brick-wall">🧱</i></button><button class="btn" id="mPLock" title="Terrain: lock a node"><i data-lucide="lock">🔒</i></button><select class="btn" id="polyLayerSel" title="Layer of the selected shape"><option value="main">▦ Main · collides</option><option value="bg">▦ Background</option><option value="fg">▦ Foreground</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Wall angle: slopes steeper than this become walls">∠<input id="polyAngle" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:64px;vertical-align:middle"></label></span>
    <span class="grp grp-skin termode"><span class="glabel">Skin</span><button class="btn" id="mPText" title="Terrain: label / color the selected shape (no node edits)"><i data-lucide="tag">🏷</i> Label</button><input id="polyColor" type="color" value="#6a5ca0" title="Fill color of selected shape" style="width:30px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;vertical-align:middle"><button class="btn" id="bPolyTex" title="Generate an AI texture for the selected shape"><i data-lucide="palette">🎨</i> Skin</button><button class="btn" id="bPolyTexHist" title="View this shape's skin history — tap to apply, × to delete"><i data-lucide="history">⟳</i> Tex</button><button class="btn" id="bSharpen" title="Upscale/sharpen the selected shape's image (keeps the same style)"><i data-lucide="wand-sparkles">🔍</i> Sharpen</button><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Texture tile size of selected shape">tile<input id="polyTexScale" type="range" min="0.25" max="4" step="0.05" value="1" style="width:64px;vertical-align:middle"></label><button class="btn" id="bPolyEdge" title="Edge style: hard / soft (feathered, for fog & clouds)">◡ hard</button><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Transparency of selected shape">α<input id="polyOpac" type="range" min="0.1" max="1" step="0.05" value="1" style="width:58px;vertical-align:middle"></label><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Soft-edge fade distance (only affects soft edges)">fade<input id="polyFeather" type="range" min="2" max="90" step="1" value="24" style="width:64px;vertical-align:middle"></label></span>
@@ -260,8 +260,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782450000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782450000');
+fetch('./assets/sprites.json?v=1782460000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782460000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -429,7 +429,7 @@ function cvxy(e){ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left
 const pal=document.getElementById('palList');
 const COMMIT_API='https://creapz.vercel.app/api/commit';
 const TEXTURE_API='https://creapz.vercel.app/api/texture';
-let BCONFIG={version:1,customAssets:[],categories:[],bench:[],worldMap:{},styleBank:[]};
+let BCONFIG={version:1,customAssets:[],categories:[],bench:[],worldMap:{},styleBank:[],characters:[]};
 function getCommitSecret(force){ let s=localStorage.getItem('creapz_commit_secret'); if(force||!s){ s=prompt('Builder commit password (your Vercel COMMIT_SECRET):',''); if(s) localStorage.setItem('creapz_commit_secret',s); } return s; }
 async function commitFiles(files, message){ const secret=getCommitSecret(); if(!secret){ toast('commit cancelled'); return null; }
   toast('committing\u2026');
@@ -1147,6 +1147,66 @@ function styleAdd(){ const inp=document.createElement('input'); inp.type='file';
     toast(res?'reference added ✓':'added (commit failed — try again)');
   }catch(e){ toast('add error: '+e.message); } }; inp.click(); }
 function openStyle(){ ensureStyleOv(); renderStyle(); _styleOv.style.display='flex'; }
+let _charModal=null,_charLib=null,_charModel='gemini',_charKeyedB64=null,_charPrompt=''; const CHARIMG={};
+function ensureCharModal(){ if(_charModal) return _charModal; const ov=document.createElement('div'); ov.id='charModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:100000';
+  ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:18px;width:min(460px,94vw);font-family:sans-serif;color:#e8e6f5">'
+   +'<div style="font-size:15px;font-weight:600;margin-bottom:4px">Create a Character</div>'
+   +'<div id="charInput"><div style="font-size:12px;color:#9b93b5;margin-bottom:10px">Describe a monster or character. Style Bank matching applies if it is on.</div>'
+   +'<textarea id="charPromptI" rows="2" placeholder="hulking bone golem / shrieking wraith / little fanged imp" style="width:100%;box-sizing:border-box;background:#0f0c1a;border:1px solid #2c2740;border-radius:8px;color:#e8e6f5;padding:8px;font-size:13px;resize:vertical"></textarea>'
+   +'<div style="font-size:12px;color:#9b93b5;margin:12px 0 6px">Image model</div><div style="display:flex;gap:8px"><button id="charMGemini" class="texMbtn">Gemini</button><button id="charMFal" class="texMbtn">FAL / FLUX</button></div>'
+   +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button id="charCancel" class="texCbtn">Cancel</button><button id="charGen" class="texGbtn">Generate</button></div></div>'
+   +'<div id="charPreview" style="display:none"><div style="background:repeating-conic-gradient(#3a3550 0% 25%,#2a2640 0% 50%) 50%/22px 22px;border:1px solid #2c2740;border-radius:10px;padding:10px;text-align:center"><img id="charImg" style="max-width:100%;max-height:46vh;vertical-align:middle"></div>'
+   +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:14px"><button id="charTrash" class="texCbtn">Trash</button><button id="charReprompt" class="texCbtn">Reprompt</button><button id="charRerun" class="texCbtn">Rerun</button><button id="charDownload" class="texCbtn">Download</button><button id="charSave" class="texGbtn">Save</button></div></div></div>';
+  document.body.appendChild(ov); _charModal=ov;
+  const gm=ov.querySelector('#charMGemini'), fl=ov.querySelector('#charMFal'); function pick(m){ _charModel=m; gm.classList.toggle('sel',m==='gemini'); fl.classList.toggle('sel',m==='fal'); } gm.onclick=()=>pick('gemini'); fl.onclick=()=>pick('fal'); pick(_charModel);
+  ov.querySelector('#charCancel').onclick=()=>{ ov.style.display='none'; };
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
+  ov.querySelector('#charGen').onclick=()=>{ const d=(ov.querySelector('#charPromptI').value||'').trim(); charGenerate(d); };
+  ov.querySelector('#charTrash').onclick=()=>{ _charKeyedB64=null; ov.querySelector('#charPreview').style.display='none'; ov.querySelector('#charInput').style.display='block'; };
+  ov.querySelector('#charReprompt').onclick=()=>{ ov.querySelector('#charPreview').style.display='none'; ov.querySelector('#charInput').style.display='block'; };
+  ov.querySelector('#charRerun').onclick=()=>{ if(_charPrompt) charGenerate(_charPrompt); };
+  ov.querySelector('#charDownload').onclick=charDownload;
+  ov.querySelector('#charSave').onclick=charSave;
+  return ov; }
+function openCharCreate(){ const ov=ensureCharModal(); ov.querySelector('#charInput').style.display='block'; ov.querySelector('#charPreview').style.display='none'; ov.style.display='flex'; setTimeout(()=>{ const t=ov.querySelector('#charPromptI'); if(t)t.focus(); },30); }
+async function charGenerate(desc){ if(!desc){ toast('describe the character'); return; } _charPrompt=desc; const ov=ensureCharModal();
+  let styleRefs=[]; try{ styleRefs=await getStyleRefs(); }catch(e){}
+  toast(styleRefs.length?'generating character (style-matched)':'generating character ('+_charModel+')');
+  try{ const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:desc, style:M.theme||'', model:_charModel, mode:'character', styleRefs})});
+    const j=await r.json().catch(()=>({})); if(!r.ok||!j.imageBase64){ toast('gen failed: '+(j.error||'no image')); return; }
+    _charKeyedB64=await keyFringeB64(j.imageBase64, j.mimeType);
+    ov.querySelector('#charImg').src='data:image/png;base64,'+_charKeyedB64; ov.querySelector('#charInput').style.display='none'; ov.querySelector('#charPreview').style.display='block';
+  }catch(e){ toast('gen error: '+e.message); } }
+function charDownload(){ if(!_charKeyedB64) return; const a=document.createElement('a'); a.href='data:image/png;base64,'+_charKeyedB64; a.download=(_charPrompt.slice(0,24).replace(/[^a-z0-9]+/gi,'_')||'character')+'.png'; a.click(); }
+async function charSave(){ if(!_charKeyedB64){ toast('nothing to save'); return; }
+  const name=(prompt('Name this character:', _charPrompt.slice(0,30))||'').trim()||'character';
+  const id='ch_'+Date.now().toString(36), path='./config/characters/'+id+'.png'; CHARIMG[path]='data:image/png;base64,'+_charKeyedB64;
+  BCONFIG.characters=BCONFIG.characters||[]; BCONFIG.characters.push({id,name,path,prompt:_charPrompt});
+  toast('saving to library'); if(_charLib&&_charLib.style.display==='flex') renderCharLib();
+  const res=await commitFiles([{path:'config/characters/'+id+'.png',content:_charKeyedB64,encoding:'base64'},{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'character: '+id);
+  toast(res?'saved to library ✓':'saved (commit failed — try again)'); }
+function ensureCharLib(){ if(_charLib) return _charLib; const ov=document.createElement('div'); ov.id='charLib'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
+  ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:16px;width:min(560px,94vw);max-height:84vh;overflow:auto;font-family:sans-serif;color:#e8e6f5">'
+   +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><div style="font-size:15px;font-weight:600">Character Library</div><button id="charNew" class="texGbtn">+ Create Character</button></div>'
+   +'<div style="font-size:12px;color:#9b93b5;margin-bottom:12px">Your saved monsters, synced via the cloud. This library will feed the animation tool later.</div>'
+   +'<div id="charGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px"></div>'
+   +'<div style="text-align:right;margin-top:14px"><button id="charLibClose" class="texCbtn">Close</button></div></div>';
+  document.body.appendChild(ov); _charLib=ov;
+  ov.querySelector('#charLibClose').onclick=()=>{ ov.style.display='none'; };
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
+  ov.querySelector('#charNew').onclick=openCharCreate;
+  return ov; }
+function renderCharLib(){ const ov=ensureCharLib(); const grid=ov.querySelector('#charGrid'); grid.innerHTML=''; const list=BCONFIG.characters||[];
+  if(!list.length){ grid.innerHTML='<div style="grid-column:1/-1;color:#9b93b5;font-size:12px;text-align:center;padding:18px 0">No characters yet. Create your first monster.</div>'; }
+  list.forEach(e=>{ const cell=document.createElement('div'); cell.style.cssText='position:relative;border:2px solid #2c2740;border-radius:8px;overflow:hidden;background:repeating-conic-gradient(#3a3550 0% 25%,#2a2640 0% 50%) 50%/16px 16px;aspect-ratio:1';
+    const im=document.createElement('img'); im.src=CHARIMG[e.path]||e.path; im.style.cssText='width:100%;height:100%;object-fit:contain;display:block'; cell.appendChild(im);
+    const dl=document.createElement('button'); dl.textContent='⭳'; dl.title='Download'; dl.style.cssText='position:absolute;top:4px;left:4px;width:24px;height:24px;border:none;border-radius:6px;background:rgba(15,8,22,.82);color:#cfc9e6;font-size:13px;cursor:pointer';
+    dl.onclick=(ev)=>{ ev.stopPropagation(); const a=document.createElement('a'); a.href=CHARIMG[e.path]||e.path; a.download=(e.name||'character')+'.png'; a.click(); };
+    const del=document.createElement('button'); del.textContent='×'; del.title='Delete'; del.style.cssText='position:absolute;top:4px;right:4px;width:24px;height:24px;border:2px solid #fff;border-radius:50%;background:#e2563b;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0';
+    del.onclick=(ev)=>{ ev.stopPropagation(); if(!confirm('Delete "'+(e.name||'character')+'"?')) return; BCONFIG.characters=(BCONFIG.characters||[]).filter(x=>x.id!==e.id); renderCharLib(); commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'character: remove '+e.id); };
+    const nm=document.createElement('div'); nm.textContent=e.name||''; nm.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(10,8,20,.74);color:#e8e6f5;font-size:10px;text-align:center;padding:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    cell.appendChild(dl); cell.appendChild(del); cell.appendChild(nm); grid.appendChild(cell); }); }
+function openCharLib(){ ensureCharLib(); renderCharLib(); _charLib.style.display='flex'; }
 function ensureObjModal(){ if(_objModal) return _objModal; const ov=document.createElement('div'); ov.id='objModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
   ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:18px;width:min(460px,94vw);font-family:sans-serif;color:#e8e6f5">'
    +'<div style="font-size:15px;font-weight:600;margin-bottom:4px">Create an Object</div>'
@@ -1770,6 +1830,7 @@ document.getElementById('bExport').onclick=async()=>{ toast('building backup\u20
  a.download='creapz-backup-'+new Date().toISOString().slice(0,10)+'.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('backup exported \u2014 '+Object.keys(backup.bench).length+' bench stages + assets'); };
 document.getElementById('bObject').onclick=openObjModal;
 document.getElementById('bStyle').onclick=openStyle;
+document.getElementById('bChar').onclick=openCharLib;
 document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file';
  inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{ let j=tx.trim(); const i=j.indexOf('={'); if(i>=0)j=j.slice(i+1,j.lastIndexOf('}')+1);
    histPush(); M=Object.assign(blankLevel(),migrateLevel(JSON.parse(j))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
