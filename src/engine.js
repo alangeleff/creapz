@@ -1,4 +1,4 @@
-const ASSET_VER='1782420000';
+const ASSET_VER='1782430000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1182,10 +1182,12 @@ function polyCeilAbove(x,hy){ const cs=polyCross(x); let c=null; for(let i=1;i<c
 function polySolidAt(x,y){ for(const ob of POLY.objs){ if(!polyCollides(ob)) continue; const S=ob.samples; let c=0; for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); if(a.y+(b.y-a.y)*t<y) c++; } } if((c&1)===1) return true; } return false; }
 function polyTop(x){ const cs=polyCross(x); return cs.length?cs[0].y:null; }
 function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(PW/2); const run=Math.abs(ex-p.x)||1;
-  for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+10]){ if(polySolidAt(ex,yy)) return true; }  // would move the body INTO a solid (e.g. into a closed object) -> block (no shove)
-  const cs=polyCross(ex); let surf=null, best=1e9;                   // else: too-steep walkable floor ahead -> block (must jump)
+  const cs=polyCross(ex); let surf=null, best=1e9;                   // nearest WALKABLE floor ahead
   for(let i=0;i<cs.length;i++){ if(cs[i].wall||!cs[i].floor) continue; const d=Math.abs(cs[i].y-p.y); if(d<best){ best=d; surf=cs[i].y; } }
-  if(surf!==null){ const rise=p.y-surf; return rise>0 && (rise/run) > POLY_MAXSLOPE; }
+  if(surf!==null){ const rise=p.y-surf; if(rise>0 && (rise/run) > POLY_MAXSLOPE) return true;   // too steep to walk up -> jump
+    for(const yy of [surf-8, surf-PH*0.5, surf-PH+10]){ if(polySolidAt(ex,yy)) return true; }   // a solid body standing ON that floor (object/wall) -> block entry (slopes have open air above, so they pass)
+    return false; }
+  for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+10]){ if(polySolidAt(ex,yy)) return true; }        // no floor ahead but solid in the body path
   return false; }
 function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
