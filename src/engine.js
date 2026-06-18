@@ -1,4 +1,4 @@
-const ASSET_VER='1782430000';
+const ASSET_VER='1782440000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1179,15 +1179,13 @@ function polyFloorUnder(x,fy){ const cs=polyCross(x); for(let i=0;i<cs.length;i+
 function polyFloorBetween(x,y0,y1){ const cs=polyCross(x); const lo=Math.min(y0,y1)-2, hi=Math.max(y0,y1)+0.5; let best=null;
   for(let i=0;i<cs.length;i+=2){ if(!cs[i].wall && cs[i].y>=lo && cs[i].y<=hi && (best===null||cs[i].y<best)) best=cs[i].y; } return best; }
 function polyCeilAbove(x,hy){ const cs=polyCross(x); let c=null; for(let i=1;i<cs.length;i+=2){ if(cs[i].y<=hy+2) c=cs[i].y; else break; } return c; }
-function polySolidAt(x,y){ for(const ob of POLY.objs){ if(!polyCollides(ob)) continue; const S=ob.samples; let c=0; for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ const t=(x-a.x)/((b.x-a.x)||1e-6); if(a.y+(b.y-a.y)*t<y) c++; } } if((c&1)===1) return true; } return false; }
+function polySolidAt(x,y){ const cs=polyCross(x); let c=0; for(const k of cs) if(k.y<y) c++; return (c&1)===1; }
 function polyTop(x){ const cs=polyCross(x); return cs.length?cs[0].y:null; }
 function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(PW/2); const run=Math.abs(ex-p.x)||1;
-  const cs=polyCross(ex); let surf=null, best=1e9;                   // nearest WALKABLE floor ahead
-  for(let i=0;i<cs.length;i++){ if(cs[i].wall||!cs[i].floor) continue; const d=Math.abs(cs[i].y-p.y); if(d<best){ best=d; surf=cs[i].y; } }
-  if(surf!==null){ const rise=p.y-surf; if(rise>0 && (rise/run) > POLY_MAXSLOPE) return true;   // too steep to walk up -> jump
-    for(const yy of [surf-8, surf-PH*0.5, surf-PH+10]){ if(polySolidAt(ex,yy)) return true; }   // a solid body standing ON that floor (object/wall) -> block entry (slopes have open air above, so they pass)
-    return false; }
-  for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+10]){ if(polySolidAt(ex,yy)) return true; }        // no floor ahead but solid in the body path
+  const cs=polyCross(ex); let surf=null, best=1e9;                   // nearest WALKABLE floor ahead (even, non-wall) to the feet — no step cap
+  for(let i=0;i<cs.length;i+=2){ if(cs[i].wall) continue; const d=Math.abs(cs[i].y-p.y); if(d<best){ best=d; surf=cs[i].y; } }
+  if(surf!==null){ const rise=p.y-surf; return rise>0 && (rise/run) > POLY_MAXSLOPE; }   // block only if it ramps up steeper than the wall angle
+  for(const yy of [p.y-6, p.y-PH*0.5, p.y-PH+10]){ if(polySolidAt(ex,yy)) return true; }  // no walkable floor but solid in the body's path = wall
   return false; }
 function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
