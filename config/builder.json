@@ -388,6 +388,11 @@
    "id": "sb_mqj09x4d",
    "name": "Villian",
    "path": "./config/stylebank/sb_mqj09x4d.png"
+  },
+  {
+   "id": "sb_mqj0a1v4",
+   "name": "cReaper",
+   "path": "./config/stylebank/sb_mqj0a1v4.png"
   }
  ],
  "hidden": [
