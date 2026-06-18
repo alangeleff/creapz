@@ -353,6 +353,13 @@
    ]
   }
  },
+ "styleBank": [
+  {
+   "id": "sb_mqj08kp7",
+   "name": "file_00000000491872309e288186e2c0f29c",
+   "path": "./config/stylebank/sb_mqj08kp7.png"
+  }
+ ],
  "hidden": [
   "fg_cryptbg",
   "gnd_gmq6wf61u",
