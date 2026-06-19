@@ -71,8 +71,9 @@ async function genGeminiStyled(full, refs) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return { err: 'GEMINI_API_KEY is not set on the server' };
   const parts = [];
+  parts.push({ text: 'The following image(s) are STYLE REFERENCES ONLY — use them strictly to match the art style (color palette, shading, linework/outline weight, and detail level). They are NOT the subject: do NOT copy, trace, redraw, or build on top of the character or content shown in them.' });
   for (const rr of refs) { const m = /^data:([^;]+);base64,(.*)$/.exec(rr) || []; if (m[2]) parts.push({ inlineData: { mimeType: m[1] || 'image/png', data: m[2] } }); }
-  parts.push({ text: full + ' IMPORTANT: match the ART STYLE of the reference image(s) above — same color palette, shading, linework/outline weight, and level of detail. Keep the established look consistent; do NOT copy their subject, only the style.' });
+  parts.push({ text: full + ' Render a COMPLETELY ORIGINAL, NEW subject exactly as described — visually distinct from the reference images. Do NOT reuse the reference character, body, pose, or features; borrow ONLY the art style.' });
   const payload = { contents: [{ role: 'user', parts }], generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '1:1' } } };
   const r = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(key)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   const j = await r.json().catch(() => ({}));
