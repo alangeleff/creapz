@@ -1,4 +1,4 @@
-const ASSET_VER='1782520000';
+const ASSET_VER='1782530000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -13,9 +13,10 @@ if (document.fonts && document.fonts.load){ try{ await Promise.race([document.fo
 const SPRITES = await loadSprites();
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const tcv = document.createElement('canvas'), tctx = tcv.getContext('2d');
-const W = 960, H = 440;
+const BASE_W = 960, BASE_H = 440; let W = BASE_W, H = BASE_H, VZOOM = 1;
 const RS = Math.min(2, Math.max(1, Math.round(window.devicePixelRatio || 1)));
 cv.width = W*RS; cv.height = H*RS;
+function setView(z){ z=Math.max(0.5,Math.min(1.7,+z||1)); VZOOM=z; W=Math.round(BASE_W/z); H=Math.round(BASE_H/z); cv.width=W*RS; cv.height=H*RS; }
 const GROUND = 360;
 const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
 const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
@@ -298,6 +299,7 @@ function enterWorld(fromAct){
 }
 function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
+  setView(ST.zoom||1);
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
   if(window.__polyDemo){ ST.poly=ST.poly||DEMO_POLY; SEG=[]; }
   POLY = polyBuildAll(ST.poly);
