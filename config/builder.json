@@ -411,6 +411,12 @@
    "name": "Ding-Dong",
    "path": "./config/characters/ch_mqkf62ey.png",
    "prompt": "Powerful siren head chibi monster in a cloak with sharp claws"
+  },
+  {
+   "id": "ch_mqkfa9wn",
+   "name": "Siren",
+   "path": "./config/characters/ch_mqkfa9wn.png",
+   "prompt": "Dark, evil lady siren with an evil harp and seaside features, large mouth with razor teeth"
   }
  ],
  "hidden": [
