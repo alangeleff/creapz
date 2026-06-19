@@ -1,4 +1,4 @@
-const ASSET_VER='1782650000';
+const ASSET_VER='1782660000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1417,7 +1417,6 @@ function update(dt){
     transformT-=dt; powerPulse+=dt; p.vx=0; p.vy=0; p.onGround=false; p.y-=16*dt; p.inv=Math.max(p.inv,0.5);
     if(p.state!=='jump'){ p.state='jump'; p.clock=0; } p.clock+=dt;
     if(transformT<=0){ powerBoom=0.42; playSfx('sfx_wportal_low2',0.55); playSfx('sfx_meleehit',0.7); }
-    { let tz=ST.zoom||1; const zz=ST.zoomzones; if(zz&&zz.length){ let bestF=0,tgt=tz; for(const z of zz){ if(p.x<z.x0||p.x>z.x1) continue; const R=Math.max(1,z.ramp||200), dIn=Math.min(p.x-z.x0,z.x1-p.x), ff=Math.max(0,Math.min(1,dIn/R)); if(ff>=bestF){bestF=ff;tgt=(z.zoom||1);} } tz=tz+(tgt-tz)*bestF; } tz=Math.round(tz/0.02)*0.02; if(Math.abs(tz-VZOOM)>0.001) setView(tz); }
     camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38)); const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62)); camY+=(_cty-camY)*Math.min(1,dt*7);
     return;
   }
@@ -1968,6 +1967,7 @@ function update(dt){
   updateHazards(dt*efr);
   updateZbits(dt);
   updatePal(dt);
+  { let tz=ST.zoom||1; const zz=ST.zoomzones; if(zz&&zz.length){ let bestF=0,tgt=tz; for(const z of zz){ if(p.x<z.x0||p.x>z.x1) continue; const R=Math.max(1,z.ramp||200), dIn=Math.min(p.x-z.x0,z.x1-p.x), ff=Math.max(0,Math.min(1,dIn/R)); if(ff>=bestF){bestF=ff;tgt=(z.zoom||1);} } tz=tz+(tgt-tz)*bestF; } tz=Math.round(tz/0.02)*0.02; if(Math.abs(tz-VZOOM)>0.001) setView(tz); }
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
   const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
   camY+=(_cty-camY)*Math.min(1,dt*7);
