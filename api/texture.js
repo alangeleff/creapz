@@ -146,8 +146,9 @@ module.exports = async (req, res) => {
     if (!body || typeof body !== 'object') body = {};
     const { prompt, style } = body;
     const model = (body.model === 'fal') ? 'fal' : 'gemini';
-    const mode = (body.mode === 'fringe') ? 'fringe' : (body.mode === 'object' ? 'object' : (body.mode === 'character' ? 'character' : (body.mode === 'upscale' ? 'upscale' : 'texture')));
+    const mode = (body.mode === 'fringe') ? 'fringe' : (body.mode === 'object' ? 'object' : (body.mode === 'character' ? 'character' : (body.mode === 'upscale' ? 'upscale' : (body.mode === 'edit' ? 'edit' : 'texture'))));
     const styleRefs = Array.isArray(body.styleRefs) ? body.styleRefs.filter(x => typeof x === 'string' && x.length > 100).slice(0, 2) : [];
+    if (mode === 'edit') { if (typeof body.image !== 'string' || body.image.length < 200 || !prompt) return res.status(400).json({ error: 'image + prompt required' }); const ed = await genGeminiI2I('Edit the provided image: ' + prompt + '. Apply ONLY that change; keep everything else identical — the subject pose, framing, proportions, line art, colors, and the solid magenta background. Return the full image at the same composition.', body.image); if (ed.err) return res.status(ed.status || 500).json({ error: ed.err, mode: 'edit' }); return res.status(200).json({ imageBase64: ed.imageBase64, mimeType: ed.mimeType, mode: 'edit' }); }
     if (mode === 'upscale') { if (typeof body.image !== 'string' || body.image.length < 200) return res.status(400).json({ error: 'image required' }); const u = await genFalUpscale(body.image); if (u.err) return res.status(u.status||500).json({ error: u.err, mode }); return res.status(200).json({ imageBase64: u.imageBase64, mimeType: u.mimeType, mode }); }
     if (!prompt) return res.status(400).json({ error: 'prompt required' });
 
