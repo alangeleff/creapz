@@ -260,8 +260,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782480000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782480000');
+fetch('./assets/sprites.json?v=1782490000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782490000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1211,8 +1211,53 @@ function renderCharLib(){ const ov=ensureCharLib(); const grid=ov.querySelector(
     const del=document.createElement('button'); del.textContent='×'; del.title='Delete'; del.style.cssText='position:absolute;top:4px;right:4px;width:24px;height:24px;border:2px solid #fff;border-radius:50%;background:#e2563b;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0';
     del.onclick=(ev)=>{ ev.stopPropagation(); if(!confirm('Delete "'+(e.name||'character')+'"?')) return; BCONFIG.characters=(BCONFIG.characters||[]).filter(x=>x.id!==e.id); renderCharLib(); commitFiles([{path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'}],'character: remove '+e.id); };
     const nm=document.createElement('div'); nm.textContent=e.name||''; nm.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(10,8,20,.74);color:#e8e6f5;font-size:10px;text-align:center;padding:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    cell.style.cursor='pointer'; cell.title='Animate'; cell.onclick=()=>openAnimator(e);
     cell.appendChild(dl); cell.appendChild(del); cell.appendChild(nm); grid.appendChild(cell); }); }
 function openCharLib(){ ensureCharLib(); renderCharLib(); _charLib.style.display='flex'; }
+let _animOv=null,_animChar=null,_animFrames=[],_animTimer=null,_animIdx=0,_animFps=6;
+const ANIM_PRESETS=[['Idle','relaxed idle standing pose, slight breathing lean'],['Walk A','walking, left leg forward mid-stride, arms swinging'],['Walk B','walking, right leg forward mid-stride, arms swinging the other way'],['Run','running fast, body leaning forward, legs in a wide stride'],['Jump','jumping upward, legs tucked, arms raised'],['Attack','attacking — arm or weapon swung forward aggressively'],['Hurt','recoiling in pain, leaning back, off-balance']];
+function ensureAnimOv(){ if(_animOv) return _animOv; const ov=document.createElement('div'); ov.id='animOv'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.7);display:none;align-items:center;justify-content:center;z-index:100001';
+  let presetBtns=ANIM_PRESETS.map(p=>'<button class="texCbtn animp" data-pose="'+p[1].replace(/"/g,'&quot;')+'">'+p[0]+'</button>').join('');
+  ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:16px;width:min(620px,95vw);max-height:90vh;overflow:auto;font-family:sans-serif;color:#e8e6f5">'
+   +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div id="animTitle" style="font-size:15px;font-weight:600">Character Animator</div><button id="animClose" class="texCbtn">Close</button></div>'
+   +'<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">'
+   +'<div style="flex:0 0 200px;text-align:center"><div style="background:repeating-conic-gradient(#3a3550 0% 25%,#2a2640 0% 50%) 50%/22px 22px;border:1px solid #2c2740;border-radius:10px;padding:8px"><img id="animView" style="width:184px;height:184px;object-fit:contain;display:block"></div>'
+   +'<div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px"><button id="animPlayBtn" class="texGbtn" style="padding:6px 12px">⏸</button><label style="font-size:11px;color:#9b93b5;display:flex;align-items:center;gap:5px">fps<input id="animFps" type="range" min="1" max="16" step="1" value="6" style="width:80px"></label></div></div>'
+   +'<div style="flex:1;min-width:240px"><div style="font-size:12px;color:#9b93b5;margin-bottom:6px">Frames (plays in order):</div><div id="animStrip" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>'
+   +'<div style="font-size:12px;color:#9b93b5;margin-bottom:6px">Add a pose (generated from the base character):</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+presetBtns+'<button class="texCbtn" id="animCustom">+ Custom</button></div>'
+   +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button id="animSave" class="texGbtn">Save Animation</button></div></div></div></div>';
+  document.body.appendChild(ov); _animOv=ov;
+  ov.querySelector('#animClose').onclick=()=>{ animPlay(false); ov.style.display='none'; };
+  ov.addEventListener('click',e=>{ if(e.target===ov){ animPlay(false); ov.style.display='none'; } });
+  ov.querySelector('#animPlayBtn').onclick=()=>{ animPlay(!_animTimer); };
+  ov.querySelector('#animFps').addEventListener('input',function(){ _animFps=+this.value; if(_animTimer) animPlay(true); });
+  ov.querySelectorAll('.animp').forEach(b=>{ b.onclick=()=>animPose(b.getAttribute('data-pose')); });
+  ov.querySelector('#animCustom').onclick=()=>{ const t=(prompt('Describe the pose:')||'').trim(); if(t) animPose(t); };
+  ov.querySelector('#animSave').onclick=animSave;
+  return ov; }
+function animPlay(on){ const ov=_animOv; if(!ov) return; if(_animTimer){ clearInterval(_animTimer); _animTimer=null; } const btn=ov.querySelector('#animPlayBtn');
+  if(on && _animFrames.length){ _animTimer=setInterval(()=>{ _animIdx=(_animIdx+1)%_animFrames.length; const v=ov.querySelector('#animView'); if(v) v.src=_animFrames[_animIdx].src; }, Math.round(1000/_animFps)); if(btn)btn.textContent='⏸'; }
+  else if(btn) btn.textContent='▶'; }
+function renderAnim(){ const ov=ensureAnimOv(); ov.querySelector('#animTitle').textContent='Animator — '+(_animChar?_animChar.name:''); const strip=ov.querySelector('#animStrip'); strip.innerHTML='';
+  _animFrames.forEach((fr,i)=>{ const cell=document.createElement('div'); cell.style.cssText='position:relative;width:54px;height:54px;border:2px solid '+(i===0?'#5fd8ff':'#2c2740')+';border-radius:6px;overflow:hidden;background:repeating-conic-gradient(#3a3550 0% 25%,#2a2640 0% 50%) 50%/12px 12px';
+    const im=document.createElement('img'); im.src=fr.src; im.style.cssText='width:100%;height:100%;object-fit:contain'; im.title=fr.pose; cell.appendChild(im);
+    if(i>0){ const del=document.createElement('button'); del.textContent='×'; del.style.cssText='position:absolute;top:-1px;right:-1px;width:18px;height:18px;border:1px solid #fff;border-radius:50%;background:#e2563b;color:#fff;font-size:11px;line-height:1;cursor:pointer;padding:0'; del.onclick=()=>{ _animFrames.splice(i,1); if(_animIdx>=_animFrames.length)_animIdx=0; renderAnim(); }; cell.appendChild(del); }
+    strip.appendChild(cell); });
+  const v=ov.querySelector('#animView'); if(v && _animFrames[0] && !v.src) v.src=_animFrames[0].src; }
+function openAnimator(e){ _animChar=e; _animIdx=0; ensureAnimOv(); const base=CHARIMG[e.path]||e.path; _animFrames=[{pose:'idle (base)', src:base}]; if(e.frames) for(const fr of e.frames) _animFrames.push({pose:fr.pose, src:fr.path}); _animOv.querySelector('#animView').src=base; renderAnim(); _animOv.style.display='flex'; animPlay(true); }
+async function animPose(poseText){ if(!_animChar) return;
+  try{ const baseImg=await _loadImg(CHARIMG[_animChar.path]||_animChar.path); const c=document.createElement('canvas'); c.width=baseImg.naturalWidth; c.height=baseImg.naturalHeight; const x=c.getContext('2d'); x.fillStyle='#ff00ff'; x.fillRect(0,0,c.width,c.height); x.drawImage(baseImg,0,0);
+    toast('generating pose');
+    const r=await fetch(TEXTURE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'pose', image:c.toDataURL('image/png'), prompt:poseText})});
+    const j=await r.json().catch(()=>({})); if(!r.ok||!j.imageBase64){ toast('pose failed: '+(j.error||'no image')); return; }
+    const keyed=await keyFringeB64(j.imageBase64, j.mimeType); _animFrames.push({pose:poseText, src:'data:image/png;base64,'+keyed}); renderAnim(); toast('pose added');
+  }catch(e2){ toast('pose error: '+e2.message); } }
+async function animSave(){ if(!_animChar){ return; } const e=_animChar; const files=[]; const frames=[];
+  for(let i=1;i<_animFrames.length;i++){ const fr=_animFrames[i]; if(fr.src.indexOf('data:')===0){ const id=e.id+'_f'+i, path='./config/characters/'+id+'.png'; CHARIMG[path]=fr.src; files.push({path:'config/characters/'+id+'.png',content:fr.src.split(',')[1],encoding:'base64'}); frames.push({pose:fr.pose, path}); } else { frames.push({pose:fr.pose, path:fr.src}); } }
+  e.frames=frames; const idx=(BCONFIG.characters||[]).findIndex(c=>c.id===e.id); if(idx>=0) BCONFIG.characters[idx].frames=frames;
+  files.push({path:'config/builder.json',content:JSON.stringify(BCONFIG,null,1),encoding:'utf8'});
+  toast('saving animation ('+frames.length+' frames)');
+  const res=await commitFiles(files,'character anim: '+e.id); toast(res?'animation saved ✓':'saved locally (commit failed)'); }
 function ensureObjModal(){ if(_objModal) return _objModal; const ov=document.createElement('div'); ov.id='objModal'; ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,16,.66);display:none;align-items:center;justify-content:center;z-index:99999';
   ov.innerHTML='<div style="background:#171326;border:1px solid #2c2740;border-radius:14px;padding:18px;width:min(460px,94vw);font-family:sans-serif;color:#e8e6f5">'
    +'<div style="font-size:15px;font-weight:600;margin-bottom:4px">Create an Object</div>'
