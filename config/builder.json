@@ -405,6 +405,14 @@
    "path": "./config/stylebank/sb_mqj0af4p.png"
   }
  ],
+ "characters": [
+  {
+   "id": "ch_mqkf62ey",
+   "name": "Ding-Dong",
+   "path": "./config/characters/ch_mqkf62ey.png",
+   "prompt": "Powerful siren head chibi monster in a cloak with sharp claws"
+  }
+ ],
  "hidden": [
   "fg_cryptbg",
   "gnd_gmq6wf61u",
