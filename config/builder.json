@@ -417,6 +417,12 @@
    "name": "Siren",
    "path": "./config/characters/ch_mqkfa9wn.png",
    "prompt": "Dark, evil lady siren with an evil harp and seaside features, large mouth with razor teeth"
+  },
+  {
+   "id": "ch_mqkfnh6d",
+   "name": "Haunted Treant - Boss",
+   "path": "./config/characters/ch_mqkfnh6d.png",
+   "prompt": "Haunted treant 6-legged beast"
   }
  ],
  "hidden": [
