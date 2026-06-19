@@ -423,6 +423,12 @@
    "name": "Haunted Treant - Boss",
    "path": "./config/characters/ch_mqkfnh6d.png",
    "prompt": "Haunted treant 6-legged beast"
+  },
+  {
+   "id": "ch_mqkfpa6i",
+   "name": "Giant spider monster, corpses",
+   "path": "./config/characters/ch_mqkfpa6i.png",
+   "prompt": "Giant spider monster, corpses for limbs, 9 eyes, bony spine spikes"
   }
  ],
  "hidden": [
