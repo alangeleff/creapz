@@ -167,7 +167,7 @@
   <div id="bar">
    <span class="grp grp-stage"><span class="glabel">Stage</span><label>name</label><input id="fName" size="9" value="Crypt Depths"><label>act</label><input id="fAct" size="2" value="I"><label>theme</label><select id="fTheme"><option value="crypt">crypt</option><option value="plains">ethereal plains</option><option value="witch">witchwood</option><option value="harbor">drowned harbor</option><option value="spire">bell spire</option><option value="charnel">charnel peak</option><option value="rift">the rift</option><option value="castle">blood moon castle</option><option value="">surface</option></select><label>music</label><select id="fMusic"><option>act1</option><option>act2</option><option>crypt1</option><option>crypt2</option><option>ethereal1</option><option>ethereal2</option><option>title</option></select><label>W</label><input id="fW" size="4" value="3200"><label>H</label><input id="fH" size="4" value="2900"><label>idx</label><input id="fIdx" size="2" value="2"><label title="Gameplay camera zoom — lower = more zoomed out (test via Play)">zoom</label><input id="stageZoom" type="range" min="0.6" max="1.5" step="0.05" value="1" style="width:70px;vertical-align:middle"><button class="btn" id="bNew"><i data-lucide="file-plus-2">✦</i> New</button></span>
    <span class="grp grp-save"><span class="glabel">Save</span><button class="btn" id="bBench" title="Committed stage bench — permanent, every device"><i data-lucide="archive">🗄</i> Bench</button><button class="btn" id="bMap" title="World Map — assign bench stages to zones/acts"><i data-lucide="map">🗺</i> Map</button><select class="btn" id="bLoad" title="Load an existing level to edit"><option value="">Load level…</option><option value="stage1.js|0">Cemetery · Act I</option><option value="stage2.js|1">Cemetery · Act II</option><option value="crypt1.js|2">Crypt Depths · Act I</option><option value="crypt2.js|3">Crypt Depths · Act II</option></select><button class="btn" id="bExport" title="Export a full backup — this stage + all custom assets + every bench stage"><i data-lucide="download">⭳</i> Backup</button><button class="btn" id="bImport" title="Import a level file"><i data-lucide="file-up">⭱</i> Import</button></span>
-   <span class="grp grp-edit"><span class="glabel">Edit</span><button class="btn" id="bUndo" title="Undo (Ctrl+Z)"><i data-lucide="undo-2">↶</i></button><button class="btn" id="bRedo" title="Redo (Ctrl+Y)"><i data-lucide="redo-2">↷</i></button><button class="btn" id="bRuler" title="Measure / jump-reach ruler"><i data-lucide="ruler">📏</i></button><button class="btn" id="bSnap" title="Magnetic edge snapping"><i data-lucide="magnet">🧲</i></button></span>
+   <span class="grp grp-edit"><span class="glabel">Edit</span><button class="btn" id="bUndo" title="Undo (Ctrl+Z)"><i data-lucide="undo-2">↶</i></button><button class="btn" id="bRedo" title="Redo (Ctrl+Y)"><i data-lucide="redo-2">↷</i></button><button class="btn" id="bRuler" title="Measure / jump-reach ruler"><i data-lucide="ruler">📏</i></button><button class="btn" id="bSnap" title="Magnetic edge snapping"><i data-lucide="magnet">🧲</i></button><button class="btn" id="mMarq" title="Marquee select — drag a box to select multiple, then drag to move them together"><i data-lucide="box-select">⬚</i></button></span>
    <span class="grp grp-assets"><span class="glabel">Assets</span><button class="btn" id="bUpload" title="Upload a custom asset"><i data-lucide="upload">⬆</i> Upload</button><button class="btn" id="bMusic" title="Upload a background music track"><i data-lucide="music">🎵</i> Music</button><button class="btn" id="bObject" title="Create an AI object/prop with auto-traced collision"><i data-lucide="sparkles">✨</i> Object</button><button class="btn" id="bStyle" title="Style Bank — reference art for consistent generation"><i data-lucide="images">🎭</i> Style</button><button class="btn" id="bChar" title="Character Creator + cloud library"><i data-lucide="ghost">🐉</i> Characters</button></span>
    <button class="btn" id="mPoly" title="Terrain sculpt mode (polyline ground)"><i data-lucide="mountain">⛰</i> Terrain</button>
    <span class="grp grp-terrain termode"><span class="glabel">Terrain</span><button class="btn" id="bAddPoly" title="Add a main ground polyline across the stage"><i data-lucide="spline">+</i> Polyline</button><button class="btn" id="bAddShape" title="Add a closed free-floating shape (platform / pillar / ceiling)"><i data-lucide="hexagon">+</i> Shape</button><button class="btn" id="mPBreak" title="Terrain: break handle (independent in/out curve)"><i data-lucide="scissors">✂</i></button><button class="btn" id="mPWall" title="Terrain: paint wall segments"><i data-lucide="brick-wall">🧱</i></button><button class="btn" id="mPLock" title="Terrain: lock a node"><i data-lucide="lock">🔒</i></button><select class="btn" id="polyLayerSel" title="Layer of the selected shape"><option value="main">▦ Main · collides</option><option value="bg">▦ Background</option><option value="fg">▦ Foreground</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Wall angle: slopes steeper than this become walls">∠<input id="polyAngle" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:64px;vertical-align:middle"></label></span>
@@ -260,8 +260,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782550000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782550000');
+fetch('./assets/sprites.json?v=1782560000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782560000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -399,7 +399,7 @@ function selectGroup(name){ const members=allProps().filter(p=>getG(p.raw)===nam
   if(members.length){ let mx=0,my=0; members.forEach(r=>{ const pr={raw:r,kind:Array.isArray(r)?'terrace':(r.t? (HAZ_COLS[r.t]?'haz':'tex') : (r.type?'obst':'plat'))}; const c=propCenterRaw(r); mx+=c[0]; my+=c[1]; }); centerOn(mx/members.length,my/members.length); } draw(); }
 function propCenterRaw(r){ if(Array.isArray(r)) return [(r[0]+r[1])/2,r[2]]; if(r.type) return [r.x,r.gy||0]; if(r.t&&!HAZ_COLS[r.t]) return [r.x+r.w/2,r.y]; if(r.t) return [r.x+r.w/2,r.y]; return [(r.x??r.x0)+r.w/2,r.y]; }
 function moveMemberBy(r,dx,dy){ if(Array.isArray(r)){ r[0]+=dx; r[1]+=dx; r[2]+=dy; } else if(r.type){ r.x+=dx; r.gy=(r.gy||0)+dy; } else { if(r.x0!==undefined)r.x0+=dx; r.x+=dx; r.y+=dy; } }
-let eraseMode=false, bulkArm=false;
+let eraseMode=false, bulkArm=false, marqMode=false;
 let M=blankLevel();
 function blankLevel(){ return {name:'Crypt Depths',act:'I',music:'act2',theme:'crypt',world:3200,h:2900,
   goal:3000,goalY:2480, seg:[], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[], bg:[], fg:[], poly:[], wallSlope:1.3}; }
@@ -796,6 +796,7 @@ cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.s
  const hh=hitHandle(wxp,wyp);
  if(hh){ act={mode:'handle',h:hh,start:JSON.parse(JSON.stringify(sel.obj)),pre:snapM(),moved:false}; return; }
  const h=hit(wxp,wyp);
+ if(marqMode && !h){ act={mode:'marquee',x0:wxp,y0:wyp,x1:wxp,y1:wyp}; sel=null; showSel(); draw(); return; }
  if(sel&&sel.type==='group' && !h){ act={mode:'gmove',px:c.x,py:c.y,pre:snapM(),moved:false,gstart:sel.members.map(r=>JSON.stringify(Array.isArray(r)?r:r))}; }
  else if(h){ sel=h; showSel(); act={mode:'move',h,px:c.x,py:c.y,start:JSON.parse(JSON.stringify(h.obj)),pre:snapM(),moved:false}; }
  else { sel=null; showSel(); act={mode:'pan',px:c.x,py:c.y,cx:camx,cy:camy}; }
@@ -810,6 +811,7 @@ cv.addEventListener('pointermove',e=>{
  if(polyMode){ if(polyDrag){ polyMove(wx(c.x),wy(c.y)); return; } }
  if(!act) return;
  if(act.mode==='pan'){ camx=act.cx-(c.x-act.px)/zoom; camy=act.cy-(c.y-act.py)/zoom; draw(); return; }
+ if(act.mode==='marquee'){ act.x1=wx(c.x); act.y1=wy(c.y); draw(); return; }
  if(act.mode==='gmove'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); if(!act.last)act.last={dx:0,dy:0};
    const sdx=dx-act.last.dx, sdy=dy-act.last.dy; if(sdx||sdy){ for(const r of sel.members) moveMemberBy(r,sdx,sdy); act.last={dx,dy}; act.moved=true; persist(); draw(); } return; }
  if(act.mode==='move'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); moveObj(act.h,act.start,dx,dy); if(snapOn) snapMove(act.h); act.moved=true; syncBack(act.h); persist(); showSel(); draw(); return; }
@@ -817,6 +819,7 @@ cv.addEventListener('pointermove',e=>{
  if(act.mode==='ruler'){ if(act.pt===1){ ruler.x1=snap(wx(c.x)); ruler.y1=snap(wy(c.y)); } else { ruler.x2=snap(wx(c.x)); ruler.y2=snap(wy(c.y)); } draw(); return; }
 });
 function endPtr(e){ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null;
+ if(act && act.mode==='marquee'){ if(ptrs.size===0){ const x0=Math.min(act.x0,act.x1),x1=Math.max(act.x0,act.x1),y0=Math.min(act.y0,act.y1),y1=Math.max(act.y0,act.y1); const members=[]; for(const pp of allProps()){ const cc=propCenterRaw(pp.raw); if(cc[0]>=x0&&cc[0]<=x1&&cc[1]>=y0&&cc[1]<=y1) members.push(pp.raw); } msel.clear(); members.forEach(r=>msel.add(r)); sel = members.length ? {type:'group',name:'Selection ('+members.length+')',members,obj:{}} : null; showSel(); marqMode=false; const mb=document.getElementById('mMarq'); if(mb)mb.classList.remove('on'); act=null; draw(); toast(members.length?members.length+' selected — drag to move them together':'nothing in the box'); } return; }
  if(polyDrag){ if(polyDrag.kind==='node' && !polyDrag.moved){ const n=polyDrag.n, now=performance.now();
      if(polyLastTapNode===n && now-polyLastTapT<350){ const ns=curNodes(); const i=ns?ns.indexOf(n):-1; if(i>=0 && ns.length>2) ns.splice(i,1); polyLastTapNode=null; }
      else { n.corner=!n.corner; polyLastTapNode=n; polyLastTapT=now; } }
@@ -1540,6 +1543,7 @@ function draw(){
  for(let y=0;y<=M.h;y+=g){ ctx.moveTo(sx(0),sy(y)); ctx.lineTo(sx(M.world),sy(y)); }
  ctx.stroke();
  drawEditorPoly(); drawPolyLabels();
+ if(act && act.mode==='marquee'){ ctx.save(); ctx.strokeStyle='#5fd8ff'; ctx.fillStyle='rgba(95,216,255,.12)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); const X=sx(Math.min(act.x0,act.x1)),Y=sy(Math.min(act.y0,act.y1)),W2=Math.abs(act.x1-act.x0)*zoom,H2=Math.abs(act.y1-act.y0)*zoom; ctx.fillRect(X,Y,W2,H2); ctx.strokeRect(X,Y,W2,H2); ctx.setLineDash([]); ctx.restore(); }
  allProps().sort((a,b)=>a.z-b.z).forEach(pr=>{ if(pr.kind==='terrace')dTerr(pr.raw); else if(pr.kind==='plat')dPlat(pr.raw); else if(pr.kind==='haz')dHaz(pr.raw); else if(pr.kind==='tex')dTex(pr.raw); else dObst(pr.raw); });
  if(sel&&sel.type==='bulkswap'){ for(const r of sel.members){ const c=propCenterRaw(r); const X=sx(c[0]),Y=sy(c[1]); ctx.fillStyle='rgba(200,251,80,.16)'; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(X,Y,18,0,7); ctx.fill(); ctx.stroke(); } }
  for(const s of M.souls){ ctx.fillStyle=SOUL_COL_ED[s[2]||1]||'#7fe0ff'; ctx.beginPath(); ctx.arc(sx(s[0]),sy(s[1]),Math.max(3,6*zoom),0,7); ctx.fill(); }
@@ -1902,6 +1906,7 @@ document.getElementById('bExport').onclick=async()=>{ toast('building backup\u20
 document.getElementById('bObject').onclick=openObjModal;
 document.getElementById('bStyle').onclick=openStyle;
 document.getElementById('bChar').onclick=openCharLib;
+document.getElementById('mMarq').onclick=function(){ marqMode=!marqMode; this.classList.toggle('on',marqMode); if(marqMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); const mb2=document.getElementById('mBulk'); if(mb2)mb2.classList.remove('on'); if(polyMode){ polyMode=false; const mp=document.getElementById('mPoly'); if(mp)mp.classList.remove('on'); try{updateTermodeBar();}catch(e){} } sel=null; showSel(); draw(); toast('Marquee: drag a box over objects to select them'); } };
 document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file';
  inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{ let j=tx.trim(); const i=j.indexOf('={'); if(i>=0)j=j.slice(i+1,j.lastIndexOf('}')+1);
    histPush(); M=Object.assign(blankLevel(),migrateLevel(JSON.parse(j))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
