@@ -1,4 +1,4 @@
-const ASSET_VER='1782630000';
+const ASSET_VER='1782640000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1212,7 +1212,7 @@ function resolvePoly(prevFeet){
     if(g!==null && (g-p.y)<=POLY_MAXSLOPE*RUN+12) best=g;
     if(best===null){ const fb=polyFloorBetween(p.x,prevFeet,p.y); if(fb!==null) best=fb; }
     for(const sfc of polyLineSurfaces(p.x)){ let ok;
-      if(sfc.wn==='oneway') ok=(prevFeet<=sfc.y+2 && p.y>=sfc.y-2);      // one-way: only when crossing down onto it
+      if(sfc.wn==='oneway') ok=(prevFeet<=sfc.y+POLY_STEP && sfc.y<=p.y+POLY_MAXSLOPE*RUN+40);   // one-way: catch/follow if feet were near-or-above the line (any incline); pass up only from well below
       else ok=(sfc.y>=p.y-POLY_STEP);                                    // solid thin line: land if at/just-above feet
       if(ok && (best===null || sfc.y<best)) best=sfc.y; }
     if(best!==null){ p.y=best; p.vy=0; p.onGround=true; } else p.onGround=false;
