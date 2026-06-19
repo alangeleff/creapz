@@ -260,8 +260,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782540000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782540000');
+fetch('./assets/sprites.json?v=1782550000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782550000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -441,6 +441,15 @@ async function loadBConfig(){ try{ const r=await fetch('./config/builder.json?cb
 loadBConfig();
 try{updateTermodeBar();}catch(e){}
 try{ if(window.lucide&&lucide.createIcons) lucide.createIcons(); }catch(e){}
+function enhanceSliders(root){ (root||document).querySelectorAll('input[type=range]:not([data-enh])').forEach(r=>{ r.setAttribute('data-enh','1');
+  const span=(parseFloat(r.max)-parseFloat(r.min)); const frac=(parseFloat(r.step||'1')<1)||span<=5; if(frac) r.step='0.01';
+  const fmt=v=> frac ? (Math.round(v*100)/100) : Math.round(v);
+  const n=document.createElement('input'); n.type='number'; n.min=r.min; n.max=r.max; n.step=frac?'0.01':'1'; n.value=fmt(+r.value);
+  n.style.cssText='width:46px;background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:3px 4px;font-size:11px;margin-left:3px;vertical-align:middle';
+  r.addEventListener('input',()=>{ n.value=fmt(+r.value); });
+  n.addEventListener('input',()=>{ let v=parseFloat(n.value); if(isNaN(v)) return; v=Math.max(+r.min,Math.min(+r.max,v)); r.value=v; r.dispatchEvent(new Event('input',{bubbles:true})); });
+  r.insertAdjacentElement('afterend', n); }); }
+setTimeout(()=>{ try{ enhanceSliders(); }catch(e){} },0);
 function customStamps(){ return (BCONFIG.customAssets||[]).map(a=>({k:(a.kind==='bg'?'bg_':a.kind==='fg'?'fg_':'tex_')+a.id, label:a.name, sw:a.sw||'#9a8a6a', cat:a.cat||(a.kind==='bg'?'Background':a.kind==='fg'?'Foreground':'Decor'), id:a.id, custom:true})); }
 function registerCustomAsset(a, src){ const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src=src||('./'+a.file+'?v='+(a.v||1)); if(a.kind==='bg'||a.kind==='fg'){ BGE_IMG[a.id]=im; BG_LABEL[a.id]=a.name; } else { DECOR_IMG[a.id]=im; TEX_LABEL[a.id]=a.name; TEX_COLS[a.id]=a.sw||'#9a8a6a'; } }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -1234,6 +1243,7 @@ function ensureAnimOv(){ if(_animOv) return _animOv; const ov=document.createEle
   ov.querySelectorAll('.animp').forEach(b=>{ b.onclick=()=>animPose(b.getAttribute('data-pose')); });
   ov.querySelector('#animCustom').onclick=()=>{ const t=(prompt('Describe the pose:')||'').trim(); if(t) animPose(t); };
   ov.querySelector('#animSave').onclick=animSave;
+  try{ enhanceSliders(ov); }catch(e){}
   return ov; }
 function animPlay(on){ const ov=_animOv; if(!ov) return; if(_animTimer){ clearInterval(_animTimer); _animTimer=null; } const btn=ov.querySelector('#animPlayBtn');
   if(on && _animFrames.length){ _animTimer=setInterval(()=>{ _animIdx=(_animIdx+1)%_animFrames.length; const v=ov.querySelector('#animView'); if(v) v.src=_animFrames[_animIdx].src; }, Math.round(1000/_animFps)); if(btn)btn.textContent='⏸'; }
@@ -1277,6 +1287,7 @@ function ensureObjModal(){ if(_objModal) return _objModal; const ov=document.cre
   ov.querySelector('#objReprompt').onclick=()=>{ ov.querySelector('#objPreview').style.display='none'; ov.querySelector('#objInput').style.display='block'; };
   ov.querySelector('#objTrash').onclick=()=>{ _objKeyedB64=null; ov.querySelector('#objPreview').style.display='none'; ov.querySelector('#objInput').style.display='block'; };
   ov.querySelector('#objTweak').onclick=objTweak; ov.querySelector('#objPlace').onclick=objPlace;
+  try{ enhanceSliders(ov); }catch(e){}
   return ov; }
 async function sharpenSelected(){ const o=M.poly&&M.poly[polyActive]; if(!o||!o.tex){ toast('select an object or skinned shape first'); return; }
   try{ let src=POLYTEX_ED[o.tex]; if(!(src&&src.complete&&src.naturalWidth)) src=await _loadImg(o.tex);
