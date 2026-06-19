@@ -1,4 +1,4 @@
-const ASSET_VER='1782610000';
+const ASSET_VER='1782620000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1168,20 +1168,20 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; b.fillMode=o.fillMode||'pattern'; b.rot=o.rot||0; b.kind=o.kind||null; b.noCol=!!o.noCol; built.push(b); } }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; b.fillMode=o.fillMode||'pattern'; b.rot=o.rot||0; b.kind=o.kind||null; b.noCol=!!o.noCol; b.line=!!o.line; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyCollides(ob){ return (ob.layer||'main')==='main' && !ob.noCol; }
 function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground'||c==='oneway'||c==='pass')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
 function polyCross(x){ const out=[];
   for(const ob of POLY.objs){ if(!polyCollides(ob)) continue; const S=ob.samples;
-    for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ if((a.wn||'auto')==='pass') continue; const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t, wall:polyEdgeWall(a,b), wn:a.wn||'auto'}); } } }
+    for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ if((a.wn||'auto')==='pass') continue; const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t, wall:polyEdgeWall(a,b), wn:a.wn||'auto', line:!!ob.line}); } } }
   out.sort((p,q)=>p.y-q.y); return out; }
 function polyFloorUnder(x,fy){ const cs=polyCross(x); for(let i=0;i<cs.length;i+=2){ if(cs[i].wn==='oneway') continue; if(!cs[i].wall && cs[i].y>=fy-POLY_STEP) return cs[i].y; } return null; }
 function polyFloorBetween(x,y0,y1){ const cs=polyCross(x); const lo=Math.min(y0,y1)-2, hi=Math.max(y0,y1)+0.5; let best=null;
   for(let i=0;i<cs.length;i+=2){ if(!cs[i].wall && cs[i].y>=lo && cs[i].y<=hi && (best===null||cs[i].y<best)) best=cs[i].y; } return best; }
 function polyCeilAbove(x,hy){ const cs=polyCross(x); let c=null; for(let i=1;i<cs.length;i+=2){ if(cs[i].wn==='oneway') continue; if(cs[i].y<=hy+2) c=cs[i].y; else break; } return c; }
-function polySolidAt(x,y){ const cs=polyCross(x); let c=0; for(const k of cs){ if(k.wn==='oneway') continue; if(k.y<y) c++; } return (c&1)===1; }
+function polySolidAt(x,y){ const cs=polyCross(x); let c=0; for(const k of cs){ if(k.wn==='oneway'||k.line) continue; if(k.y<y) c++; } return (c&1)===1; }
 function polyTop(x){ const cs=polyCross(x); return cs.length?cs[0].y:null; }
 function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(PW/2); const run=Math.abs(ex-p.x)||1;
   const cs=polyCross(ex); let surf=null, best=1e9;                   // nearest WALKABLE floor ahead (even, non-wall) to the feet — no step cap
@@ -1256,7 +1256,7 @@ function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex)
     ctx.drawImage(img, u,0, sw,ih, x-camX, sy-H+drop, step+1, H); }
   ctx.restore(); }
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
-  for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; const S=ob.samples; if(S.length<2) continue;
+  for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; if(ob.line) continue; const S=ob.samples; if(S.length<2) continue;
     const a=(layer==='bg'?0.55:(layer==='fg'?0.85:1))*(ob.alpha!==undefined?ob.alpha:1);
     if(ob.edge==='soft'){
       const texReady = !ob.tex || !!polyTexImg(ob.tex);

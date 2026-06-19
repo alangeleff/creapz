@@ -260,8 +260,8 @@ const GRASS_IMG=new Image(); GRASS_IMG.onload=()=>draw(); GRASS_IMG.src='./asset
 const SPIKE_E=new Image(); SPIKE_E.onload=()=>draw(); SPIKE_E.src='./assets/haz_spike2.png';
 const SPIKESHOT_E=new Image(); SPIKESHOT_E.onload=()=>draw(); SPIKESHOT_E.src='./assets/haz_spikeshot1.png';
 const EDSPR={};
-fetch('./assets/sprites.json?v=1782610000').then(r=>r.json()).then(S=>{
-  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782610000');
+fetch('./assets/sprites.json?v=1782620000').then(r=>r.json()).then(S=>{
+  const ass=p=> p.startsWith('data:')?p:('./assets/'+p+'?v=1782620000');
   const need={grave:S.obst.grave, crate:S.obst.crate, chkst:S.chkst, goal:S.goal,
     zombie:S.zombie.idle, zgen:(S.zgen&&(S.zgen.idle||S.zgen.walk)), gob:S.gob.idle, bd:S.bd.walk, bat:S.bat.idle, golem:(S.golem&&S.golem.idle), witch:(S.witch&&S.witch.idle), skel:(S.skel&&S.skel.idle), knight:(S.knight&&S.knight.idle), angel:(S.angel&&S.angel.idle)};
   for(const k in need){ const m=need[k]; if(!m)continue; const img=new Image(); img.onload=()=>draw(); img.src=ass(m.src); EDSPR[k]={img,m}; }
@@ -1459,7 +1459,7 @@ function addShape(){ histPush(); const cx=Math.round(camx+(CW/2)/zoom), cy=Math.
 function deletePolyActive(){ if(!(M.poly&&M.poly[polyActive]>=0&&M.poly[polyActive])){ if(!(M.poly&&M.poly[polyActive])){ toast('tap a shape/line/object in Terrain mode first'); return; } } if(!(M.poly&&M.poly[polyActive])){ toast('tap a shape/line/object first'); return; } histPush(); M.poly.splice(polyActive,1); polyActive=-1; persist(); draw(); syncPolyUI(); toast('deleted'); }
 function addLinePoly(){ histPush(); const cx=Math.round(camx+(CW/2)/zoom), cy=Math.round(camy+(CH/2)/zoom);
   const nodes=[{x:cx-110,y:cy,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true},{x:cx+110,y:cy,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true}];
-  M.poly=M.poly||[]; M.poly.push({nodes,closed:false,layer:'main'}); polyActive=M.poly.length-1; polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); try{updateTermodeBar();}catch(e){}
+  M.poly=M.poly||[]; M.poly.push({nodes,closed:false,layer:'main',line:true}); polyActive=M.poly.length-1; polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); try{updateTermodeBar();}catch(e){}
   persist(); draw(); syncPolyUI(); if(typeof toast==='function')toast('custom line added — tap the line to add nodes, 🧱 to set ground/wall/one-way/passthru per segment'); }
 function addMainPoly(){ histPush(); const y=380, Wd=M.world, nodes=[]; for(let i=0;i<6;i++) nodes.push({x:Math.round(i*Wd/5),y,corner:false,wn:'auto',ho:{x:0,y:0},hi:{x:0,y:0},ha:true});
   M.poly=M.poly||[]; M.poly.push({nodes,closed:false,layer:'main'}); polyActive=M.poly.length-1; polyMode=true; const mp=document.getElementById('mPoly'); if(mp)mp.classList.add('on'); persist(); draw(); if(typeof toast==='function')toast('polyline added (shape '+(polyActive+1)+') — tap a shape to select it'); }
@@ -1475,7 +1475,8 @@ function drawEditorPoly(){ if(!M.poly||!M.poly.length) return;
   for(const L of order){ for(let pi=0;pi<M.poly.length;pi++){ const o=M.poly[pi]; if((o.layer||'main')!==L) continue; const active=(pi===polyActive); const S=polySamplesNs(o.nodes,!!o.closed); if(S.length<2) continue; const base=colof(L);
     ctx.save();
     const sa=(o.alpha!==undefined?o.alpha:1);
-    if(o.edge==='soft'){ const fb=Math.max(2,(o.feather||24))*zoom;
+    if(o.line){ /* thin collision line: editable stroke only, no fill */ }
+    else if(o.edge==='soft'){ const fb=Math.max(2,(o.feather||24))*zoom;
       const mk=_esoftMask(); mk.setTransform(1,0,0,1,0,0); mk.clearRect(0,0,_esmaskC.width,_esmaskC.height);
       mk.fillStyle='#fff'; polyEdPath(mk,S,o.closed); mk.fill('evenodd');
       mk.globalCompositeOperation='destination-out'; mk.lineJoin='round'; mk.lineCap='round'; mk.strokeStyle='#000';
