@@ -1,4 +1,4 @@
-const ASSET_VER='1782620000';
+const ASSET_VER='1782630000';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1174,7 +1174,7 @@ function polyBuildAll(data){
 function polyCollides(ob){ return (ob.layer||'main')==='main' && !ob.noCol; }
 function polyEdgeWall(a,b){ const c=a.wn||'auto'; if(c==='wall')return true; if(c==='ground'||c==='oneway'||c==='pass')return false; return Math.abs((b.y-a.y)/((b.x-a.x)||0.0001))>POLY_MAXSLOPE; }
 function polyCross(x){ const out=[];
-  for(const ob of POLY.objs){ if(!polyCollides(ob)) continue; const S=ob.samples;
+  for(const ob of POLY.objs){ if(!polyCollides(ob)||ob.line) continue; const S=ob.samples;
     for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ if((a.wn||'auto')==='pass') continue; const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t, wall:polyEdgeWall(a,b), wn:a.wn||'auto', line:!!ob.line}); } } }
   out.sort((p,q)=>p.y-q.y); return out; }
 function polyFloorUnder(x,fy){ const cs=polyCross(x); for(let i=0;i<cs.length;i+=2){ if(cs[i].wn==='oneway') continue; if(!cs[i].wall && cs[i].y>=fy-POLY_STEP) return cs[i].y; } return null; }
@@ -1191,7 +1191,7 @@ function polyBlock(nx){ const dir=Math.sign(nx-p.x)||p.facing; const ex=nx+dir*(
   return false; }
 function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2;
   for(let pass=0;pass<3;pass++){ let cx=p.x, cy=p.y-PH/2;
-    for(const ob of POLY.objs){ if(!polyCollides(ob)) continue; const S=ob.samples;
+    for(const ob of POLY.objs){ if(!polyCollides(ob)||ob.line) continue; const S=ob.samples;
       for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if(!polyEdgeWall(a,b)) continue;
         const vx=b.x-a.x, vy=b.y-a.y, L=vx*vx+vy*vy; if(L<0.01) continue;
         let t=((cx-a.x)*vx+(cy-a.y)*vy)/L; t=Math.max(0,Math.min(1,t)); const px=a.x+t*vx, py=a.y+t*vy;
@@ -1200,14 +1200,22 @@ function resolvePolyWalls(){ const hx=PW/2-2, hy=PH/2-2;
         if(pen>0.01){ p.x+=ndx*pen; cx=p.x;
           if(ndy>0.4){ p.y+=ndy*pen; cy=p.y-PH/2; if(p.vy<0)p.vy=0; }
         } } } } }
+function polyLineSurfaces(x){ const out=[];
+  for(const ob of POLY.objs){ if(!ob.line || !polyCollides(ob)) continue; const S=ob.samples;
+    for(let i=1;i<S.length;i++){ const a=S[i-1],b=S[i]; if((a.x<=x&&x<b.x)||(b.x<=x&&x<a.x)){ if((a.wn||'auto')==='pass') continue; const t=(x-a.x)/((b.x-a.x)||1e-6); out.push({y:a.y+(b.y-a.y)*t, wn:a.wn||'auto'}); } } }
+  return out; }
 function resolvePoly(prevFeet){
   if(p.flying||p.dead||p.won||p.winning||!POLY) return;
   if(p.vy>=0){
-    let landed=false;
+    let best=null;                                   // highest valid floor to land on
     const g=polyFloorUnder(p.x,p.y);
-    if(g!==null && (g-p.y)<=POLY_MAXSLOPE*RUN+12){ p.y=g; p.vy=0; p.onGround=true; landed=true; }
-    if(!landed){ const fb=polyFloorBetween(p.x,prevFeet,p.y); if(fb!==null){ p.y=fb; p.vy=0; p.onGround=true; landed=true; } }
-    if(!landed) p.onGround=false;
+    if(g!==null && (g-p.y)<=POLY_MAXSLOPE*RUN+12) best=g;
+    if(best===null){ const fb=polyFloorBetween(p.x,prevFeet,p.y); if(fb!==null) best=fb; }
+    for(const sfc of polyLineSurfaces(p.x)){ let ok;
+      if(sfc.wn==='oneway') ok=(prevFeet<=sfc.y+2 && p.y>=sfc.y-2);      // one-way: only when crossing down onto it
+      else ok=(sfc.y>=p.y-POLY_STEP);                                    // solid thin line: land if at/just-above feet
+      if(ok && (best===null || sfc.y<best)) best=sfc.y; }
+    if(best!==null){ p.y=best; p.vy=0; p.onGround=true; } else p.onGround=false;
   } else { const c=polyCeilAbove(p.x,p.y-PH); if(c!==null && (p.y-PH)<c){ p.y=c+PH; p.vy=0; } }
   resolvePolyWalls();
 }
