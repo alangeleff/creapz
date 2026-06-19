@@ -429,6 +429,12 @@
    "name": "Giant spider monster, corpses",
    "path": "./config/characters/ch_mqkfpa6i.png",
    "prompt": "Giant spider monster, corpses for limbs, 9 eyes, bony spine spikes"
+  },
+  {
+   "id": "ch_mqkfvfz1",
+   "name": "Giant spider monster, corpses",
+   "path": "./config/characters/ch_mqkfvfz1.png",
+   "prompt": "Giant spider monster, corpses for limbs, main body formed by corpses, 9 eyes, bony spine spikes"
   }
  ],
  "hidden": [
