@@ -839,7 +839,12 @@ function contentBounds(){ let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infin
   return any?{minX:mnX,minY:mnY,maxX:mxX,maxY:mxY}:null; }
 function resizeHandles(){ const X0=sx(0),Y0=sy(0),X1=sx(M.world),Y1=sy(M.h),XM=(X0+X1)/2,YM=(Y0+Y1)/2;
   return [['tl',X0,Y0],['tr',X1,Y0],['bl',X0,Y1],['br',X1,Y1],['t',XM,Y0],['b',XM,Y1],['l',X0,YM],['r',X1,YM]]; }
-function resizeHandleHit(c){ const R=24; for(const [id,hx,hy] of resizeHandles()){ if(Math.hypot(c.x-hx,c.y-hy)<R) return id; } return null; }
+function resizeHandleHit(c){ const X0=sx(0),Y0=sy(0),X1=sx(M.world),Y1=sy(M.h), R=22;
+  const nearV=(X)=> Math.abs(c.x-X)<R && c.y>Math.min(Y0,Y1)-R && c.y<Math.max(Y0,Y1)+R;
+  const nearH=(Y)=> Math.abs(c.y-Y)<R && c.x>Math.min(X0,X1)-R && c.x<Math.max(X0,X1)+R;
+  const L=nearV(X0), Rr=nearV(X1), T=nearH(Y0), B=nearH(Y1);
+  if(T&&L) return 'tl'; if(T&&Rr) return 'tr'; if(B&&L) return 'bl'; if(B&&Rr) return 'br';
+  if(L) return 'l'; if(Rr) return 'r'; if(T) return 't'; if(B) return 'b'; return null; }
 function drawResizeHandles(){ const X0=sx(0),Y0=sy(0),X1=sx(M.world),Y1=sy(M.h);
   ctx.save(); ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.setLineDash([9,6]); ctx.strokeRect(X0,Y0,X1-X0,Y1-Y0); ctx.setLineDash([]);
   for(const [id,hx,hy] of resizeHandles()){ const sgl=(id.length===2); const s=sgl?8:7; ctx.fillStyle='#12102a'; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.rect(hx-s,hy-s,s*2,s*2); ctx.fill(); ctx.stroke(); }
