@@ -1,4 +1,4 @@
-const ASSET_VER='17819229720';
+const ASSET_VER='17819239810';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -17,6 +17,8 @@ const BASE_W = 960, BASE_H = 440; let W = BASE_W, H = BASE_H, VZOOM = 1;
 const RS = Math.min(2, Math.max(1, Math.round(window.devicePixelRatio || 1)));
 cv.width = W*RS; cv.height = H*RS;
 function setView(z){ z=Math.max(0.5,Math.min(1.7,+z||1)); VZOOM=z; W=Math.round(BASE_W/z); H=Math.round(BASE_H/z); cv.width=W*RS; cv.height=H*RS; }
+// UI/HUD render at a fixed reference scale (BASE_W x BASE_H), independent of world zoom
+function uiView(){ ctx.setTransform(RS/VZOOM,0,0,RS/VZOOM,0,0); }
 const GROUND = 360;
 const GRAV = 0.6, WALK = 3.7, RUN = 7.4, JUMP = -13.2;
 const DIVE_VX = 8.6, DIVE_VY = 9.4, DIVE_REC = 0.22, DIVE_ROT = 0.5;   // Power Dive (Dingbat)
@@ -485,7 +487,7 @@ function _joyClear(){ for(const c of _joy.codes) release(c); _joy.codes=new Set(
 (function(){
   const zone=document.getElementById('joyzone'), base=document.getElementById('joybase'), knob=document.getElementById('joyknob');
   if(!zone) return;
-  zone.addEventListener('pointerdown',e=>{ if(mode!=='play')return; const _cv=document.getElementById('c'); if(_cv){ const _r=_cv.getBoundingClientRect(), _lx=(e.clientX-_r.left)/_r.width*W, _ly=(e.clientY-_r.top)/_r.height*H; if(_lx>PB.x-12 && _lx<PB.x+PB.w+12 && _ly>PB.y-12 && _ly<PB.y+PB.h+12){ if(p&&!p.dead&&!p.won&&!p.winning){ paused=true; playSfx('sfx_mtog'); } return; } } e.preventDefault(); _joy.active=true; _joy.id=e.pointerId; _joy.ox=e.clientX; _joy.oy=e.clientY; base.style.left=knob.style.left=e.clientX+'px'; base.style.top=knob.style.top=e.clientY+'px'; base.style.display=knob.style.display='block'; try{zone.setPointerCapture(e.pointerId);}catch(_){} });
+  zone.addEventListener('pointerdown',e=>{ if(mode!=='play')return; const _cv=document.getElementById('c'); if(_cv){ const _r=_cv.getBoundingClientRect(), _lx=(e.clientX-_r.left)/_r.width*BASE_W, _ly=(e.clientY-_r.top)/_r.height*BASE_H; if(_lx>PB.x-12 && _lx<PB.x+PB.w+12 && _ly>PB.y-12 && _ly<PB.y+PB.h+12){ if(p&&!p.dead&&!p.won&&!p.winning){ paused=true; playSfx('sfx_mtog'); } return; } } e.preventDefault(); _joy.active=true; _joy.id=e.pointerId; _joy.ox=e.clientX; _joy.oy=e.clientY; base.style.left=knob.style.left=e.clientX+'px'; base.style.top=knob.style.top=e.clientY+'px'; base.style.display=knob.style.display='block'; try{zone.setPointerCapture(e.pointerId);}catch(_){} });
   zone.addEventListener('pointermove',e=>{ if(!_joy.active||e.pointerId!==_joy.id)return; e.preventDefault(); const dx=e.clientX-_joy.ox, dy=e.clientY-_joy.oy, dz=16, R=48; const nc=new Set(); if(dx<-dz)nc.add('ArrowLeft'); else if(dx>dz)nc.add('ArrowRight'); if(dy<-dz)nc.add('ArrowUp'); else if(dy>dz)nc.add('ArrowDown'); _joySet(nc); const m=Math.hypot(dx,dy)||1, k=Math.min(1,R/m); knob.style.left=(_joy.ox+dx*k)+'px'; knob.style.top=(_joy.oy+dy*k)+'px'; });
   const end=()=>{ _joy.active=false; _joyClear(); base.style.display=knob.style.display='none'; };
   zone.addEventListener('pointerup',end); zone.addEventListener('pointercancel',end);
@@ -587,7 +589,7 @@ cv.addEventListener('pointerdown', e=>{
     for (const r of menuRects){ if (pt.x>r.x&&pt.x<r.x+r.w&&pt.y>r.y&&pt.y<r.y+r.h){ playSfx('sfx_msel'); r.action(); return; } }
     return;
   }
-  if (pt.x>PB.x-6&&pt.x<PB.x+PB.w+6&&pt.y>PB.y-6&&pt.y<PB.y+PB.h+6 && !p.winning){ paused=true; playSfx('sfx_mtog'); }
+  { const _bx=pt.x*BASE_W/W, _by=pt.y*BASE_H/H; if (_bx>PB.x-6&&_bx<PB.x+PB.w+6&&_by>PB.y-6&&_by<PB.y+PB.h+6 && !p.winning){ paused=true; playSfx('sfx_mtog'); } }
 });
 
 // ---- load sprites ----
@@ -1361,6 +1363,7 @@ function loop(now){
   const moving = mode==='play' && !paused && p && !p.dead && !p.won && !p.winning && p.onGround && (p.state==='run'||p.state==='walk');
   setRunLoop(moving ? p.state : null);
   if ((mode==='select'||mode==='title'||mode==='world') && AC && AC.state==='running' && musicKey!=='title') playMusic('title');
+  if (VZOOM!==1 && (mode!=='play' || (p && menuOpen()))) setView(1);
   if (testMode && mode==='load' && loaded>=total){ bootTest(); }
   if (mode==='load') drawLoading();
   else if (mode==='title'){ titleFade=Math.min(1,titleFade+dt/1.1); drawTitle(); }
@@ -1376,7 +1379,7 @@ function loop(now){
   else if (mode==='controls') drawControls();
   else if (mode==='soulbox'){}
   else { try{ update(dt); draw(); }catch(err){ if(!window.__loopErr){ window.__loopErr=1; console.error('loop error:',err); } } }
-  if (devToastT>0){ devToastT-=dt; ctx.setTransform(RS,0,0,RS,0,0); ctx.save(); ctx.globalAlpha=Math.min(1,devToastT*2.5); const tw=210; ctx.fillStyle='rgba(8,6,18,0.85)'; roundRect(W/2-tw/2,H-54,tw,30,8); ctx.fill(); ctx.strokeStyle='rgba(200,251,80,0.6)'; ctx.lineWidth=1; ctx.stroke(); ctx.fillStyle='#c8fb50'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center'; ctx.fillText(devToast, W/2, H-34); ctx.textAlign='left'; ctx.restore(); }
+  if (devToastT>0){ devToastT-=dt; uiView(); ctx.save(); ctx.globalAlpha=Math.min(1,devToastT*2.5); const tw=210; ctx.fillStyle='rgba(8,6,18,0.85)'; roundRect(BASE_W/2-tw/2,BASE_H-54,tw,30,8); ctx.fill(); ctx.strokeStyle='rgba(200,251,80,0.6)'; ctx.lineWidth=1; ctx.stroke(); ctx.fillStyle='#c8fb50'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center'; ctx.fillText(devToast, BASE_W/2, BASE_H-34); ctx.textAlign='left'; ctx.restore(); }
   requestAnimationFrame(loop);
 }
 
@@ -3079,7 +3082,7 @@ function drawPlayerHP(){
   if(low>0){ ctx.strokeStyle='rgba(230,50,50,'+(0.25+0.5*low)+')'; ctx.lineWidth=2.5; roundRect(bx,y+4,bw,h-8,6); ctx.stroke(); }
 }
 function drawProgress(){
-  const bx=W-200, bw=170, by=20, bh=9, frac=Math.min(1,p.x/GOAL_X);
+  const bx=BASE_W-200, bw=170, by=20, bh=9, frac=Math.min(1,p.x/GOAL_X);
   ctx.fillStyle='rgba(12,10,24,.72)'; roundRect(bx-3,by-3,bw+6,bh+6,6); ctx.fill();
   ctx.strokeStyle='rgba(127,224,255,.35)'; ctx.lineWidth=1.5; ctx.stroke();
   if (frac>0.004){
@@ -3671,24 +3674,25 @@ function draw(){
     ctx.fillStyle='rgba(2,1,6,'+dk.toFixed(2)+')'; ctx.fillRect(0,0,W,H);
   }
   drawForegrounds(); drawPoly('fg');   // foreground occluder layers (player passes behind — secret areas)
-  // HUD
+  // HUD (fixed reference scale, not affected by world zoom)
+  uiView();
   drawPlayerHP();
   drawStoneMeter();
   if (!menuOpen() && !p.winning) drawPauseBtn();
   drawProgress();
   ctx.textAlign='right'; ctx.font='bold 15px sans-serif';
-  ctx.fillStyle='rgba(20,16,36,.55)'; roundRect(W-184,36,154,24,7); ctx.fill();
+  ctx.fillStyle='rgba(20,16,36,.55)'; roundRect(BASE_W-184,36,154,24,7); ctx.fill();
   ctx.fillStyle='#eaf6ff';
-  ctx.fillText((banked+actScore).toLocaleString('en-US'), W-40, 53);
+  ctx.fillText((banked+actScore).toLocaleString('en-US'), BASE_W-40, 53);
   ctx.textAlign='left'; ctx.font='10px sans-serif'; ctx.fillStyle='rgba(200,190,255,.7)';
-  ctx.fillText('SCORE', W-176, 52);
-  ctx.fillStyle='rgba(20,16,36,.5)'; roundRect(W-184,64,154,26,7); ctx.fill();
-  ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(W-168,77,8,0,7); ctx.fill();
-  ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(W-168,77,4.5,0,7); ctx.fill();
-  ctx.fillStyle='#eaf6ff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='right'; ctx.fillText(soulCount+' / '+totalOrbVal, W-40, 82); ctx.textAlign='left';
+  ctx.fillText('SCORE', BASE_W-176, 52);
+  ctx.fillStyle='rgba(20,16,36,.5)'; roundRect(BASE_W-184,64,154,26,7); ctx.fill();
+  ctx.fillStyle='#7fe0ff'; ctx.beginPath(); ctx.arc(BASE_W-168,77,8,0,7); ctx.fill();
+  ctx.fillStyle='#cfeaff'; ctx.beginPath(); ctx.arc(BASE_W-168,77,4.5,0,7); ctx.fill();
+  ctx.fillStyle='#eaf6ff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='right'; ctx.fillText(soulCount+' / '+totalOrbVal, BASE_W-40, 82); ctx.textAlign='left';
   if (testMode){ const gm=greedMult(); ctx.font='bold 11px sans-serif'; ctx.textAlign='right';
     ctx.fillStyle = gm>1 ? '#5fd8ff' : '#9a93b5';
-    ctx.fillText('TEST \u00b7 Greed '+(gm>1?'\u00d72 ON':'OFF')+' \u00b7 banking '+(soulCount*gm)+' soulz', W-40, 99);
+    ctx.fillText('TEST \u00b7 Greed '+(gm>1?'\u00d72 ON':'OFF')+' \u00b7 banking '+(soulCount*gm)+' soulz', BASE_W-40, 99);
     ctx.textAlign='left'; }
   if (p.dead && p.deadT>(p.deathHurt?3.05:2.3)){
     menuPanel('YOU DIED', [

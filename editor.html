@@ -67,6 +67,14 @@
  .grp-skin{background:rgba(123,92,255,.12);border-color:#473774}
  .grp-fringe{background:rgba(200,251,80,.08);border-color:#56652e}
  #bar.noterr .termode{display:none}
+ .grp>.glabel{cursor:pointer;user-select:none;display:inline-flex;align-items:center;padding:2px 2px 2px 0}
+ .grp>.glabel::after{content:'\25BE';margin-left:4px;font-size:8px;opacity:.85}
+ .grp.collapsed>.glabel::after{content:'\25B8'}
+ .grp.collapsed>*:not(.glabel){display:none!important}
+ #pal{transition:width .14s ease}
+ #pal.collapsed{width:0;min-width:0;border-right:none;overflow:hidden}
+ #palTog{position:absolute;left:0;top:10px;z-index:40;width:24px;height:46px;border:1px solid var(--line);border-left:none;border-radius:0 9px 9px 0;background:var(--panel);color:var(--ink);cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+ @media (pointer: coarse) and (min-width: 700px){ .grp>.glabel{font-size:12px;padding:6px 4px 6px 0} #palTog{width:30px;height:58px;font-size:18px} }
  .texMbtn{flex:1;background:#0f0c1a;border:1px solid #2c2740;color:#cfc9e6;border-radius:8px;padding:9px;font-size:13px;cursor:pointer}
  .texMbtn.sel{background:#c8fb50;color:#13160a;border-color:#c8fb50;font-weight:600}
  .texCbtn{background:#241f38;border:1px solid #3a3356;color:#cfc9e6;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}
@@ -176,6 +184,7 @@
    <button class="btn go" id="bPlay" title="Playtest this stage"><i data-lucide="play">▶</i> Play</button>
   </div>
   <div id="cvWrap">
+   <button id="palTog" title="Hide assets panel">‹</button>
    <canvas id="cv"></canvas>
    <div id="zoomb"><button id="zin">+</button><button id="zout">−</button></div>
    <div id="hint"></div>
@@ -450,6 +459,19 @@ function enhanceSliders(root){ (root||document).querySelectorAll('input[type=ran
   n.addEventListener('input',()=>{ let v=parseFloat(n.value); if(isNaN(v)) return; v=Math.max(+r.min,Math.min(+r.max,v)); r.value=v; r.dispatchEvent(new Event('input',{bubbles:true})); });
   r.insertAdjacentElement('afterend', n); }); }
 setTimeout(()=>{ try{ enhanceSliders(); }catch(e){} },0);
+// --- ribbon group collapse (persisted) ---
+let RIBBON_COL={}; try{ RIBBON_COL=JSON.parse(localStorage.getItem('creapz_ribbon_collapsed')||'{}'); }catch(e){}
+function grpKey(g){ return (Array.from(g.classList).find(c=>c.startsWith('grp-'))||'').slice(4); }
+(function(){
+  document.querySelectorAll('#bar .grp').forEach(g=>{ const k=grpKey(g); if(k) g.classList.toggle('collapsed', !!RIBBON_COL[k]); });
+  document.querySelectorAll('#bar .grp > .glabel').forEach(lb=>{ lb.addEventListener('click', ()=>{ const g=lb.parentElement, k=grpKey(g); if(!k) return; const nc=!g.classList.contains('collapsed'); g.classList.toggle('collapsed', nc); RIBBON_COL[k]=nc; try{ localStorage.setItem('creapz_ribbon_collapsed',JSON.stringify(RIBBON_COL)); }catch(_){} try{ fit(); }catch(_){} }); });
+})();
+// --- assets sidebar collapse (persisted) ---
+(function(){ const pal=document.getElementById('pal'), tog=document.getElementById('palTog'); if(!pal||!tog) return;
+  function setC(c){ pal.classList.toggle('collapsed',c); tog.innerHTML=c?'\u203A':'\u2039'; tog.title=c?'Show assets panel':'Hide assets panel'; try{ localStorage.setItem('creapz_pal_collapsed',c?'1':'0'); }catch(_){} setTimeout(()=>{ try{ fit(); }catch(_){} },160); }
+  tog.addEventListener('click',()=>setC(!pal.classList.contains('collapsed')));
+  setC(localStorage.getItem('creapz_pal_collapsed')==='1');
+})();
 function customStamps(){ return (BCONFIG.customAssets||[]).map(a=>({k:(a.kind==='bg'?'bg_':a.kind==='fg'?'fg_':'tex_')+a.id, label:a.name, sw:a.sw||'#9a8a6a', cat:a.cat||(a.kind==='bg'?'Background':a.kind==='fg'?'Foreground':'Decor'), id:a.id, custom:true})); }
 function registerCustomAsset(a, src){ const im=new Image(); im.onload=()=>{ try{draw();}catch(e){} }; im.src=src||('./'+a.file+'?v='+(a.v||1)); if(a.kind==='bg'||a.kind==='fg'){ BGE_IMG[a.id]=im; BG_LABEL[a.id]=a.name; } else { DECOR_IMG[a.id]=im; TEX_LABEL[a.id]=a.name; TEX_COLS[a.id]=a.sw||'#9a8a6a'; } }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
