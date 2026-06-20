@@ -345,7 +345,7 @@ const STAMPS=[
  {k:'fg_cavebg',label:'Cave',sw:'#2a3340',cat:'Foreground'},
  {k:'fg_bonedirt',label:'Bone Dirt',sw:'#5a4632',cat:'Foreground'},
 ];
-const LABELOF={}; STAMPS.forEach(s=>LABELOF[s.k]=s.label);
+const LABELOF={}; STAMPS.forEach(s=>LABELOF[s.k]=s.label); LABELOF['spawn']='Start (spawn)';
 function assetKey(s){ const r=s.raw, ty=s.type||s.kind;
   if(ty==='terrace') return (Array.isArray(r)&&r[6]==='cave')?'terrace_cave':(Array.isArray(r)&&r[6]==='witchwood')?'terrace_witch':(Array.isArray(r)&&r[6]==='ethereal')?'terrace_eth':'terrace';
   if(ty==='plat') return 'plat_'+(r.skin==='cave'?'cave_':r.skin==='witch'?'witch_':r.skin==='ethf'?'ethf_':r.skin==='ethg'?'ethg_':'')+r.t;
@@ -556,7 +556,7 @@ buildPaletteHTML();
 // ---- selection / edit panel ----
 let sel=null;
 const selBox=document.getElementById('sel');
-const SEL_FIELDS={terrace:['x0','x1','gy','depth'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w','d'],obst:['x','gy'],tex:['x','y','w'],bg:['x','y','w','h','par'],fg:['x','y','w','h','par']};
+const SEL_FIELDS={terrace:['x0','x1','gy','depth'],plat:['x','x0','y','w','range','spd'],chk:['x','gy'],goal:['x','gy'],spawn:['x','gy'],soul:['x','y'],enemy:['x','min','max','gy'],bat:['x','min','max','y'],haz:['x','y','w','d'],obst:['x','gy'],tex:['x','y','w'],bg:['x','y','w','h','par'],fg:['x','y','w','h','par']};
 function showSel(){
  if(!sel){ selBox.style.display='none'; return; }
  if(sel.type==='bulkswap'){ selBox.style.display='block';
@@ -664,6 +664,7 @@ function delObj(s){
 // ---- hit test ----
 function hit(wxp,wyp){
  if(M.goal&&!locked.has('goal')&&Math.hypot(wxp-M.goal,wyp-(M.goalY-30))<44) return selGoal();
+ { const _sp=spawnPt(); if(_sp&&!locked.has('spawn')&&Math.hypot(wxp-_sp.x,wyp-(_sp.y-30))<44) return selSpawn(); }
  for(const c of M.chk){ if(!locked.has(c)&&Math.hypot(wxp-c[0],wyp-(c[1]-30))<36) return wrap('chk',c,['x','gy'],[0,1]); }
  for(const s of M.souls){ if(!locked.has(s)&&Math.hypot(wxp-s[0],wyp-s[1])<24) return wrap('soul',s,['x','y'],[0,1]); }
  for(const b of M.bats){ if(!locked.has(b)&&Math.hypot(wxp-b[0],wyp-b[3])<28) return wrap('bat',b,['x','min','max','y'],[0,1,2,3]); }
@@ -681,6 +682,12 @@ function hit(wxp,wyp){
  return null;
 }
 function selGoal(){ return {type:'goal',kind:'goal',obj:{x:M.goal,gy:M.goalY},raw:'goal',sync(){M.goal=this.obj.x;M.goalY=this.obj.gy;}}; }
+function spawnPt(){ const x=(M.spawnX!==undefined?M.spawnX:90); let y=M.spawnY;
+  if(y===undefined){ y=spawnY(x);
+    if((y===null||y===undefined) && M.poly){ for(const o of M.poly){ if((o.layer||'main')!=='main')continue; const ty=polyObjTopEd(o.nodes||[],x); if(ty!=null && (y==null||ty<y)) y=ty; } }
+    if(y===null||y===undefined) y=Math.min((M.h||440)-60, 360); }
+  return {x,y}; }
+function selSpawn(){ const sp=spawnPt(); return {type:'spawn',kind:'spawn',obj:{x:sp.x,gy:sp.y},raw:'spawn',sync(){ M.spawnX=Math.round(this.obj.x); M.spawnY=Math.round(this.obj.gy); }}; }
 function wrap(type,raw,names,idx,kind){ const o={}; names.forEach((n,i)=>o[n]=raw[idx[i]]);
  return {type,kind:kind||type,obj:o,raw,sync(){names.forEach((n,i)=>{ if(o[n]!==undefined) raw[idx[i]]=o[n]; });}}; }
 
@@ -808,7 +815,7 @@ function placeAt(kind,gx,gy){
 
 // ---- stage resize (drag edge/corner handles; top/left also shift content) ----
 function shiftAll(dx,dy){ if(!dx&&!dy) return;
-  M.goal=(M.goal||0)+dx; M.goalY=(M.goalY||0)+dy; M.spawnX=(M.spawnX===undefined?90:M.spawnX)+dx;
+  M.goal=(M.goal||0)+dx; M.goalY=(M.goalY||0)+dy; M.spawnX=(M.spawnX===undefined?90:M.spawnX)+dx; if(M.spawnY!==undefined) M.spawnY+=dy;
   (M.seg||[]).forEach(s=>{ s[0]+=dx; if(s[2]!==undefined)s[2]+=dy; });
   (M.chk||[]).forEach(c=>{ c[0]+=dx; if(c[1]!==undefined)c[1]+=dy; });
   (M.souls||[]).forEach(s=>{ s[0]+=dx; if(s[1]!==undefined)s[1]+=dy; });
@@ -900,7 +907,7 @@ function moveObj(h,start,dx,dy){
  const o=h.obj;
  if(h.type==='terrace'){ o.x0=start.x0+dx; o.x1=start.x1+dx; o.gy=start.gy+dy; }
  else if(h.type==='plat'){ if(start.x0!==undefined)o.x0=start.x0+dx; o.x=(start.x??start.x0)+dx; o.y=start.y+dy; }
- else if(h.type==='goal'){ o.x=start.x+dx; o.gy=start.gy+dy; }
+ else if(h.type==='goal'||h.type==='spawn'){ o.x=start.x+dx; o.gy=start.gy+dy; }
  else if(h.type==='enemy'){ o.x=start.x+dx; o.min=start.min+dx; o.max=start.max+dx; o.gy=start.gy+dy; }
  else if(h.type==='bat'){ o.x=start.x+dx; o.min=start.min+dx; o.max=start.max+dx; o.y=start.y+dy; }
  else if(h.type==='haz'){ o.x=start.x+dx; o.y=start.y+dy; }
@@ -1646,7 +1653,8 @@ function draw(){
    if(sel&&sel.raw===c){ const m=EDSPR.chkst; const w=(m?m.m.w:40)*zoom,hh=(m?m.m.h:50)*zoom; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-w/2-2,Y-hh-2,w+4,hh+4); } }
  if(M.goal){ const X=sx(M.goal),Y=sy(M.goalY);
    if(!dSprite('goal', X, Y, zoom, 'b', false)){ ctx.strokeStyle='#e0506a'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(X,Y-34*zoom,22*zoom,0,7); ctx.stroke(); ctx.fillStyle='#e0506a'; ctx.font='11px sans-serif'; ctx.fillText('EXIT',X-12,Y+12); } }
- const _spx=(M.spawnX||90); const sp=spawnY(_spx); if(sp!==null){ const X=sx(_spx),Y=sy(sp); ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y-30*zoom,Math.max(5,9*zoom),0,7); ctx.fill();
+ { const _sp=spawnPt(); const X=sx(_sp.x),Y=sy(_sp.y), _ssel=(sel&&sel.type==='spawn'); ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y-30*zoom,Math.max(5,9*zoom),0,7); ctx.fill();
+   if(_ssel){ ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y-30*zoom,Math.max(10,15*zoom),0,7); ctx.stroke(); }
    ctx.fillStyle='#c8fb50'; ctx.font='10px sans-serif'; ctx.fillText('START',X-14,Y-44*zoom); }
  for(const b of (M.fg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue;
    ctx.globalAlpha=0.72;
@@ -1705,6 +1713,7 @@ function actorList(){ const out=[];
  M.bats.forEach(b=>out.push({sec:'Enemies',label:'Blood Ravager',color:'#b07a5a',raw:b,mk:()=>wrap('bat',b,['x','min','max','y'],[0,1,2,3]),cx:b[0],cy:b[3]}));
  M.chk.forEach(c=>out.push({sec:'Functions',label:'Checkpoint',color:'#ff9a3c',raw:c,mk:()=>wrap('chk',c,['x','gy'],[0,1]),cx:c[0],cy:c[1]}));
  if(M.goal) out.push({sec:'Functions',label:'Goal (exit)',color:'#e0506a',raw:'goal',mk:()=>selGoal(),cx:M.goal,cy:M.goalY});
+ { const _sp=spawnPt(); out.push({sec:'Functions',label:'Start (spawn)',color:'#c8fb50',raw:'spawn',mk:()=>selSpawn(),cx:_sp.x,cy:_sp.y}); }
  return out; }
 function buildLayers(){
  const host=document.getElementById('layers'); if(!host) return;
@@ -1885,7 +1894,7 @@ addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCas
   else if((e.key==='Delete'||e.key==='Backspace') && polyMode && M.poly&&M.poly[polyActive] && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||'')){ e.preventDefault(); deletePolyActive(); } });
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
- o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; if(M.poly&&M.poly.length)o.poly=M.poly; o.wallSlope=M.wallSlope||1.3; o.zoom=M.zoom||1; if(M.zoomzones&&M.zoomzones.length)o.zoomzones=M.zoomzones; if(M.spawnX!==undefined&&M.spawnX!==90)o.spawnX=M.spawnX; return o; }
+ o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; if(M.poly&&M.poly.length)o.poly=M.poly; o.wallSlope=M.wallSlope||1.3; o.zoom=M.zoom||1; if(M.zoomzones&&M.zoomzones.length)o.zoomzones=M.zoomzones; if(M.spawnX!==undefined&&M.spawnX!==90)o.spawnX=M.spawnX; if(M.spawnY!==undefined)o.spawnY=M.spawnY; return o; }
 function encodeAsset(im, isBg){ let scale=Math.min(1, 2400/Math.max(im.naturalWidth, im.naturalHeight));
   for(let i=0;i<7;i++){ const cw=Math.max(1,Math.round(im.naturalWidth*scale)), ch=Math.max(1,Math.round(im.naturalHeight*scale));
     const c=document.createElement('canvas'); c.width=cw; c.height=ch; const cx=c.getContext('2d'); cx.imageSmoothingQuality='high'; cx.drawImage(im,0,0,cw,ch);
