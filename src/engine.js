@@ -1,4 +1,4 @@
-const ASSET_VER='17819239810';
+const ASSET_VER='17819252390';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1049,7 +1049,7 @@ function activateSlot(i){
   else { slotIdx=i; saves.slots[i]={chosen:'default',acts:{},heroAt:'cem',soulz:0,created:Date.now(),played:Date.now()}; bindSlot(i); saveAll(); playSfx('sfx_msel'); bootIntoWorld(); }
 }
 function reset(keep){
-  const sx = keep && p ? p.spawn : 90;
+  const sx = keep && p ? p.spawn : (ST&&ST.spawnX||90);
   const sy = keep && p && p.spawnY!==undefined ? p.spawnY : (segFloorsAt(sx)[0]!==undefined?segFloorsAt(sx)[0]:GROUND);
   p = { x:sx, y:sy, vx:0, vy:0, facing:1, onGround:true, state:'idle', clock:0, attackT:0, won:false,
         hp:curMaxHP(), hpShown:curMaxHP(), inv:0, flash:0, dead:false, hurtT:0, invHurt:0, diveT:0, diveRec:0, slamT:0, slamRec:0, deadT:0, spawn:sx, spawnY:sy, standPlat:null, flying:false, castT:0, castCd:0, castFired:true, winning:false, winT:0 };

@@ -175,7 +175,7 @@
   <div id="bar">
    <span class="grp grp-stage"><span class="glabel">Stage</span><label>name</label><input id="fName" size="9" value="Crypt Depths"><label>act</label><input id="fAct" size="2" value="I"><label>theme</label><select id="fTheme"><option value="crypt">crypt</option><option value="plains">ethereal plains</option><option value="witch">witchwood</option><option value="harbor">drowned harbor</option><option value="spire">bell spire</option><option value="charnel">charnel peak</option><option value="rift">the rift</option><option value="castle">blood moon castle</option><option value="">surface</option></select><label>music</label><select id="fMusic"><option>act1</option><option>act2</option><option>crypt1</option><option>crypt2</option><option>ethereal1</option><option>ethereal2</option><option>title</option></select><label>W</label><input id="fW" size="4" value="3200"><label>H</label><input id="fH" size="4" value="2900"><label>idx</label><input id="fIdx" size="2" value="2"><label title="Gameplay camera zoom — lower = more zoomed out (test via Play)">zoom</label><input id="stageZoom" type="range" min="0.6" max="1.5" step="0.05" value="1" style="width:70px;vertical-align:middle"><button class="btn" id="bNew"><i data-lucide="file-plus-2">✦</i> New</button></span>
    <span class="grp grp-save"><span class="glabel">Save</span><button class="btn" id="bBench" title="Committed stage bench — permanent, every device"><i data-lucide="archive">🗄</i> Bench</button><button class="btn" id="bMap" title="World Map — assign bench stages to zones/acts"><i data-lucide="map">🗺</i> Map</button><select class="btn" id="bLoad" title="Load an existing level to edit"><option value="">Load level…</option><option value="stage1.js|0">Cemetery · Act I</option><option value="stage2.js|1">Cemetery · Act II</option><option value="crypt1.js|2">Crypt Depths · Act I</option><option value="crypt2.js|3">Crypt Depths · Act II</option></select><button class="btn" id="bExport" title="Export a full backup — this stage + all custom assets + every bench stage"><i data-lucide="download">⭳</i> Backup</button><button class="btn" id="bImport" title="Import a level file"><i data-lucide="file-up">⭱</i> Import</button></span>
-   <span class="grp grp-edit"><span class="glabel">Edit</span><button class="btn" id="bUndo" title="Undo (Ctrl+Z)"><i data-lucide="undo-2">↶</i></button><button class="btn" id="bRedo" title="Redo (Ctrl+Y)"><i data-lucide="redo-2">↷</i></button><button class="btn" id="bRuler" title="Measure / jump-reach ruler"><i data-lucide="ruler">📏</i></button><button class="btn" id="bSnap" title="Magnetic edge snapping"><i data-lucide="magnet">🧲</i></button><button class="btn" id="mMarq" title="Marquee select — drag a box to select multiple, then drag to move them together"><i data-lucide="box-select">⬚</i></button><button class="btn" id="mZone" title="Zoom zones — drag to create a camera-zoom band, tap to edit"><i data-lucide="scan-search">🔭</i></button></span>
+   <span class="grp grp-edit"><span class="glabel">Edit</span><button class="btn" id="bUndo" title="Undo (Ctrl+Z)"><i data-lucide="undo-2">↶</i></button><button class="btn" id="bRedo" title="Redo (Ctrl+Y)"><i data-lucide="redo-2">↷</i></button><button class="btn" id="bRuler" title="Measure / jump-reach ruler"><i data-lucide="ruler">📏</i></button><button class="btn" id="bSnap" title="Magnetic edge snapping"><i data-lucide="magnet">🧲</i></button><button class="btn" id="mMarq" title="Marquee select — drag a box to select multiple, then drag to move them together"><i data-lucide="box-select">⬚</i></button><button class="btn" id="mZone" title="Zoom zones — drag to create a camera-zoom band, tap to edit"><i data-lucide="scan-search">🔭</i></button><button class="btn" id="mResize" title="Resize stage — drag the edge &amp; corner handles to grow/shrink; dragging the top or left edge opens new room and shifts your layout"><i data-lucide="scaling">⤢</i></button></span>
    <span class="grp grp-assets"><span class="glabel">Assets</span><button class="btn" id="bUpload" title="Upload a custom asset"><i data-lucide="upload">⬆</i> Upload</button><button class="btn" id="bMusic" title="Upload a background music track"><i data-lucide="music">🎵</i> Music</button><button class="btn" id="bObject" title="Create an AI object/prop with auto-traced collision"><i data-lucide="sparkles">✨</i> Object</button><button class="btn" id="bStyle" title="Style Bank — reference art for consistent generation"><i data-lucide="images">🎭</i> Style</button><button class="btn" id="bChar" title="Character Creator + cloud library"><i data-lucide="ghost">🐉</i> Characters</button></span>
    <button class="btn" id="mPoly" title="Terrain sculpt mode (polyline ground)"><i data-lucide="mountain">⛰</i> Terrain</button>
    <span class="grp grp-terrain termode"><span class="glabel">Terrain</span><button class="btn" id="bAddPoly" title="Add a full-width ground baseline across the stage"><i data-lucide="spline">+</i> Ground</button><button class="btn" id="bAddLine" title="Add a short custom collision line — paint each segment ground/wall/one-way/passthru"><i data-lucide="pen-line">+</i> Line</button><button class="btn" id="bAddShape" title="Add a closed free-floating shape (platform / pillar / ceiling)"><i data-lucide="hexagon">+</i> Shape</button><button class="btn" id="mPBreak" title="Terrain: break handle (independent in/out curve)"><i data-lucide="scissors">✂</i></button><button class="btn" id="mPWall" title="Terrain: paint wall segments"><i data-lucide="brick-wall">🧱</i></button><button class="btn" id="mPLock" title="Terrain: lock a node"><i data-lucide="lock">🔒</i></button><button class="btn" id="bDelShape" title="Delete the selected shape / line / object"><i data-lucide="trash-2">🗑</i></button><select class="btn" id="polyLayerSel" title="Layer of the selected shape"><option value="main">▦ Main · collides</option><option value="bg">▦ Background</option><option value="fg">▦ Foreground</option></select><label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--mut)" title="Wall angle: slopes steeper than this become walls">∠<input id="polyAngle" type="range" min="0.4" max="3" step="0.1" value="1.3" style="width:64px;vertical-align:middle"></label></span>
@@ -408,7 +408,7 @@ function selectGroup(name){ const members=allProps().filter(p=>getG(p.raw)===nam
   if(members.length){ let mx=0,my=0; members.forEach(r=>{ const pr={raw:r,kind:Array.isArray(r)?'terrace':(r.t? (HAZ_COLS[r.t]?'haz':'tex') : (r.type?'obst':'plat'))}; const c=propCenterRaw(r); mx+=c[0]; my+=c[1]; }); centerOn(mx/members.length,my/members.length); } draw(); }
 function propCenterRaw(r){ if(r&&r.nodes){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const n of r.nodes){ if(n.x<x0)x0=n.x; if(n.x>x1)x1=n.x; if(n.y<y0)y0=n.y; if(n.y>y1)y1=n.y; } return [(x0+x1)/2,(y0+y1)/2]; } if(Array.isArray(r)) return [(r[0]+r[1])/2,r[2]]; if(r.type) return [r.x,r.gy||0]; if(r.t&&!HAZ_COLS[r.t]) return [r.x+r.w/2,r.y]; if(r.t) return [r.x+r.w/2,r.y]; return [(r.x??r.x0)+r.w/2,r.y]; }
 function moveMemberBy(r,dx,dy){ if(r&&r.nodes){ for(const n of r.nodes){ n.x+=dx; n.y+=dy; } return; } if(Array.isArray(r)){ r[0]+=dx; r[1]+=dx; r[2]+=dy; } else if(r.type){ r.x+=dx; r.gy=(r.gy||0)+dy; } else { if(r.x0!==undefined)r.x0+=dx; r.x+=dx; r.y+=dy; } }
-let eraseMode=false, bulkArm=false, marqMode=false, zoneMode=false, zoneSel=-1;
+let eraseMode=false, bulkArm=false, marqMode=false, zoneMode=false, zoneSel=-1, resizeMode=false;
 let M=blankLevel();
 function blankLevel(){ return {name:'Crypt Depths',act:'I',music:'act2',theme:'crypt',world:3200,h:2900,
   goal:3000,goalY:2480, seg:[], plats:[], chk:[], souls:[], enemies:[], bats:[], obst:[], hazards:[], tex:[], bg:[], fg:[], poly:[], wallSlope:1.3, zoomzones:[]}; }
@@ -806,12 +806,52 @@ function placeAt(kind,gx,gy){
  showSel(); persist(); draw();
 }
 
+// ---- stage resize (drag edge/corner handles; top/left also shift content) ----
+function shiftAll(dx,dy){ if(!dx&&!dy) return;
+  M.goal=(M.goal||0)+dx; M.goalY=(M.goalY||0)+dy; M.spawnX=(M.spawnX===undefined?90:M.spawnX)+dx;
+  (M.seg||[]).forEach(s=>{ s[0]+=dx; if(s[2]!==undefined)s[2]+=dy; });
+  (M.chk||[]).forEach(c=>{ c[0]+=dx; if(c[1]!==undefined)c[1]+=dy; });
+  (M.souls||[]).forEach(s=>{ s[0]+=dx; if(s[1]!==undefined)s[1]+=dy; });
+  (M.enemies||[]).forEach(e=>{ e[0]+=dx; if(e[1]!==undefined)e[1]+=dx; if(e[2]!==undefined)e[2]+=dx; if(e[4]!==undefined)e[4]+=dy; });
+  (M.bats||[]).forEach(b=>{ b[0]+=dx; if(b[1]!==undefined)b[1]+=dx; if(b[2]!==undefined)b[2]+=dx; if(b[3]!==undefined)b[3]+=dy; });
+  (M.plats||[]).forEach(p=>{ if(p.x!==undefined)p.x+=dx; if(p.x0!==undefined)p.x0+=dx; if(p.y!==undefined)p.y+=dy; });
+  (M.obst||[]).forEach(o=>{ if(o.x!==undefined)o.x+=dx; if(o.gy!==undefined)o.gy+=dy; });
+  (M.hazards||[]).forEach(h=>{ if(h.x!==undefined)h.x+=dx; if(h.y!==undefined)h.y+=dy; if(h.tx!==undefined)h.tx+=dx; if(h.ty!==undefined)h.ty+=dy; });
+  (M.tex||[]).forEach(t=>{ if(t.x!==undefined)t.x+=dx; if(t.y!==undefined)t.y+=dy; });
+  (M.fg||[]).forEach(b=>{ if(b.x!==undefined)b.x+=dx; if(b.y!==undefined)b.y+=dy; });
+  (M.bg||[]).forEach(b=>{ if(b.x!==undefined)b.x+=dx; if(b.y!==undefined)b.y+=dy; });
+  (M.poly||[]).forEach(o=>{ (o.nodes||[]).forEach(nd=>{ nd.x+=dx; nd.y+=dy; }); });
+  (M.zoomzones||[]).forEach(z=>{ z.x0+=dx; z.x1+=dx; }); }
+function contentBounds(){ let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity,any=false;
+  const ax=(x,y)=>{ if(x!==undefined&&x!==null){ mnX=Math.min(mnX,x); mxX=Math.max(mxX,x); any=true; } if(y!==undefined&&y!==null){ mnY=Math.min(mnY,y); mxY=Math.max(mxY,y); } };
+  (M.seg||[]).forEach(s=>ax(s[0],s[2])); (M.chk||[]).forEach(c=>ax(c[0],c[1])); (M.souls||[]).forEach(s=>ax(s[0],s[1]));
+  (M.enemies||[]).forEach(e=>{ ax(e[0],e[4]); ax(e[1]); ax(e[2]); }); (M.bats||[]).forEach(b=>{ ax(b[0],b[3]); ax(b[1]); ax(b[2]); });
+  (M.plats||[]).forEach(p=>ax(p.x,p.y)); (M.obst||[]).forEach(o=>ax(o.x,o.gy)); (M.hazards||[]).forEach(h=>ax(h.x,h.y));
+  (M.tex||[]).forEach(t=>ax(t.x,t.y)); (M.fg||[]).forEach(b=>{ if(b.x!==undefined)ax(b.x,b.y); });
+  (M.poly||[]).forEach(o=>(o.nodes||[]).forEach(nd=>ax(nd.x,nd.y))); ax(M.goal,M.goalY);
+  return any?{minX:mnX,minY:mnY,maxX:mxX,maxY:mxY}:null; }
+function resizeHandles(){ const X0=sx(0),Y0=sy(0),X1=sx(M.world),Y1=sy(M.h),XM=(X0+X1)/2,YM=(Y0+Y1)/2;
+  return [['tl',X0,Y0],['tr',X1,Y0],['bl',X0,Y1],['br',X1,Y1],['t',XM,Y0],['b',XM,Y1],['l',X0,YM],['r',X1,YM]]; }
+function resizeHandleHit(c){ const R=24; for(const [id,hx,hy] of resizeHandles()){ if(Math.hypot(c.x-hx,c.y-hy)<R) return id; } return null; }
+function drawResizeHandles(){ const X0=sx(0),Y0=sy(0),X1=sx(M.world),Y1=sy(M.h);
+  ctx.save(); ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.setLineDash([9,6]); ctx.strokeRect(X0,Y0,X1-X0,Y1-Y0); ctx.setLineDash([]);
+  for(const [id,hx,hy] of resizeHandles()){ const sgl=(id.length===2); const s=sgl?8:7; ctx.fillStyle='#12102a'; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.rect(hx-s,hy-s,s*2,s*2); ctx.fill(); ctx.stroke(); }
+  ctx.restore(); }
+function resizeStageMove(c){ const wdx=(c.x-act.lsx)/zoom, wdy=(c.y-act.lsy)/zoom; const H=act.h;
+  const left=H.indexOf('l')>=0, right=H.indexOf('r')>=0, top=H.indexOf('t')>=0, bottom=H.indexOf('b')>=0;
+  const MINW=480, MINH=320, bnd=contentBounds();
+  if(right){ let nw=M.world+wdx; nw=Math.max(MINW,nw); if(bnd) nw=Math.max(nw,(bnd.maxX||0)+20); M.world=nw; }
+  if(bottom){ let nh=M.h+wdy; nh=Math.max(MINH,nh); if(bnd) nh=Math.max(nh,(bnd.maxY||0)+20); M.h=nh; }
+  if(left){ let grow=-wdx; const ms=Math.min(bnd?bnd.minX:Infinity, M.world-MINW); if(grow<-ms) grow=-ms; if(grow){ M.world+=grow; shiftAll(grow,0); camx+=grow; } }
+  if(top){ let grow=-wdy; const ms=Math.min(bnd?bnd.minY:Infinity, M.h-MINH); if(grow<-ms) grow=-ms; if(grow){ M.h+=grow; shiftAll(0,grow); camy+=grow; } }
+  act.lsx=c.x; act.lsy=c.y; const hb=document.getElementById('hint'); if(hb) hb.textContent='stage '+Math.round(M.world)+' × '+Math.round(M.h); persist(); draw(); }
 cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,cvxy(e));
  if(ptrs.size===2){ const p=[...ptrs.values()]; pinch={d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),z:zoom,
    mx:(p[0].x+p[1].x)/2,my:(p[0].y+p[1].y)/2, bx:wx((p[0].x+p[1].x)/2),by:wy((p[0].y+p[1].y)/2)}; act=null; return; }
  const c=cvxy(e), wxp=wx(c.x),wyp=wy(c.y);
  if(polyMode){ if(!polyDown(wxp,wyp,e.altKey)){ act={mode:'pan',px:c.x,py:c.y,cx:camx,cy:camy}; } syncPolyUI(); return; }
  if(zoneMode){ const zz=M.zoomzones||(M.zoomzones=[]); let hi=-1,edge=0; for(let i=zz.length-1;i>=0;i--){ const z=zz[i],a=Math.min(z.x0,z.x1),b=Math.max(z.x0,z.x1); if(Math.abs(wxp-a)<12/zoom){hi=i;edge=-1;break;} if(Math.abs(wxp-b)<12/zoom){hi=i;edge=1;break;} if(wxp>=a&&wxp<=b){hi=i;edge=0;break;} } histPush(); if(hi>=0){ zoneSel=hi; act=(edge!==0)?{mode:'zedge',i:hi,edge}:{mode:'zmove',i:hi,px:wxp}; } else { zz.push({x0:Math.round(wxp),x1:Math.round(wxp),zoom:0.8,ramp:200}); zoneSel=zz.length-1; act={mode:'zedge',i:zoneSel,edge:1}; } syncZoneUI(); draw(); return; }
+ if(resizeMode){ const hid=resizeHandleHit(c); if(hid){ histPush(); act={mode:'stageresize',h:hid,lsx:c.x,lsy:c.y}; } else { act={mode:'pan',px:c.x,py:c.y,cx:camx,cy:camy}; } return; }
  if(ruler){ const e1=Math.hypot(c.x-sx(ruler.x1),c.y-sy(ruler.y1)), e2=Math.hypot(c.x-sx(ruler.x2),c.y-sy(ruler.y2)); if(e1<18){ act={mode:'ruler',pt:1}; return; } if(e2<18){ act={mode:'ruler',pt:2}; return; } }
  if(eraseMode){ const h=hit(wxp,wyp); if(h){ histPush(); delObj(h); persist(); draw(); } return; }
  if(bulkArm){ const h=hit(wxp,wyp); bulkArm=false; const mb=document.getElementById('mBulk'); if(mb)mb.classList.remove('on');
@@ -835,6 +875,7 @@ cv.addEventListener('pointermove',e=>{
  if(!act) return;
  if(act.mode==='pan'){ camx=act.cx-(c.x-act.px)/zoom; camy=act.cy-(c.y-act.py)/zoom; draw(); return; }
  if(act.mode==='marquee'){ act.x1=wx(c.x); act.y1=wy(c.y); draw(); return; }
+ if(act.mode==='stageresize'){ resizeStageMove(c); return; }
  if(act.mode==='zedge'){ const z=M.zoomzones[act.i]; if(z){ if(act.edge<0) z.x0=Math.round(wx(c.x)); else z.x1=Math.round(wx(c.x)); persist(); draw(); } return; }
  if(act.mode==='zmove'){ const z=M.zoomzones[act.i]; if(z){ const nx=wx(c.x), dx=Math.round(nx-act.px); z.x0+=dx; z.x1+=dx; act.px=nx; persist(); draw(); } return; }
  if(act.mode==='gmove'){ const dx=snap((c.x-act.px)/zoom), dy=snap((c.y-act.py)/zoom); if(!act.last)act.last={dx:0,dy:0};
@@ -844,6 +885,7 @@ cv.addEventListener('pointermove',e=>{
  if(act.mode==='ruler'){ if(act.pt===1){ ruler.x1=snap(wx(c.x)); ruler.y1=snap(wy(c.y)); } else { ruler.x2=snap(wx(c.x)); ruler.y2=snap(wy(c.y)); } draw(); return; }
 });
 function endPtr(e){ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null;
+ if(act && act.mode==='stageresize'){ if(ptrs.size===0){ M.world=Math.round(M.world); M.h=Math.round(M.h); const fw=document.getElementById('fW'),fh=document.getElementById('fH'); if(fw)fw.value=M.world; if(fh)fh.value=M.h; persist(); draw(); act=null; } return; }
  if(act && (act.mode==='zedge'||act.mode==='zmove')){ if(ptrs.size===0){ const z=M.zoomzones&&M.zoomzones[act.i]; if(z&&z.x0>z.x1){ const t=z.x0; z.x0=z.x1; z.x1=t; } persist(); syncZoneUI(); act=null; } return; }
  if(act && act.mode==='marquee'){ if(ptrs.size===0){ const x0=Math.min(act.x0,act.x1),x1=Math.max(act.x0,act.x1),y0=Math.min(act.y0,act.y1),y1=Math.max(act.y0,act.y1); const members=[]; for(const pp of allProps()){ const cc=propCenterRaw(pp.raw); if(cc[0]>=x0&&cc[0]<=x1&&cc[1]>=y0&&cc[1]<=y1) members.push(pp.raw); }
    (M.poly||[]).forEach(o=>{ const cc=propCenterRaw(o); if(cc[0]>=x0&&cc[0]<=x1&&cc[1]>=y0&&cc[1]<=y1) members.push(o); }); msel.clear(); members.forEach(r=>msel.add(r)); sel = members.length ? {type:'group',name:'Selection ('+members.length+')',members,obj:{}} : null; showSel(); marqMode=false; const mb=document.getElementById('mMarq'); if(mb)mb.classList.remove('on'); act=null; draw(); toast(members.length?members.length+' selected — drag to move them together':'nothing in the box'); } return; }
@@ -1543,7 +1585,7 @@ function drawPolyLabels(){ if(!M.poly) return; ctx.textAlign='center'; ctx.font=
     ctx.fillStyle='rgba(10,8,20,.72)'; ctx.fillRect(X-w/2-5,Y-9,w+10,18); ctx.fillStyle='#e8e6f5'; ctx.fillText(o.label,X,Y+4); }
   ctx.textAlign='left'; }
 (function(){ const mk=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
-  mk('mPoly',function(){ polyMode=!polyMode; document.getElementById('mPoly').classList.toggle('on',polyMode); if(polyMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); syncPolyUI(); } updateTermodeBar(); draw(); });
+  mk('mPoly',function(){ polyMode=!polyMode; document.getElementById('mPoly').classList.toggle('on',polyMode); if(polyMode){ resizeMode=false; { const mr=document.getElementById('mResize'); if(mr)mr.classList.remove('on'); } eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); const pa=document.getElementById('polyAngle'); if(pa) pa.value=(M.wallSlope||1.3); syncPolyUI(); } updateTermodeBar(); draw(); });
   { const pa=document.getElementById('polyAngle'); if(pa) pa.addEventListener('input',function(){ M.wallSlope=+this.value; persist(); draw(); }); }
   mk('bAddPoly',addMainPoly); mk('bAddLine',addLinePoly); mk('bDelShape',deletePolyActive);
   mk('bAddShape',addShape);
@@ -1587,6 +1629,7 @@ function draw(){
  drawEditorPoly(); drawPolyLabels();
  if(act && act.mode==='marquee'){ ctx.save(); ctx.strokeStyle='#5fd8ff'; ctx.fillStyle='rgba(95,216,255,.12)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); const X=sx(Math.min(act.x0,act.x1)),Y=sy(Math.min(act.y0,act.y1)),W2=Math.abs(act.x1-act.x0)*zoom,H2=Math.abs(act.y1-act.y0)*zoom; ctx.fillRect(X,Y,W2,H2); ctx.strokeRect(X,Y,W2,H2); ctx.setLineDash([]); ctx.restore(); }
  if(zoneMode && M.zoomzones){ for(let i=0;i<M.zoomzones.length;i++){ const z=M.zoomzones[i], X0=sx(Math.min(z.x0,z.x1)), X1=sx(Math.max(z.x0,z.x1)), seld=(i===zoneSel); ctx.save(); ctx.fillStyle=seld?'rgba(95,216,255,.16)':'rgba(95,216,255,.07)'; ctx.fillRect(X0,0,X1-X0,CH); ctx.strokeStyle='#5fd8ff'; ctx.lineWidth=seld?2.5:1.2; ctx.setLineDash([6,5]); ctx.strokeRect(X0,0,X1-X0,CH); ctx.setLineDash([]); ctx.fillStyle='#cdeeff'; ctx.font='11px sans-serif'; ctx.fillText('🔭 '+(z.zoom||1)+'  ramp '+(z.ramp||200), X0+6, 15); ctx.restore(); } }
+ if(resizeMode) drawResizeHandles();
  allProps().sort((a,b)=>a.z-b.z).forEach(pr=>{ if(pr.kind==='terrace')dTerr(pr.raw); else if(pr.kind==='plat')dPlat(pr.raw); else if(pr.kind==='haz')dHaz(pr.raw); else if(pr.kind==='tex')dTex(pr.raw); else dObst(pr.raw); });
  if(sel&&sel.type==='bulkswap'){ for(const r of sel.members){ const c=propCenterRaw(r); const X=sx(c[0]),Y=sy(c[1]); ctx.fillStyle='rgba(200,251,80,.16)'; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(X,Y,18,0,7); ctx.fill(); ctx.stroke(); } }
  for(const s of M.souls){ ctx.fillStyle=SOUL_COL_ED[s[2]||1]||'#7fe0ff'; ctx.beginPath(); ctx.arc(sx(s[0]),sy(s[1]),Math.max(3,6*zoom),0,7); ctx.fill(); }
@@ -1603,7 +1646,7 @@ function draw(){
    if(sel&&sel.raw===c){ const m=EDSPR.chkst; const w=(m?m.m.w:40)*zoom,hh=(m?m.m.h:50)*zoom; ctx.strokeStyle='#c8fb50'; ctx.lineWidth=2; ctx.strokeRect(X-w/2-2,Y-hh-2,w+4,hh+4); } }
  if(M.goal){ const X=sx(M.goal),Y=sy(M.goalY);
    if(!dSprite('goal', X, Y, zoom, 'b', false)){ ctx.strokeStyle='#e0506a'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(X,Y-34*zoom,22*zoom,0,7); ctx.stroke(); ctx.fillStyle='#e0506a'; ctx.font='11px sans-serif'; ctx.fillText('EXIT',X-12,Y+12); } }
- const sp=spawnY(90); if(sp!==null){ const X=sx(90),Y=sy(sp); ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y-30*zoom,Math.max(5,9*zoom),0,7); ctx.fill();
+ const _spx=(M.spawnX||90); const sp=spawnY(_spx); if(sp!==null){ const X=sx(_spx),Y=sy(sp); ctx.fillStyle='#c8fb50'; ctx.beginPath(); ctx.arc(X,Y-30*zoom,Math.max(5,9*zoom),0,7); ctx.fill();
    ctx.fillStyle='#c8fb50'; ctx.font='10px sans-serif'; ctx.fillText('START',X-14,Y-44*zoom); }
  for(const b of (M.fg||[])){ const img=BGE_IMG[b.t]; if(!img||!img.naturalWidth) continue;
    ctx.globalAlpha=0.72;
@@ -1842,7 +1885,7 @@ addEventListener('keydown',e=>{ const z=(e.ctrlKey||e.metaKey)&&e.key.toLowerCas
   else if((e.key==='Delete'||e.key==='Backspace') && polyMode && M.poly&&M.poly[polyActive] && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||'')){ e.preventDefault(); deletePolyActive(); } });
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',2400); }
 function cleanLevel(){ syncFields(); const o={name:M.name,act:M.act,music:M.music}; if(M.theme)o.theme=M.theme;
- o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; if(M.poly&&M.poly.length)o.poly=M.poly; o.wallSlope=M.wallSlope||1.3; o.zoom=M.zoom||1; if(M.zoomzones&&M.zoomzones.length)o.zoomzones=M.zoomzones; return o; }
+ o.world=M.world;o.h=M.h;o.goal=M.goal;o.goalY=M.goalY;o.seg=M.seg;o.obst=M.obst||[];o.plats=M.plats;o.chk=M.chk;o.souls=M.souls;o.enemies=M.enemies;o.bats=M.bats;o.hazards=M.hazards||[];o.tex=M.tex||[];o.bg=M.bg||[];o.fg=M.fg||[]; if(M.poly&&M.poly.length)o.poly=M.poly; o.wallSlope=M.wallSlope||1.3; o.zoom=M.zoom||1; if(M.zoomzones&&M.zoomzones.length)o.zoomzones=M.zoomzones; if(M.spawnX!==undefined&&M.spawnX!==90)o.spawnX=M.spawnX; return o; }
 function encodeAsset(im, isBg){ let scale=Math.min(1, 2400/Math.max(im.naturalWidth, im.naturalHeight));
   for(let i=0;i<7;i++){ const cw=Math.max(1,Math.round(im.naturalWidth*scale)), ch=Math.max(1,Math.round(im.naturalHeight*scale));
     const c=document.createElement('canvas'); c.width=cw; c.height=ch; const cx=c.getContext('2d'); cx.imageSmoothingQuality='high'; cx.drawImage(im,0,0,cw,ch);
@@ -1950,8 +1993,9 @@ document.getElementById('bExport').onclick=async()=>{ toast('building backup\u20
 document.getElementById('bObject').onclick=openObjModal;
 document.getElementById('bStyle').onclick=openStyle;
 document.getElementById('bChar').onclick=openCharLib;
-document.getElementById('mZone').onclick=function(){ zoneMode=!zoneMode; this.classList.toggle('on',zoneMode); if(zoneMode){ marqMode=false; const mm=document.getElementById('mMarq'); if(mm)mm.classList.remove('on'); eraseMode=false; bulkArm=false; if(polyMode){ polyMode=false; const mp=document.getElementById('mPoly'); if(mp)mp.classList.remove('on'); try{updateTermodeBar();}catch(e){} } sel=null; showSel(); toast('Zoom zones: drag to create a band, tap to edit. Lower zoom = more zoomed out'); } else { zoneSel=-1; } syncZoneUI(); draw(); };
-document.getElementById('mMarq').onclick=function(){ marqMode=!marqMode; this.classList.toggle('on',marqMode); if(marqMode){ zoneMode=false; const mz=document.getElementById('mZone'); if(mz)mz.classList.remove('on'); zoneSel=-1; syncZoneUI(); } if(marqMode){ eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); const mb2=document.getElementById('mBulk'); if(mb2)mb2.classList.remove('on'); if(polyMode){ polyMode=false; const mp=document.getElementById('mPoly'); if(mp)mp.classList.remove('on'); try{updateTermodeBar();}catch(e){} } sel=null; showSel(); draw(); toast('Marquee: drag a box over objects to select them'); } };
+document.getElementById('mZone').onclick=function(){ zoneMode=!zoneMode; this.classList.toggle('on',zoneMode); if(zoneMode){ resizeMode=false; { const mr=document.getElementById('mResize'); if(mr)mr.classList.remove('on'); } marqMode=false; const mm=document.getElementById('mMarq'); if(mm)mm.classList.remove('on'); eraseMode=false; bulkArm=false; if(polyMode){ polyMode=false; const mp=document.getElementById('mPoly'); if(mp)mp.classList.remove('on'); try{updateTermodeBar();}catch(e){} } sel=null; showSel(); toast('Zoom zones: drag to create a band, tap to edit. Lower zoom = more zoomed out'); } else { zoneSel=-1; } syncZoneUI(); draw(); };
+document.getElementById('mMarq').onclick=function(){ marqMode=!marqMode; this.classList.toggle('on',marqMode); if(marqMode){ zoneMode=false; const mz=document.getElementById('mZone'); if(mz)mz.classList.remove('on'); zoneSel=-1; syncZoneUI(); } if(marqMode){ resizeMode=false; { const mr=document.getElementById('mResize'); if(mr)mr.classList.remove('on'); } eraseMode=false; bulkArm=false; const me=document.getElementById('mErase'); if(me)me.classList.remove('on'); const mb2=document.getElementById('mBulk'); if(mb2)mb2.classList.remove('on'); if(polyMode){ polyMode=false; const mp=document.getElementById('mPoly'); if(mp)mp.classList.remove('on'); try{updateTermodeBar();}catch(e){} } sel=null; showSel(); draw(); toast('Marquee: drag a box over objects to select them'); } };
+document.getElementById('mResize').onclick=function(){ resizeMode=!resizeMode; this.classList.toggle('on',resizeMode); if(resizeMode){ zoneMode=false; { const mz=document.getElementById('mZone'); if(mz)mz.classList.remove('on'); } zoneSel=-1; try{syncZoneUI();}catch(e){} marqMode=false; { const mm=document.getElementById('mMarq'); if(mm)mm.classList.remove('on'); } eraseMode=false; bulkArm=false; if(polyMode){ polyMode=false; const mp=document.getElementById('mPoly'); if(mp)mp.classList.remove('on'); try{updateTermodeBar();}catch(e){} } sel=null; showSel(); toast('Resize stage: drag the edge/corner handles. Dragging the top or left edge opens room and shifts your layout to keep it in place.'); } draw(); };
 document.getElementById('bImport').onclick=()=>{ const inp=document.createElement('input'); inp.type='file';
  inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; f.text().then(tx=>{ try{ let j=tx.trim(); const i=j.indexOf('={'); if(i>=0)j=j.slice(i+1,j.lastIndexOf('}')+1);
    histPush(); M=Object.assign(blankLevel(),migrateLevel(JSON.parse(j))); M.theme=M.theme||''; loadFields(); sel=null; showSel(); persist(); draw(); toast('imported'); }catch(err){ toast('import failed: '+err.message); } }); }; inp.click(); };
