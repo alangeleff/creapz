@@ -52,13 +52,13 @@
  .modebtn{display:flex;align-items:center;gap:8px;padding:9px 10px;margin:4px 0;border-radius:8px;background:#1d1838;border:1px solid transparent;cursor:pointer;font-size:13px}
  .modebtn.on{border-color:var(--lime);background:#242a16}
  #main{flex:1;display:flex;flex-direction:column;min-width:0}
- #bar{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+ #bar{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap;max-width:100%;box-sizing:border-box}
  #bar input,#bar select{background:#0e0b1d;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 7px;font-size:12px}
  #bar label{font-size:11px;color:var(--mut)}
  .btn{background:#2a2150;color:var(--ink);border:1px solid #7b5cff;border-radius:7px;padding:8px 12px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
  .btn svg{width:16px;height:16px;stroke-width:2}
  .btn i[data-lucide]{font-style:normal;display:inline-flex;align-items:center}
- .grp{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
+ .grp{display:inline-flex;flex-wrap:wrap;max-width:100%;align-items:center;gap:5px 6px;padding:4px 8px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
  .grp>.glabel{font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);opacity:.6;padding-right:1px}
  .grp-save{background:rgba(91,156,255,.09);border-color:#2f4663}
  .grp-edit{background:rgba(120,140,160,.06);border-color:#384350}
