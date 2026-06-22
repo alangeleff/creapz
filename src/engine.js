@@ -1,4 +1,4 @@
-const ASSET_VER='17821572620';
+const ASSET_VER='17821603120';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1170,7 +1170,7 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; b.fillMode=o.fillMode||'pattern'; b.rot=o.rot||0; b.kind=o.kind||null; b.noCol=!!o.noCol; b.line=!!o.line; b.dyn=!!o.dyn; b.thr=o.thr; built.push(b); } }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; b.fillMode=o.fillMode||'pattern'; b.rot=o.rot||0; b.kind=o.kind||null; b.noCol=!!o.noCol; b.line=!!o.line; b.dyn=!!o.dyn; b.thr=o.thr; b.par=o.par; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyCollides(ob){ return (ob.layer||'main')==='main' && !ob.noCol; }
@@ -1265,6 +1265,8 @@ function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex)
     const frac=((x-x0)%tileW)/tileW, u=trim*iw+frac*cw, sw=Math.max(1,(step/tileW)*cw);
     ctx.drawImage(img, u,0, sw,ih, x-camX, sy-H+drop, step+1, H); }
   ctx.restore(); }
+function drawPolyBg(){ if(!POLY||!POLY.objs.length) return;
+  for(const ob of POLY.objs){ if((ob.layer||'main')!=='bg'||ob.line||ob.dyn) continue; const par=(ob.par!==undefined?ob.par:0.6); ctx.save(); ctx.translate(camX*(1-par), -camY*par); drawPolyOne(ob,'bg'); ctx.restore(); } }
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
   for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; if(ob.line) continue; if(ob.dyn) continue; drawPolyOne(ob, layer); } }
 function drawPolyOne(ob, layer){ if(ob.line) return; const S=ob.samples; if(S.length<2) return;
@@ -3513,7 +3515,7 @@ function draw(){
   let _shx=0,_shy=0; if(shakeT>0){ const m=shakeMag*Math.min(1,shakeT/0.13); _shx=(Math.random()*2-1)*m; _shy=(Math.random()*2-1)*m; }
   ctx.setTransform(RS,0,0,RS,_shx*RS,_shy*RS);
   if (ST.theme==='crypt') caveBG(); else if (ST.theme==='plains') etherealBG(); else if (ST.theme==='witch') witchBG(); else if (ST.theme==='harbor') harborBG(); else if (ST.theme==='spire') spireBG(); else if (ST.theme==='charnel') charnelBG(); else if (ST.theme==='rift') riftBG(); else if (ST.theme==='castle') castleBG(); else { skyBG(); drawFence(); }
-  drawBackgrounds(); ctx.save(); ctx.translate(0,-camY); drawPoly('bg'); ctx.restore();   // bg-layer poly is world-locked (matches editor) so it stays behind content after stage resize
+  drawBackgrounds(); drawPolyBg();   // bg-layer poly with per-shape parallax (par: 1=locked to world, 0=locked to screen)
   vignette();
   ctx.save(); ctx.translate(0,-camY);
   drawSpikes();
