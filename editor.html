@@ -854,8 +854,8 @@ function resizeStageMove(c){ const wdx=(c.x-act.lsx)/zoom, wdy=(c.y-act.lsy)/zoo
   const MINW=480, MINH=320, bnd=contentBounds();
   if(right){ let nw=M.world+wdx; nw=Math.max(MINW,nw); if(bnd) nw=Math.max(nw,(bnd.maxX||0)+20); M.world=nw; }
   if(bottom){ let nh=M.h+wdy; nh=Math.max(MINH,nh); if(bnd) nh=Math.max(nh,(bnd.maxY||0)+20); M.h=nh; }
-  if(left){ let grow=-wdx; const ms=Math.min(bnd?bnd.minX:Infinity, M.world-MINW); if(grow<-ms) grow=-ms; if(grow){ M.world+=grow; shiftAll(grow,0); camx+=grow; } }
-  if(top){ let grow=-wdy; const ms=Math.min(bnd?bnd.minY:Infinity, M.h-MINH); if(grow<-ms) grow=-ms; if(grow){ M.h+=grow; shiftAll(0,grow); camy+=grow; } }
+  if(left){ let grow=-wdx; const ms=Math.min(bnd?bnd.minX:Infinity, M.world-MINW); if(grow<-ms) grow=-ms; if(grow){ M.world+=grow; shiftAll(grow,0); } }
+  if(top){ let grow=-wdy; const ms=Math.min(bnd?bnd.minY:Infinity, M.h-MINH); if(grow<-ms) grow=-ms; if(grow){ M.h+=grow; shiftAll(0,grow); } }
   act.lsx=c.x; act.lsy=c.y; const hb=document.getElementById('hint'); if(hb) hb.textContent='stage '+Math.round(M.world)+' × '+Math.round(M.h); persist(); draw(); }
 cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,cvxy(e));
  if(ptrs.size===2){ const p=[...ptrs.values()]; pinch={d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),z:zoom,
