@@ -1,4 +1,4 @@
-const ASSET_VER='17821562080';
+const ASSET_VER='17821572620';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -13,7 +13,7 @@ if (document.fonts && document.fonts.load){ try{ await Promise.race([document.fo
 const SPRITES = await loadSprites();
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const tcv = document.createElement('canvas'), tctx = tcv.getContext('2d');
-const BASE_W = 960, BASE_H = 440; let W = BASE_W, H = BASE_H, VZOOM = 1;
+const BASE_W = 960, BASE_H = 440; let W = BASE_W, H = BASE_H, VZOOM = 1, _zoomCur = null;
 const RS = Math.min(2, Math.max(1, Math.round(window.devicePixelRatio || 1)));
 cv.width = W*RS; cv.height = H*RS;
 function setView(z){ z=Math.max(0.5,Math.min(1.7,+z||1)); VZOOM=z; W=Math.round(BASE_W/z); H=Math.round(BASE_H/z); cv.width=W*RS; cv.height=H*RS; }
@@ -301,7 +301,7 @@ function enterWorld(fromAct){
 }
 function loadStage(i){
   stageIdx = i; ST = window.STAGES[i];
-  setView(ST.zoom||1);
+  setView(ST.zoom||1); _zoomCur=ST.zoom||1;
   WORLD = ST.world; GOAL_X = ST.goal; SEG = ST.seg;
   if(window.__polyDemo){ ST.poly=ST.poly||DEMO_POLY; SEG=[]; }
   POLY = polyBuildAll(ST.poly);
@@ -1268,7 +1268,7 @@ function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex)
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
   for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; if(ob.line) continue; if(ob.dyn) continue; drawPolyOne(ob, layer); } }
 function drawPolyOne(ob, layer){ if(ob.line) return; const S=ob.samples; if(S.length<2) return;
-    const a=(layer==='bg'?0.55:(layer==='fg'?0.85:1))*(ob.alpha!==undefined?ob.alpha:1);
+    const a=(ob.alpha!==undefined?ob.alpha:1);   // opacity is per-shape (alpha slider); layers no longer auto-dim
     if(ob.edge==='soft'){
       const texReady = !ob.tex || !!polyTexImg(ob.tex);
       if(ob._cache===undefined && texReady) polySoftCache(ob,S);
@@ -1980,7 +1980,9 @@ function update(dt){
   updateHazards(dt*efr);
   updateZbits(dt);
   updatePal(dt);
-  { let tz=ST.zoom||1; const zz=ST.zoomzones; if(zz&&zz.length){ let bestF=0,tgt=tz; for(const z of zz){ if(p.x<z.x0||p.x>z.x1) continue; const R=Math.max(1,z.ramp||200), dIn=Math.min(p.x-z.x0,z.x1-p.x), ff=Math.max(0,Math.min(1,dIn/R)); if(ff>=bestF){bestF=ff;tgt=(z.zoom||1);} } tz=tz+(tgt-tz)*bestF; } tz=Math.round(tz/0.02)*0.02; if(Math.abs(tz-VZOOM)>0.001) setView(tz); }
+  { let tz=ST.zoom||1; const zz=ST.zoomzones; if(zz&&zz.length){ let bestF=0,tgt=tz; for(const z of zz){ if(p.x<z.x0||p.x>z.x1) continue; const R=Math.max(1,z.ramp||200), dIn=Math.min(p.x-z.x0,z.x1-p.x), ff=Math.max(0,Math.min(1,dIn/R)); if(ff>=bestF){bestF=ff;tgt=(z.zoom||1);} } tz=tz+(tgt-tz)*bestF; }
+    if(_zoomCur===null) _zoomCur=tz; _zoomCur += (tz-_zoomCur)*Math.min(1, dt*6); if(Math.abs(tz-_zoomCur)<0.003) _zoomCur=tz;
+    const q=Math.round(_zoomCur/0.02)*0.02; if(Math.abs(q-VZOOM)>0.001) setView(q); }
   camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38));
   const _cty=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62));
   camY+=(_cty-camY)*Math.min(1,dt*7);
