@@ -1,4 +1,4 @@
-const ASSET_VER='17821553790';
+const ASSET_VER='17821561060';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -307,17 +307,17 @@ function loadStage(i){
   POLY = polyBuildAll(ST.poly);
   POLY_MAXSLOPE = (ST.wallSlope!==undefined ? +ST.wallSlope : 1.3);
   WORLDH = ST.h||H; GOALY = (ST.goalY!==undefined)?ST.goalY:GROUND;
-  OBST = ST.obst.map(o => { const def=OBJ[o.type]||{w:96,h:62}; const m={x:o.x, type:o.type, w:def.w, h:def.h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z, f:o.f}; if(o.type==='chest'){ m.state='closed'; m.openT=0; m.loot=o.loot||'gold'; } return m; });
+  OBST = ST.obst.map(o => { const def=OBJ[o.type]||{w:96,h:62}; const m={x:o.x, type:o.type, w:def.w, h:def.h, gy:(o.gy!==undefined?o.gy:GROUND), z:o.z, f:o.f, dyn:!!o.dyn, thr:o.thr}; if(o.type==='chest'){ m.state='closed'; m.openT=0; m.loot=o.loot||'gold'; } return m; });
   loots=[];
   SOLID = OBST.map(o => ({l:o.x-o.w/2, r:o.x+o.w/2, top:o.gy-o.h}));
   TSOLID = SEG.map(s => ({l:s[0], r:s[1], top:s[2], bot:s[2]+(s[3]||130)}));
   stoneCharge=0; powerActive=false; powerT=0; transformT=0;
   PLAT_DEF = ST.plats; CHK = (ST.chk||[]).map(c=>Array.isArray(c)?c:[c,GROUND]); SOUL_POS = ST.souls;
-  TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z, f:t.f, rot:t.rot, geom:t.geom}));
+  TEX = (ST.tex||[]).map(t=>({t:t.t, x:t.x, y:t.y, w:t.w, z:t.z, f:t.f, rot:t.rot, geom:t.geom, dyn:!!t.dyn, thr:t.thr}));
   BG = (ST.bg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale, cover:b.cover}));
   FG = (ST.fg||[]).map(b=>({t:b.t, par:b.par, alpha:b.alpha, x:b.x, y:b.y, w:b.w, h:b.h, tile:b.tile, tscale:b.tscale, cover:b.cover, fade:b.fade, _fa:1}));
   HAZ = (ST.hazards||[]).map(h=>{
-    const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0, dir:h.dir, tx:h.tx, ty:h.ty, tw:h.tw, th:h.th};
+    const o={t:h.t, x:h.x, w:h.w, y:h.y, d:h.d, z:h.z, cd:0, dir:h.dir, tx:h.tx, ty:h.ty, tw:h.tw, th:h.th, dyn:!!h.dyn, thr:h.thr};
     if(h.t==='rock'){ const n=Math.max(1,Math.round(h.w/160)); const step=h.w/n; o.spawns=[]; for(let i=0;i<n;i++) o.spawns.push(Math.round(h.x+step*(i+0.5))); o.cds=o.spawns.map(()=>0); }
     return o;
   });
@@ -1063,7 +1063,7 @@ function reset(keep){
     totalOrbVal = souls.reduce((a,s)=>a+s.val,0);
   }
   plats = PLAT_DEF.map(q=>({x:q.x!==undefined?q.x:q.x0, x0:q.x0, y:q.y, w:q.w, t:q.t, skin:q.skin, z:q.z,
-    range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0, dyf:0,
+    range:q.range||0, spd:q.spd||0, ph:0, dir:1, dxf:0, dyf:0, dyn:!!q.dyn, thr:q.thr,
     ct:0, falling:false, gone:false, dy:0, fv:0, rt:0}));
   const zspawn=ST.enemies;
   zombies = zspawn.map(z=>{ const kw=z[3]||'zombie', mh=(kw==='golem')?8:(kw==='knight')?4:(kw==='witch'||kw==='skel'||kw==='angel')?3:(kw==='zgen')?3:((kw==='gob'||kw==='bd')?1:ZMAXHP);
@@ -1170,7 +1170,7 @@ function polyBuildAll(data){
   if(!data || !data.length) return null;
   const objs=(data[0] && data[0].nodes) ? data : [{nodes:data, closed:false}];
   const built=[];
-  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; b.fillMode=o.fillMode||'pattern'; b.rot=o.rot||0; b.kind=o.kind||null; b.noCol=!!o.noCol; b.line=!!o.line; built.push(b); } }
+  for(const o of objs){ if(o && o.nodes && o.nodes.length>1){ const b=polyBuildOne(o.nodes, !!o.closed); b.layer=o.layer||'main'; b.color=o.color||null; b.tex=o.tex||null; b.texScale=o.texScale||1; b.alpha=(o.alpha!==undefined?o.alpha:1); b.edge=o.edge||'hard'; b.feather=o.feather||22; b.fringeTex=o.fringeTex||null; b.fringeH=o.fringeH||44; b.fringeScale=o.fringeScale||1; b.fringeTrim=o.fringeTrim||0; b.fillMode=o.fillMode||'pattern'; b.rot=o.rot||0; b.kind=o.kind||null; b.noCol=!!o.noCol; b.line=!!o.line; b.dyn=!!o.dyn; b.thr=o.thr; built.push(b); } }
   return built.length ? {objs:built} : null;
 }
 function polyCollides(ob){ return (ob.layer||'main')==='main' && !ob.noCol; }
@@ -1266,7 +1266,8 @@ function drawFringe(ob,S,alpha){ const img=ob.fringeTex?polyTexImg(ob.fringeTex)
     ctx.drawImage(img, u,0, sw,ih, x-camX, sy-H+drop, step+1, H); }
   ctx.restore(); }
 function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
-  for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; if(ob.line) continue; const S=ob.samples; if(S.length<2) continue;
+  for(const ob of POLY.objs){ if((ob.layer||'main')!==layer) continue; if(ob.line) continue; if(ob.dyn) continue; drawPolyOne(ob, layer); } }
+function drawPolyOne(ob, layer){ if(ob.line) return; const S=ob.samples; if(S.length<2) return;
     const a=(layer==='bg'?0.55:(layer==='fg'?0.85:1))*(ob.alpha!==undefined?ob.alpha:1);
     if(ob.edge==='soft'){
       const texReady = !ob.tex || !!polyTexImg(ob.tex);
@@ -1283,7 +1284,16 @@ function drawPoly(layer){ if(!POLY||!POLY.objs.length) return;
         sc.save(); sc.setTransform(1,0,0,1,0,0); sc.globalCompositeOperation='destination-in'; sc.drawImage(_smaskC,0,0); sc.restore();
         ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=a; ctx.drawImage(_soff,0,0); ctx.restore(); } }
     else { ctx.save(); ctx.globalAlpha=a; polyPaint(ctx,ob,S); ctx.restore(); }
-    if(ob.edge==='fringe' && ob.fringeTex) drawFringe(ob,S,a); } }
+    if(ob.edge==='fringe' && ob.fringeTex) drawFringe(ob,S,a); }
+function drawDepthLayer(front){
+  const props=[];
+  TEX.forEach((t,i)=>{ if(t.dyn && dynFront(t)===front) props.push({z:zEff('tex',t.z,i),f:()=>drawOneTex(t)}); });
+  plats.forEach((q,i)=>{ if(q.dyn && dynFront(q)===front) props.push({z:zEff('plat',q.z,i),f:()=>drawOnePlat(q)}); });
+  HAZ.forEach((h,i)=>{ if(h.dyn && dynFront(h)===front) props.push({z:zEff('haz',h.z,i),f:()=>drawOneHaz(h)}); });
+  OBST.forEach((o,i)=>{ if(o.dyn && dynFront(o)===front) props.push({z:zEff('obst',o.z,i),f:()=>drawObstacle(o)}); });
+  props.sort((a,b)=>a.z-b.z); for(const pr of props) pr.f();
+  if(POLY&&POLY.objs.length){ for(const ob of POLY.objs){ if(!ob.dyn||ob.line) continue; if(dynFront(ob)!==front) continue; drawPolyOne(ob, ob.layer||'main'); } }
+}
 function worldWeaponBox(spr, fi, x, y, facing){
   const wb = spr.weapon ? spr.weapon[fi] : null; if(!wb) return null;
   const cx=spr.cxs[fi], ft=spr.foots[fi];
@@ -2083,13 +2093,15 @@ function drawOneTex(t){ const x0=t.x-camX; if(x0+t.w<-30||x0>W+30) return; ctx.i
 // shared z layering for the visual prop types (default keeps legacy order)
 const ZBASE={terrace:0,tex:50000,plat:100000,haz:200000,obst:300000};
 function zEff(kind,z,idx){ return (z!==undefined&&z!==null)?z:(ZBASE[kind]+idx); }
+function dynThr(it){ return (it.thr!==undefined&&it.thr!==null)?it.thr:(it.gy!==undefined?it.gy:(it.y!==undefined?it.y:GROUND)); }
+function dynFront(it){ const thr=dynThr(it), HB=14; if(it._df===undefined) it._df=(p?p.y:GROUND)>thr; const fy=p?p.y:GROUND; if(fy>thr+HB) it._df=true; else if(fy<thr-HB) it._df=false; return it._df; }
 function drawWorldProps(){
   const props=[];
   SEG.forEach((s,i)=>props.push({z:zEff('terrace',s[4],i),f:()=>drawOneTerrace(s)}));
-  TEX.forEach((t,i)=>props.push({z:zEff('tex',t.z,i),f:()=>drawOneTex(t)}));
-  plats.forEach((q,i)=>props.push({z:zEff('plat',q.z,i),f:()=>drawOnePlat(q)}));
-  HAZ.forEach((h,i)=>props.push({z:zEff('haz',h.z,i),f:()=>drawOneHaz(h)}));
-  OBST.forEach((o,i)=>props.push({z:zEff('obst',o.z,i),f:()=>drawObstacle(o)}));
+  TEX.forEach((t,i)=>{ if(!t.dyn) props.push({z:zEff('tex',t.z,i),f:()=>drawOneTex(t)}); });
+  plats.forEach((q,i)=>{ if(!q.dyn) props.push({z:zEff('plat',q.z,i),f:()=>drawOnePlat(q)}); });
+  HAZ.forEach((h,i)=>{ if(!h.dyn) props.push({z:zEff('haz',h.z,i),f:()=>drawOneHaz(h)}); });
+  OBST.forEach((o,i)=>{ if(!o.dyn) props.push({z:zEff('obst',o.z,i),f:()=>drawObstacle(o)}); });
   props.sort((a,b)=>a.z-b.z);
   for(const p of props) p.f();
 }
@@ -3499,12 +3511,13 @@ function draw(){
   let _shx=0,_shy=0; if(shakeT>0){ const m=shakeMag*Math.min(1,shakeT/0.13); _shx=(Math.random()*2-1)*m; _shy=(Math.random()*2-1)*m; }
   ctx.setTransform(RS,0,0,RS,_shx*RS,_shy*RS);
   if (ST.theme==='crypt') caveBG(); else if (ST.theme==='plains') etherealBG(); else if (ST.theme==='witch') witchBG(); else if (ST.theme==='harbor') harborBG(); else if (ST.theme==='spire') spireBG(); else if (ST.theme==='charnel') charnelBG(); else if (ST.theme==='rift') riftBG(); else if (ST.theme==='castle') castleBG(); else { skyBG(); drawFence(); }
-  drawBackgrounds(); drawPoly('bg');   // parallax background image layers (cover the base when present)
+  drawBackgrounds(); ctx.save(); ctx.translate(0,-camY); drawPoly('bg'); ctx.restore();   // bg-layer poly is world-locked (matches editor) so it stays behind content after stage resize
   vignette();
   ctx.save(); ctx.translate(0,-camY);
   drawSpikes();
   drawWorldProps();
   drawPoly('main');
+  drawDepthLayer(false);   // depth-flip items currently BEHIND the player
   drawChecks();
   drawRocks();
   drawVolleys();
@@ -3523,6 +3536,7 @@ function draw(){
   drawChaosBack();
   drawPal();
   drawPlayerLayer();
+  drawDepthLayer(true);    // depth-flip items currently IN FRONT of the player
   drawSlamFx();
   drawPower();
   drawFluoriteAura('front');
