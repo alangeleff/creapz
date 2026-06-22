@@ -17,9 +17,9 @@ function singlePrompt(prompt, style) {
     + (style ? ` Art style: ${style}.` : '');
 }
 function texturePrompt(prompt, style) {
-  return `A seamless, fully tileable repeating TEXTURE / surface material of: ${prompt}. `
-    + `Flat 2D side-scrolling video-game art, stylized and painterly, evenly lit with no strong directional shadows, `
-    + `filling the entire frame edge to edge as a repeating material. No scene, no horizon, no sky, no characters, no objects — just the surface itself.`
+  return `A seamless tileable TEXTURE SWATCH of ${prompt}, viewed TOP-DOWN / flat-lay (camera looking straight down at the surface, orthographic, zero perspective), like a video-game ground tileset tile. `
+    + `The pattern repeats seamlessly and the edges wrap (left edge matches right, top matches bottom). Stylized painterly 2D game art, even flat lighting, no cast shadows, no highlights from any single direction. `
+    + `It MUST fill the entire square frame edge to edge with the material only — absolutely NO horizon, NO sky, NO ground line, NO perspective, NO scene, NO objects, NO characters, NO vignette, NO border. Just the flat surface material, like a fabric/tile sample.`
     + (style ? ` Overall art style: ${style}.` : '');
 }
 function fringePrompt(prompt, style) {
