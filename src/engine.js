@@ -1,4 +1,4 @@
-const ASSET_VER='17822387510';
+const ASSET_VER='17822430640';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1241,7 +1241,7 @@ function adjTexImg(ob){ const img=ob.tex?polyTexImg(ob.tex):null; if(!img) retur
 function fringeFilterStr(ob){ const br=(ob.fringeBr!=null?ob.fringeBr:1), sa=(ob.fringeSat!=null?ob.fringeSat:1), hu=(ob.fringeHue||0); if(br===1&&sa===1&&hu===0) return null; return 'brightness('+br+') saturate('+sa+') hue-rotate('+hu+'deg)'; }
 function adjFringeImg(ob){ const img=ob.fringeTex?polyTexImg(ob.fringeTex):null; if(!img) return null; const ff=fringeFilterStr(ob); if(!ff) return img; if(!img.naturalWidth) return img; const key=ob.fringeTex+'|'+ff; if(ob._adjF && ob._adjFKey===key) return ob._adjF; const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight; const x=c.getContext('2d'); x.filter=ff; x.drawImage(img,0,0); c.naturalWidth=c.width; c.naturalHeight=c.height; ob._adjF=c; ob._adjFKey=key; return c; }
 function polyPaint(g,ob,S,ox){ if(ox===undefined)ox=camX; polyPath(g,S,ob.closed,ox); const tImg=ob.tex?adjTexImg(ob):null;
-  if(tImg){ g.save(); const isObj=ob.kind==='object'; if(!isObj) g.clip('evenodd'); const rot=ob.rot||0; let Sf=S; if(rot){ const u=_unrotS(S,rot); Sf=u.Sf; g.translate(u.cx-ox,u.cy); g.rotate(rot); g.translate(-(u.cx-ox),-u.cy); } if(isObj) polyObjFit(g,tImg,Sf,ox); else if(ob.fillMode==='single') polySingleFill(g,tImg,Sf,ob.closed,ox); else polyTileFill(g,tImg,Sf,ob.closed,ob.texScale,ox); g.restore(); }
+  if(tImg){ g.save(); const isObj=ob.kind==='object'; if(!isObj) g.clip('evenodd'); const rot=ob.rot||0; let Sf=S; if(rot){ const u=_unrotS(S,rot); Sf=u.Sf; g.translate(u.cx-ox,u.cy); g.rotate(rot); g.translate(-(u.cx-ox),-u.cy); } if(isObj) polyObjFit(g,tImg,Sf,ox); else if(ob.fillMode==='single'||ob.fillMode==='scene') polySingleFill(g,tImg,Sf,ob.closed,ox); else polyTileFill(g,tImg,Sf,ob.closed,ob.texScale,ox); g.restore(); }
   else { if(ob.color){ g.fillStyle=ob.color; } else { const tg=g.createLinearGradient(0,GROUND-120,0,WORLDH); tg.addColorStop(0,'#39305c'); tg.addColorStop(1,'#241d3f'); g.fillStyle=tg; } g.fill('evenodd'); }
 }
 function polySoftCache(ob,S){ const f=Math.max(2,ob.feather||24), pad=Math.ceil(f+3);

@@ -16,6 +16,11 @@ function singlePrompt(prompt, style) {
   return `A single complete ${prompt} as ONE image filling the entire frame edge to edge, 2D side-scrolling video-game art, stylized and painterly, centered and filling the frame. This is a single object/scene, NOT a repeating tile or pattern. No UI, no text, no border.`
     + (style ? ` Art style: ${style}.` : '');
 }
+function scenePrompt(prompt, style) {
+  return `A painterly 2D side-scrolling video-game BACKGROUND SCENE of ${prompt}. Wide landscape composition that fills the entire frame edge to edge, stylized game art with a sense of depth and distance. `
+    + `It is scenery/backdrop only — NO playable characters, NO creatures, NO UI, NO text, NO foreground objects in front of the camera, NO border or frame. Even, soft lighting suitable for a game background.`
+    + (style ? ` Art style / world theme: ${style}.` : '');
+}
 function texturePrompt(prompt, style) {
   return `A seamless tileable TEXTURE SWATCH of ${prompt}, viewed TOP-DOWN / flat-lay (camera looking straight down at the surface, orthographic, zero perspective), like a video-game ground tileset tile. `
     + `The pattern repeats seamlessly and the edges wrap (left edge matches right, top matches bottom). Stylized painterly 2D game art, even flat lighting, no cast shadows, no highlights from any single direction. `
@@ -97,12 +102,12 @@ async function genGemini(full) {
   if (!img) return { err: 'Gemini returned no image', status: 502 };
   return { imageBase64: img.inlineData.data, mimeType: img.inlineData.mimeType || 'image/png' };
 }
-async function genFal(full) {
+async function genFal(full, size) {
   const key = process.env.FAL_KEY;
   if (!key) return { err: 'FAL_KEY is not set on the server' };
   const r = await fetch(FAL_FLUX, { method: 'POST',
     headers: { 'Authorization': 'Key ' + key, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: full, image_size: 'square_hd', num_images: 1, enable_safety_checker: true }) });
+    body: JSON.stringify({ prompt: full, image_size: (size || 'square_hd'), num_images: 1, enable_safety_checker: true }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) return { err: (j.detail && (j.detail.message || JSON.stringify(j.detail))) || 'fal API error', status: r.status };
   const url = j.images && j.images[0] && j.images[0].url;
@@ -177,13 +182,15 @@ module.exports = async (req, res) => {
       return res.status(200).json({ imageBase64: base.imageBase64, mimeType: base.mimeType || 'image/png', model, mode, i2i: hasImg });
     }
 
-    const single = body.fill === 'single';
+    const fill = body.fill;
+    const single = fill === 'single';
     const hasImg = typeof body.image === 'string' && body.image.length > 200;
     let out;
-    if (single && hasImg) { const full = singleI2IPrompt(prompt, style); out = model === 'fal' ? await genFalI2I(full, body.image, 0.92) : await genGeminiI2I(full, body.image); }
+    if (fill === 'scene') { const full = scenePrompt(prompt, style); out = styleRefs.length ? await genGeminiStyled(full, styleRefs) : (model === 'fal' ? await genFal(full, 'landscape_16_9') : await genGemini(full)); }
+    else if (single && hasImg) { const full = singleI2IPrompt(prompt, style); out = model === 'fal' ? await genFalI2I(full, body.image, 0.92) : await genGeminiI2I(full, body.image); }
     else { const full = single ? singlePrompt(prompt, style) : texturePrompt(prompt, style); out = styleRefs.length ? await genGeminiStyled(full, styleRefs) : (model === 'fal' ? await genFal(full) : await genGemini(full)); }
     if (out.err) return res.status(out.status || 500).json({ error: out.err, model });
-    return res.status(200).json({ imageBase64: out.imageBase64, mimeType: out.mimeType, model, mode, fill: (single?'single':'pattern'), i2i: (single&&hasImg) });
+    return res.status(200).json({ imageBase64: out.imageBase64, mimeType: out.mimeType, model, mode, fill: (fill==='scene'?'scene':(single?'single':'pattern')), i2i: (single&&hasImg) });
   } catch (e) {
     return res.status(500).json({ error: String((e && e.message) || e) });
   }
