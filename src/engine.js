@@ -449,6 +449,7 @@ addEventListener('keydown', e => {
   if (mode==='controls'){ if(e.code==='Escape') ctrlDone(); return; }
   if (e.code==='Escape'||e.code==='KeyP'){ if(mode==='play'&&!p.dead&&!p.won){ paused=!paused; panelSel=0; pauseSub=null; playSfx('sfx_mtog'); } return; }
   if (e.code==='KeyR'&&mode==='play'){ paused=false; onReset(); return; }
+  if (e.code==='KeyU'&&mode==='play'){ hideUI=!hideUI; return; }   // hide/show HUD for clean recording (desktop)
   if (mode==='play' && p && p.won && tally){
     if (e.code==='Enter'||e.code==='Space'){
       if (!tally.done){ tally.skip=true; playSfx('sfx_mtog'); }
@@ -682,7 +683,7 @@ const BAT_FPS = 15, BITE_FPS = 29, BAT_PATROL = 1.25, BAT_CHASE = 2.1, BAT_AGGRO
 
 let mode='select', chosen=ORDER[0];
 let p, souls, soulCount, soulOrbGot=0, totalOrbVal=0, gt=0, camX=0, camY=0, WORLDH=440, GOALY=360, zombies, plats, chkOn, bats, bolts, impacts, loots=[];
-let paused=false, menuRects=[];
+let paused=false, menuRects=[], hideUI=false;
 let musicVol=1, sfxVol=1;
 try{ musicVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_mvol')??'1'))); sfxVol=Math.min(1,Math.max(0,parseFloat(localStorage.getItem('creapz_svol')??'1'))); }catch(e){}
 function saveVols(){ try{ localStorage.setItem('creapz_mvol',musicVol); localStorage.setItem('creapz_svol',sfxVol); }catch(e){} }
@@ -3698,6 +3699,7 @@ function draw(){
   drawForegrounds(); drawPoly('fg');   // foreground occluder layers (player passes behind — secret areas)
   // HUD (fixed reference scale, not affected by world zoom)
   uiView();
+  if (!hideUI) {
   drawPlayerHP();
   drawStoneMeter();
   if (!menuOpen() && !p.winning) drawPauseBtn();
@@ -3716,6 +3718,7 @@ function draw(){
     ctx.fillStyle = gm>1 ? '#5fd8ff' : '#9a93b5';
     ctx.fillText('TEST \u00b7 Greed '+(gm>1?'\u00d72 ON':'OFF')+' \u00b7 banking '+(soulCount*gm)+' soulz', BASE_W-40, 99);
     ctx.textAlign='left'; }
+  }   // end !hideUI HUD gate
   if (p.dead && p.deadT>(p.deathHurt?3.05:2.3)){
     menuPanel('YOU DIED', [
       {label: p.spawn>90?'Rise at Checkpoint':'Try Again', action:()=>{ paused=false; onReset(); }},
