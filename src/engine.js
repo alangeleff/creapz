@@ -1,4 +1,4 @@
-const ASSET_VER='17822430640';
+const ASSET_VER='17951478130';
 async function loadSprites(){
   if (window.SPRITES_INLINE) return window.SPRITES_INLINE;
   const S = await (await fetch('./assets/sprites.json?v='+ASSET_VER)).json();
@@ -1351,6 +1351,8 @@ let testMode=false;
 try{
   const q=new URLSearchParams(location.search);
   if(q.get('polytest')==='1') window.__polyDemo=true;
+  // ?bench=<id> plays a committed bench stage straight from config/bench (for testing drafts from a link)
+  if(q.get('bench')){ try{ const x=new XMLHttpRequest(); x.open('GET','./config/bench/'+encodeURIComponent(q.get('bench'))+'.json?cb='+Date.now(),false); x.send(); if(x.status===200) localStorage.setItem('creapz_testlevel',x.responseText); }catch(e){} q.set('test','1'); }
   if(q.get('test')==='1'){
     const raw=localStorage.getItem('creapz_testlevel');
     if(raw){ const st=JSON.parse(raw); window.STAGES=window.STAGES||[]; window.STAGES.push(st);
@@ -1360,6 +1362,9 @@ try{
   }
 }catch(e){}
 loadStage(testMode?window.__testIdx:0); mode='load'; titleT=99;
+/* test hooks (only in test mode): lets tools check a stage — teleport the player, read state */
+if (testMode) window.__creapz = { state:()=>({mode, x:p&&p.x, y:p&&p.y, dead:p&&p.dead, won:p&&p.won}),
+  tp:(x,y)=>{ p.x=x; const f=segFloorsAt(x); p.y=(y!==undefined?y:(f[0]!==undefined?f[0]:p.y))-1; p.vy=0; p.inv=99; camX=Math.max(0,Math.min(WORLD-W,p.x-W*0.38)); camY=Math.max(0,Math.min(WORLDH-H,p.y-H*0.62)); } };
 if (!window.SPRITES_INLINE){
   total++; TIMG=new Image(); TIMG.onload=()=>loaded++; TIMG.onerror=()=>loaded++; TIMG.src='./assets/title.png?v='+ASSET_VER;
   audioInit();
@@ -1602,7 +1607,7 @@ function update(dt){
       }
     }
   }
-  if(p.flying){ p.x=clamp(p.x,18,WORLD-18); p.y=clamp(p.y,70,GROUND+24); flyGhosts.push({x:p.x,y:p.y,fc:p.facing}); if(flyGhosts.length>11) flyGhosts.shift(); }
+  if(p.flying){ p.x=clamp(p.x,18,WORLD-18); p.y=clamp(p.y,70,Math.max(GROUND,(WORLDH||H)-80)+24); flyGhosts.push({x:p.x,y:p.y,fc:p.facing}); if(flyGhosts.length>11) flyGhosts.shift(); }
   // hard-resolve overlap with solid terrain walls (accurate edges, no pass-through)
   if(!p.flying) for (const s of TSOLID){
     if (p.y>s.top+4 && (p.y-PH)<s.bot){

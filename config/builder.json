@@ -557,6 +557,16 @@
    "id": "mmq83d2my",
    "name": "Drowned Harbor - ACT II",
    "file": "assets/music/mmq83d2my.mp3"
+  },
+  {
+   "id": "mwitchwood1",
+   "name": "Witchwood - ACT I",
+   "file": "assets/music/mwitchwood1.mp3"
+  },
+  {
+   "id": "mwitchwood2",
+   "name": "Witchwood - ACT II",
+   "file": "assets/music/mwitchwood2.mp3"
   }
  ]
 }
