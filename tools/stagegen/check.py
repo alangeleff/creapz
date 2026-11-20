@@ -71,7 +71,7 @@ def sim(st, A, B, run=True):
                 if y > st['h'] + 200: break
     return best
 
-def check_stage(st, start, goal):
+def check_stage(st, start, goal, walk_only=False):
     S = surfaces(st)
     def on(pt):
         return [i for i, s in enumerate(S) if s[0] <= pt[0] <= s[1] and abs(s[2] - pt[1]) < 3]
@@ -81,7 +81,7 @@ def check_stage(st, start, goal):
             if i == j: continue
             if abs(B[0] - A[1]) > 700 and abs(A[0] - B[1]) > 700: continue
             if A[2] - B[2] > 160: continue                 # more than a full jump above
-            w = sim(st, A, B, run=False); r = w if w is not None else sim(st, A, B, run=True)
+            w = sim(st, A, B, run=False); r = w if w is not None else (None if walk_only else sim(st, A, B, run=True))
             if r is not None: edges.setdefault(i, []).append((j, 'walk' if w is not None else 'run', r))
     s0 = on(start); g0 = on(goal)
     seen = {i: None for i in s0}; q = list(s0)

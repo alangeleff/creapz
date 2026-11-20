@@ -10,8 +10,8 @@ from check import check_stage, render_map
 G = 620            # forest floor (top of ground)
 H = 760            # stage height: the camera scrolls 320px up into the canopy
 DEEP = H - G       # ground segments run to the bottom of the stage
-GND = 'g:gmqb9pd3q'   # Witchwood Ground
-GND2 = 'g:gmqb9zpio'  # Witchwood Ground 2
+GND = 'g:gww1'        # Witchwood Moss (toon ground, Nov 2026)
+GND2 = 'g:gww2'       # Witchwood Roots
 
 seg, plats, haz, enemies, bats, souls, chk, obst, tex = [], [], [], [], [], [], [], [], []
 z = [0]
@@ -49,6 +49,19 @@ def check(x, y=G): chk.append([x, y])
 def chest(x, gy, loot='gold'): obst.append({'x': x, 'type': 'chest', 'gy': gy, 'z': Z(), 'loot': loot, 'g': 'Secrets'})
 def grave(x, gy=G): obst.append({'x': x, 'type': 'grave', 'gy': gy, 'z': Z(), 'g': 'Decor'})
 
+# Witchwood art. x is the centre, y the base. z=5 sits behind the ground lip so props look planted.
+def deco(t, x, w, y=G + 10, z=5, f=1, grp='Witchwood decor', **kw):
+    d = {'t': t, 'x': round(x - w / 2), 'y': y, 'w': w, 'z': z, 'f': f, 'g': grp}
+    d.update(kw); tex.append(d)
+def tree(t, x, w, f=1, thr=None):
+    # thr set: depth flip. On the ground you pass behind the trunk; up on a bough above thr you are in front.
+    if thr is None: deco(t, x, w, f=f, grp='Trees')
+    else: deco(t, x, w, f=f, grp='Trees', z=None, dyn=True, thr=thr)
+def shroom(x, w=120):   # bounce pad: the cap launches you (behavior 'bounce' on cwwshroom)
+    deco('cwwshroom', x, w, y=G + 6, z=None, grp='Bounce caps', geom={'x': 0.08, 'y': 0.03, 'w': 0.84, 'h': 0.4})
+def roots(x, w=140):    # thorn roots: hurt on touch (behavior 'spikes' on cwwroots)
+    deco('cwwroots', x, w, y=G + 8, z=None, grp='Thorn roots', geom={'x': 0.1, 'y': 0.2, 'w': 0.8, 'h': 0.8})
+
 # ── 1. Edge of the Wood (0-1300): safe, teaches walking, hopping and the first goblin ──
 ground(0, 1300)
 ground(560, 760, G - 70, GND2, 'Logs')                 # a fallen log to hop onto
@@ -72,18 +85,20 @@ foe(2450, 2380, 2580, 'witch'); foe(1600, 1330, 1410, 'gob'); foe(2090, 2060, 21
 bat(1700, 1500, 1950, G - 260)
 check(1340)
 
-# ── 3. Rotted Bridge (2600-3700): the first real pits, crumbling boughs and a drifting raft ──
-ground(2600, 2760, G, GND, 'Bridge')
-plat(2930, G - 40, 120, 'c', 'Rotten boughs'); plat(3170, G - 60, 110, 'c', 'Rotten boughs')
-mover(3360, G - 40, 120, 180, 0.45)                   # drifts 3360 to 3540
+# ── 3. Rotted Bridge (2600-3760): the first real pits. Gentle: every hop is a walking jump, with a safe rest stump midway ──
+ground(2600, 2800, G, GND, 'Bridge')
+check(2660)
+plat(2900, G - 30, 130, 'c', 'Rotten boughs'); plat(3110, G - 50, 120, 'c', 'Rotten boughs')
+ground(3300, 3420, G - 40, GND2, 'Rest stump')
+mover(3500, G - 40, 130, 110, 0.4)                    # drifts 3500 to 3610
 ground(3760, 4200, G, GND, 'Far bank')
-soul_arc(2740, G - 60, 2950, G - 100, 3); soul_arc(3040, G - 100, 3200, G - 120, 2); soul_line(3380, 3600, G - 110, 3)
-bat(3100, 2900, 3400, G - 230); bat(3550, 3350, 3750, G - 260, 1)
-check(3820); foe(4050, 3900, 4180, 'zombie'); bat(3950, 3800, 4150, G - 220)
+soul_arc(2790, G - 60, 2920, G - 90, 2); soul_arc(3030, G - 90, 3130, G - 110, 2); soul_line(3320, 3400, G - 100, 2); soul_line(3520, 3700, G - 110, 3)
+bat(3350, 3150, 3600, G - 240)
+check(3820); foe(4050, 3900, 4180, 'zombie')
 
 # ── 4. Canopy Climb (4200-5600): split path. Low: thorns and goblins. High: climb the trees for souls and a chest ──
 ground(4200, 5600)
-spikes(4480, 160); spikes(4900, 120)
+roots(4560, 150); roots(4960, 130)
 foe(4700, 4660, 4860, 'gob'); foe(5200, 5060, 5440, 'gob', face=1); foe(4930, 4910, 5050, 'skel', G - 410)
 plat(4300, G - 120, 120, grp='Canopy'); plat(4470, G - 230, 120, grp='Canopy'); plat(4660, G - 330, 140, grp='Canopy')
 plat(4900, G - 410, 160, grp='Canopy'); plat(5150, G - 340, 140, grp='Canopy'); plat(5370, G - 230, 120, grp='Canopy')
@@ -104,13 +119,14 @@ bat(6500, 6300, 6900, G - 300)
 
 # ── 6. Sinking Mire (7000-8400): rising and falling boughs over a deadly bog ──
 ground(7000, 7160, G, GND, 'Mire bank')
-mover(7280, G - 20, 120, 120, 0.5, 'v')                # bobs 120px
-plat(7520, G - 80, 110, 'c', 'Rotten boughs')
-mover(7720, G - 60, 120, 140, 0.4, 'v')
-plat(7960, G - 120, 120, grp='Mire boughs')
-ground(8160, 8400, G, GND, 'Mire bank')
+check(7060)
+mover(7250, G - 20, 140, 100, 0.45, 'v')               # bobs 100px
+plat(7480, G - 70, 130, 'c', 'Rotten boughs')
+mover(7680, G - 60, 140, 110, 0.4, 'v')
+plat(7900, G - 100, 140, grp='Mire boughs')
+ground(8120, 8400, G, GND, 'Mire bank')
 check(8200)
-soul_line(7290, 7380, G - 90, 2); soul_line(7530, 7610, G - 140, 2); soul_line(7730, 7820, G - 130, 2); soul_line(7980, 8060, G - 180, 2)
+soul_line(7270, 7360, G - 90, 2); soul_line(7500, 7580, G - 130, 2); soul_line(7700, 7790, G - 130, 2); soul_line(7920, 8010, G - 160, 2)
 bat(7700, 7400, 8000, G - 280, 1)
 
 # ── 7. The Witch Gate (8400-9400): a last guarded run up to the gate ──
@@ -120,6 +136,27 @@ foe(8650, 8460, 8860, 'witch'); foe(9150, 8950, 9380, 'knight', G - 80); foe(830
 plat(8720, G - 150, 120, grp='Gate boughs')
 soul_line(8460, 8620, G - 60, 4); soul_arc(8780, G - 210, 9000, G - 140, 3); soul_line(9050, 9300, G - 140, 4)
 grave(8500); grave(9330, G - 80)
+
+# ── Witchwood art pass ──
+# 1. Edge of the Wood
+tree('cwwtree1', 200, 300); tree('cwwtree2', 700, 280, f=-1); deco('cwwlantern', 1120, 110); deco('cwwmushes', 980, 90)
+shroom(240)                                              # cap under the secret boughs: bounce up to the chest
+# 2. Bog Path
+tree('cwwtree2', 1500, 300, thr=G - 100); deco('cwwcauldron', 2520, 120); tree('cwwtree1', 2200, 280, f=-1); deco('cwwmushes', 1880, 80)
+deco('cwwlantern', 1360, 110)
+# 3. Rotted Bridge
+deco('cwwtotem', 2700, 90); deco('cwwtotem', 3860, 90); deco('cwwmushes', 3360, 70, y=G - 30)
+# 4. Canopy Climb: the climb trees. Boughs above G-200 put you in front of them
+tree('cwwtree1', 4560, 340, thr=G - 190); tree('cwwtree2', 5260, 320, f=-1, thr=G - 190)
+shroom(4360)                                            # quick route up to the first bough
+# 5. Witch's Hollow
+deco('cwwcauldron', 6480, 130); deco('cwwlantern', 5760, 110); tree('cwwtree1', 6900, 300, f=-1); deco('cwwtotem', 6150, 80, y=G - 80)
+roots(5950, 130)
+# 6. Sinking Mire
+deco('cwwlantern', 7090, 110); deco('cwwlantern', 8160, 110, f=-1); deco('cwwmushes', 8300, 80)
+# 7. Witch Gate
+deco('cwwtotem', 9050, 95, y=G - 70); deco('cwwtotem', 9370, 95, y=G - 70, f=-1); tree('cwwtree2', 8560, 300, thr=G - 100)
+roots(8800, 120); deco('cwwcauldron', 8460, 110)
 
 stage = {
     'name': 'Witchwood', 'act': 'I', 'music': 'mwitchwood1', 'theme': 'witch',
@@ -131,6 +168,8 @@ stage = {
 if __name__ == '__main__':
     out = sys.argv[1] if len(sys.argv) > 1 else 'config/bench/witch1.json'
     ok = check_stage(stage, start=(90, G), goal=(stage['goal'], stage['goalY']))
+    print('--- walking only (no run button) ---')
+    wok = check_stage(stage, start=(90, G), goal=(stage['goal'], stage['goalY']), walk_only=True)
     json.dump(stage, open(out, 'w'), indent=1)
     render_map(stage, '/tmp/witch1-map.png')
     print('written', out, 'counts', {k: len(v) for k, v in stage.items() if isinstance(v, list)})

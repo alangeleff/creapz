@@ -74,6 +74,84 @@
    "kind": "bg",
    "cat": "Background",
    "v": 1781029090637
+  },
+  {
+   "id": "cwwtree1",
+   "name": "Witch Tree (eye)",
+   "file": "assets/custom/cwwtree1_v2.png",
+   "kind": "decor",
+   "cat": "Witchwood",
+   "v": 1795151446715,
+   "ar": 1.1722
+  },
+  {
+   "id": "cwwtree2",
+   "name": "Witch Tree (lanterns)",
+   "file": "assets/custom/cwwtree2_v2.png",
+   "kind": "decor",
+   "cat": "Witchwood",
+   "v": 1795151446715,
+   "ar": 1.419
+  },
+  {
+   "id": "cwwshroom",
+   "name": "Bounce Cap",
+   "file": "assets/custom/cwwshroom_v2.png",
+   "kind": "gameplay",
+   "cat": "Witchwood",
+   "v": 1795151446715,
+   "ar": 1.0091,
+   "behavior": "bounce",
+   "params": {
+    "bounce": 19
+   }
+  },
+  {
+   "id": "cwwroots",
+   "name": "Thorn Roots",
+   "file": "assets/custom/cwwroots_v2.png",
+   "kind": "gameplay",
+   "cat": "Witchwood",
+   "v": 1795151446715,
+   "ar": 1.0308,
+   "behavior": "spikes",
+   "params": {}
+  },
+  {
+   "id": "cwwlantern",
+   "name": "Witch Lantern Post",
+   "file": "assets/custom/cwwlantern_v2.png",
+   "kind": "decor",
+   "cat": "Witchwood",
+   "v": 1795151446715,
+   "ar": 1.9466
+  },
+  {
+   "id": "cwwtotem",
+   "name": "Skull Totem",
+   "file": "assets/custom/cwwtotem_v2.png",
+   "kind": "decor",
+   "cat": "Witchwood",
+   "v": 1795151446715,
+   "ar": 2.0054
+  },
+  {
+   "id": "cwwcauldron",
+   "name": "Witch Cauldron",
+   "file": "assets/custom/cwwcauldron_v2.png",
+   "kind": "decor",
+   "cat": "Witchwood",
+   "v": 1795151446715,
+   "ar": 1.3886
+  },
+  {
+   "id": "cwwmushes",
+   "name": "Glow Mushrooms",
+   "file": "assets/custom/cwwmushes_v2.png",
+   "kind": "decor",
+   "cat": "Witchwood",
+   "v": 1795151446715,
+   "ar": 1.07
   }
  ],
  "categories": [
@@ -525,6 +603,22 @@
    "base": "assets/custom/gmqb9zpio_base.png",
    "top": "assets/custom/gmqb9zpio_top.png",
    "v": 1781289861448
+  },
+  {
+   "id": "gww1",
+   "name": "Witchwood Moss",
+   "base": "assets/custom/gww1_base.png",
+   "top": "assets/custom/gww1_top.png",
+   "th": 100,
+   "v": 1795151446715
+  },
+  {
+   "id": "gww2",
+   "name": "Witchwood Roots",
+   "base": "assets/custom/gww2_base.png",
+   "top": "assets/custom/gww2_top.png",
+   "th": 100,
+   "v": 1795151446715
   }
  ],
  "music": [
