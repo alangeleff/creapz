@@ -1,0 +1,8 @@
+{
+  "name": "creapz",
+  "private": true,
+  "description": "cReapZ game site; dependencies are for the serverless image routes only.",
+  "dependencies": {
+    "sharp": "^0.33.5"
+  }
+}

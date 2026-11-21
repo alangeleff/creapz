@@ -41,5 +41,11 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/paint.js": {
+      "maxDuration": 300,
+      "memory": 1024
+    }
+  }
 }
