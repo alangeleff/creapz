@@ -3,70 +3,65 @@
 (function () {
 /* building: id, x0, width, bottom; kinds: dome, glass, tower, theater; tower:1 adds a clock tower */
 var MAPS = {
-  hearth: { name: 'The Hearth', sub: 'The heart of the House', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 800, 820, 600],
-    P: { w: [0, 900], rw: [230, 900], e: [2048, 900], re: [1818, 900], n: [1400, 0], rn: [1400, 330], pNE: [1400, 700], pW: [720, 900], pE: [1330, 900], pN: [1024, 640], pS: [1024, 1180], gl: [1500, 1180] },
-    R: [['w', 'rw', 70, 'b'], ['rw', 'pW', 70], ['re', 'e', 70, 'b'], ['pE', 're', 70], ['n', 'rn', 60, 'b'], ['rn', 'pNE', 60], ['pNE', 'pE', 56], ['pS', 'gl', 56]],
-    PLAZA: [1024, 900, 300],
-    B: [{ id: 'commons', x: 790, w: 470, b: 560, k: 'hearth', door: 'pN' }, { id: 'gallery', x: 1360, w: 300, b: 1140, k: 'glass' }],
-    exits: { w: ['neon', 'e'], e: ['crypt', 'w'], n: ['other', 's'] },
-    extra: function (d) { d.benches([[780, 1080], [1270, 1080], [700, 760], [1350, 760]]); d.crystals([[560, 1160], [1700, 760], [420, 720], [1640, 1280]]); d.garden(520, 1240, 260, 130); },
-    portal: [1024, 900],
-    desc: 'the floating heart island of an otherworldly mansion drifting in a starry violet void: a great domed stone hall with a glowing violet void-fire hearth seen through its arched doorway (the Hearth), a round flagstone plaza in front with a glowing violet portal ring set into its center (the way to Omm City), a small glass-fronted art gallery, lanterns, benches, violet crystals, and stone bridges leading off the island edges into the void' },
-  neon: { name: 'The Neon Wing', sub: "Peevy's corner", W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 780, 760, 560],
-    P: { e: [2048, 900], re: [1740, 900], n: [1300, 0], rn: [1300, 260], s: [1300, 1536], rs: [1300, 1300], j: [1300, 900], pw: [680, 900] },
-    R: [['re', 'e', 70, 'b'], ['j', 're', 70], ['n', 'rn', 60, 'b'], ['rn', 'j', 60], ['j', 'rs', 60], ['rs', 's', 60, 'b'], ['pw', 'j', 60]],
-    B: [{ id: 'peevy-h', x: 420, w: 520, b: 760, k: 'neon' }],
+  /* ---- the main island: four districts joined by ground paths ---- */
+  hearth: { name: 'The Hearth', sub: 'The heart of the House', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 1060, 1560, 960],
+    P: { w: [0, 960], e: [2048, 960], s: [1024, 1536], pW: [720, 960], pE: [1330, 960], pN: [1024, 660], pS: [1024, 1260], gl: [600, 1260], th: [1500, 1260] },
+    R: [['w', 'pW', 70], ['pE', 'e', 70], ['pS', 's', 64], ['pS', 'gl', 56], ['pS', 'th', 56]],
+    PLAZA: [1024, 960, 300],
+    B: [{ id: 'commons', x: 770, w: 508, b: 600, k: 'hearth', door: 'pN' }, { id: 'gallery', x: 450, w: 300, b: 1210, k: 'gallery' }, { id: 'threshold', x: 1400, w: 200, b: 1210, k: 'sealed' }],
+    exits: { w: ['neon', 'e'], e: ['crypt', 'w'], s: ['bloodmoon', 'n'] },
+    extra: function (d) { d.benches([[760, 1100], [1290, 1100]]); d.crystals([[300, 1100], [1780, 1100], [1760, 760], [280, 760]]); d.garden(1640, 1330, 220, 110); },
+    portal: [1024, 960],
+    desc: 'the center of a big floating island in a starry violet void: a great round dark-stone domed hall with tall glowing amber arched windows, gold ribs on the dome and a violet crystal spire on top (the Hearth); a round flagstone plaza in front of it with a glowing violet portal ring set into its center; a small cream classical gallery pavilion with columns and a framed landscape painting on its front; a small purple stone hut with a heavy sealed door glowing faintly at its seams; lanterns, benches, violet crystals; the grassy island continues off the left, right and bottom edges, with the starry void only beyond the island rim at the top' },
+  neon: { name: "Peevy's Row", sub: 'The Neon wing', W: 2048, H: 1536, aspect: '4:3', ISLE: [1500, 900, 1300, 650],
+    P: { e: [2048, 960], j0: [420, 960], j1: [700, 960], rn: [420, 600], n: [420, 0], rs: [700, 1370], s: [700, 1536] },
+    R: [['n', 'rn', 50, 'rope'], ['rn', 'j0', 56], ['j0', 'j1', 70], ['j1', 'e', 70], ['j1', 'rs', 56], ['rs', 's', 56, 'beam', '#ff5ab4']],
+    B: [{ id: 'peevy', x: 540, w: 300, b: 880, k: 'brick' }, { id: 'peevy-h', x: 890, w: 380, b: 880, k: 'neon' }, { id: 'peevy-2', x: 1330, w: 360, b: 880, k: 'brick' }],
     exits: { e: ['hearth', 'w'], n: ['prism', 's'], s: ['archive', 'n'] },
-    extra: function (d) { d.benches([[1000, 1020], [1560, 1020]]); d.crystals([[400, 1000], [1600, 640]]); d.garden(500, 1060, 260, 120); },
-    desc: "a small floating island in a starry violet void with a tall narrow lime-green neon-lit studio townhouse (Peevy's wing: a studio flat, a recording studio and a neon hall with glowing signs and a support desk), potted plants, a little lime neon sign, string lights, and stone bridges leading off into the void" },
-  prism: { name: 'The Prism Wing', sub: "Omm's corner", W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 800, 760, 560],
-    P: { s: [1024, 1536], rs: [1024, 1330], j: [1024, 1000] },
-    R: [['j', 'rs', 60], ['rs', 's', 60, 'b']],
-    B: [{ id: 'omm-h', x: 800, w: 420, b: 900, k: 'spire' }],
+    extra: function (d) { d.benches([[1000, 1080], [1500, 1080]]); d.garden(1100, 1160, 300, 110); d.crystals([[1780, 640]]); },
+    desc: "the west end of a big floating island in a starry violet void: a cozy row of old brick townhouses along a wooden boardwalk street, with a tall brick building in the middle wearing a glowing lime-green neon sign on its roof (a blob shape, no text), green striped awnings, warm lit windows, ivy and hanging plants, string lights; a rope-and-plank bridge leaves the top edge over the void toward a floating island, and a glowing pink beam of light leaves the bottom edge over the void; the island ends in a rocky rim at the left, with starry void beyond" },
+  crypt: { name: "Moro's Abbey", sub: 'The Crypt wing', W: 2048, H: 1536, aspect: '4:3', ISLE: [550, 900, 1300, 650],
+    P: { w: [0, 960], j: [500, 960], k: [1420, 960], rn: [1420, 440], n: [1420, 0] },
+    R: [['w', 'j', 70], ['j', 'k', 70], ['k', 'rn', 56], ['rn', 'n', 50, 'beam', '#9ad8ff']],
+    B: [{ id: 'moro', x: 380, w: 280, b: 870, k: 'chapel' }, { id: 'moro-h', x: 720, w: 400, b: 880, k: 'cathedral' }, { id: 'moro-2', x: 1160, w: 220, b: 870, k: 'gothic' }],
+    exits: { w: ['hearth', 'e'], n: ['sky', 's'] },
+    extra: function (d) { d.graves([[460, 1120], [560, 1180], [1180, 1120], [1300, 1180], [760, 1200]]); d.crystals([[1700, 900]]); },
+    desc: "the east end of a big floating island in a starry violet void: a dark gothic stone abbey with pointed spires, pointed arched windows glowing warm amber and candles by the doors; a small chapel with steps leading down into a crypt on the left, the long main hall in the middle, and a narrow gothic library wing on the right; old gravestones, dead trees, a stone path; a glowing pale-blue beam of light rises from the top right of the island up and away over the void; the island ends in a rocky rim at the right, with starry void beyond" },
+  bloodmoon: { name: "Lucifer's Keep", sub: 'The Blood Moon wing', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 380, 1560, 1020],
+    P: { n: [300, 0], a: [300, 820], e: [1760, 820] },
+    R: [['n', 'a', 64], ['a', 'e', 64]],
+    B: [{ id: 'lucifer-h', x: 440, w: 300, b: 740, k: 'gatehouse' }, { id: 'lucifer', x: 820, w: 460, b: 740, k: 'keep' }, { id: 'lucifer-2', x: 1360, w: 340, b: 740, k: 'vault' }],
+    exits: { n: ['hearth', 's'] },
+    extra: function (d) { d.embers([[620, 960], [1100, 960], [1560, 960]]); d.chains([[780, 600], [1310, 600]]); },
+    desc: "the south end of a big floating island in a starry violet void: a black stone fortress of three blocky towers joined by a low black wall, each tower crowned with tall gold spikes and lit by glowing red windows and red doors: a small gatehouse on the left, the big main keep in the middle, and a squat treasure vault on the right with lava glowing in cracks around its base; braziers of red fire, a dark red path; NO throne outside; the island ends in a crumbling rocky rim at the bottom, with starry void beyond" },
+  /* ---- the floating islands ---- */
+  prism: { name: "Omm's Spires", sub: 'The Prism wing', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 820, 780, 560],
+    P: { s: [1024, 1536], rs: [1024, 1340], j: [1024, 1060], wl: [670, 1060], wr: [1378, 1060] },
+    R: [['j', 'rs', 60], ['rs', 's', 50, 'rope'], ['wl', 'j', 56], ['j', 'wr', 56]],
+    B: [{ id: 'omm', x: 520, w: 300, b: 980, k: 'spire' }, { id: 'omm-h', x: 820, w: 408, b: 760, k: 'glassbridge' }, { id: 'omm-2', x: 1228, w: 300, b: 980, k: 'spire' }],
     exits: { s: ['neon', 'n'] },
-    extra: function (d) { d.garden(500, 1050, 300, 160); d.garden(1300, 1050, 300, 160); d.crystals([[420, 700], [1600, 720], [1500, 1260], [600, 1300]]); },
-    desc: "a floating island in a starry void with a slender glass observatory spire full of rainbow light and prism crystals (Omm's wing: an observatory, a prism garden and a glass bridge), crystal gardens refracting rainbows, soft violet and aqua glow, and a stone bridge leading off into the void" },
-  sky: { name: 'The Sky Wing', sub: "Jove's corner", W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 800, 760, 560],
-    P: { s: [750, 1536], rs: [750, 1300], j: [750, 1000], pe: [1220, 1000] },
-    R: [['j', 'rs', 60], ['rs', 's', 60, 'b'], ['j', 'pe', 60]],
-    B: [{ id: 'jove-h', x: 1020, w: 400, b: 900, k: 'dome' }],
+    extra: function (d) { d.crystals([[420, 760], [1640, 760], [600, 1260], [1440, 1260]]); },
+    desc: "a small floating island in a starry violet void with a rocky underside studded with glowing violet crystals: two slender purple stone towers with gold trim, each topped by a cluster of big violet crystals and a glowing orb on a spire, joined high up by an enclosed glass bridge running between them; the left tower holds Omm's observatory bedroom, the right tower a crystal garden; a rope-and-plank bridge leaves the bottom edge over the void" },
+  sky: { name: "Jove's Domes", sub: 'The Sky wing', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 800, 780, 560],
+    P: { s: [1024, 1536], rs: [1024, 1320], j: [1024, 1020], wl: [730, 1020], wr: [1360, 1020] },
+    R: [['j', 'rs', 60], ['rs', 's', 50, 'beam', '#9ad8ff'], ['wl', 'j', 56], ['j', 'wr', 56]],
+    B: [{ id: 'jove-2', x: 560, w: 340, b: 920, k: 'dome' }, { id: 'jove', x: 1180, w: 360, b: 920, k: 'dome' }, { id: 'jove-h', x: 1140, w: 180, b: 1250, k: 'tethergate' }],
     exits: { s: ['crypt', 'n'] },
-    extra: function (d) { d.crystals([[420, 760], [1620, 1120]]); d.benches([[1000, 1120], [1400, 1120]]); d.tether(1220, 420); },
-    desc: "a floating island in a starry void with a round stone observatory dome and a big brass telescope pointed at the stars (Jove's wing: a planetarium, an observation deck and a glowing rope of light, the Sky Tether, rising from the island up into the sky), star charts, sky-blue lanterns, and a stone bridge leading off into the void" },
-  crypt: { name: 'The Crypt Wing', sub: "Moro's corner", W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 780, 780, 580],
-    P: { w: [0, 900], rw: [290, 900], n: [750, 0], rn: [750, 260], s: [750, 1536], rs: [750, 1300], j: [750, 900], pe: [1360, 900] },
-    R: [['w', 'rw', 70, 'b'], ['rw', 'j', 70], ['n', 'rn', 60, 'b'], ['rn', 'j', 60], ['j', 'rs', 60], ['rs', 's', 60, 'b'], ['j', 'pe', 60]],
-    B: [{ id: 'moro-h', x: 1100, w: 520, b: 760, k: 'crypt' }],
-    exits: { w: ['hearth', 'e'], n: ['sky', 's'], s: ['bloodmoon', 'n'] },
-    extra: function (d) { d.graves([[1000, 1080], [1120, 1150], [1460, 1080], [1580, 1160], [400, 1100], [1660, 1260]]); d.crystals([[1700, 700]]); },
-    desc: "a floating island in a starry void with a gothic stone mausoleum-crypt with a bat-wing crest and purple stained glass (Moro's wing: his crypt, a library and a bat gallery), old gravestones, dead trees with bats, violet candles, and stone bridges leading off into the void" },
-  bloodmoon: { name: 'The Blood Moon Wing', sub: "Lucifer's corner", W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 820, 760, 560],
-    P: { n: [750, 0], rn: [750, 340], j: [750, 1000], pe: [1260, 1000] },
-    R: [['n', 'rn', 60, 'b'], ['rn', 'j', 60], ['j', 'pe', 60]],
-    B: [{ id: 'lucifer-h', x: 1010, w: 500, b: 880, k: 'keep' }],
-    exits: { n: ['crypt', 's'] },
-    extra: function (d) { d.embers([[960, 1120], [1560, 1100], [500, 1100], [1340, 1300]]); d.chains([[960, 760], [1620, 760]]); },
-    desc: "a floating island in a starry void under a huge blood-red moon, with a dark spiked obsidian keep with red glowing windows and banners (Lucifer's wing: a throne room, an ember vault and a hall of chains), braziers of red fire, hanging chains, cracked red-veined rock, and a stone bridge leading off into the void" },
-  archive: { name: 'The Archive Wing', sub: "Aevron's corner", W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 820, 760, 560],
-    P: { n: [1300, 0], rn: [1300, 340], j: [1300, 1000], pw: [790, 1000] },
-    R: [['n', 'rn', 60, 'b'], ['rn', 'j', 60], ['pw', 'j', 60]],
-    B: [{ id: 'aevron-h', x: 560, w: 460, b: 880, k: 'archive' }],
+    extra: function (d) { d.crystals([[400, 760], [1660, 760]]); },
+    desc: "a small floating island in a starry violet void: two round navy-blue stone observatory towers with blue domes and gold bands; the left one has an open railed wooden deck on its roof with a big brass telescope pointed at the stars (the observation deck); the right, taller one is Jove's planetarium bedroom with a small annex; a glowing pale-blue beam of light, the Sky Tether, arrives at a little brass tether gate at the bottom of the island and runs off the bottom edge over the void" },
+  archive: { name: "Aevron's Archive", sub: 'The Archive wing', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 820, 780, 560],
+    P: { n: [1500, 0], rn: [1500, 420], jr: [1500, 1040], jl: [460, 1040] },
+    R: [['n', 'rn', 50, 'beam', '#ff5ab4'], ['rn', 'jr', 56], ['jl', 'jr', 60]],
+    B: [{ id: 'aevron-h', x: 340, w: 260, b: 960, k: 'house' }, { id: 'aevron-2', x: 660, w: 360, b: 960, k: 'rotunda' }, { id: 'aevron', x: 1100, w: 220, b: 960, k: 'tower' }],
     exits: { n: ['neon', 's'] },
-    extra: function (d) { d.pillars([[480, 1100], [1560, 980], [700, 1260], [1580, 1240]]); },
-    desc: "a floating island in a starry void with a sleek dark archive tower of black stone and glowing magenta-pink glyph panels and a big glowing screen (Aevron's wing: the Index, the Hall of Records and the Core), floating data pillars with pink light, neat hedges, and a stone bridge leading off into the void" },
-  other: { name: 'The Other House', sub: 'Beyond the sealed door', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 760, 800, 600],
-    P: { s: [1400, 1536], rs: [1400, 1250], j: [1400, 1000], pw: [920, 1000] },
-    R: [['j', 'rs', 60], ['rs', 's', 60, 'b'], ['pw', 'j', 60]],
-    B: [{ id: 'threshold', x: 640, w: 560, b: 900, k: 'otherhouse' }],
-    exits: { s: ['hearth', 'n'] },
-    extra: function (d) { d.graves([[420, 1100], [1000, 1150]]); d.fogs([[460, 700], [1600, 700], [700, 1250]]); },
-    desc: 'a forgotten floating island in a starry void, older and stranger than the rest: a crooked, overgrown Victorian manor with too many windows, one of them faintly lit, ivy and dead vines, a broken fountain, old lanterns, thick drifting fog, and a stone bridge leading off into the void' },
+    extra: function (d) { d.crystals([[400, 1240], [1640, 1200]]); },
+    desc: "a small floating island in a starry violet void with glowing lights under its rocky rim: a small dark slate house with a steep roof and pink-lit windows on the left (the Index), a round purple domed rotunda in the middle with one big round window full of stars on its front (the Hall of Records), and a tall black stone tower on the right whose whole front is a glowing pink screen (the Core); neat dark paths; a glowing pink beam of light leaves the top right of the island over the void" },
 };
-var NAMES = { commons: 'the Hearth, a great domed stone hall with a violet void-fire hearth glowing through its arched doorway', gallery: 'a small glass-fronted art gallery', 'peevy-h': "Peevy's tall lime-green neon-lit studio townhouse", 'omm-h': "Omm's slender glass observatory spire full of prism light", 'jove-h': "Jove's round stone observatory dome with a big brass telescope", 'moro-h': "Moro's gothic stone mausoleum-crypt with a bat-wing crest", 'lucifer-h': "Lucifer's dark spiked obsidian keep with red windows", 'aevron-h': "Aevron's sleek black archive tower with glowing magenta glyph panels", threshold: 'a crooked, overgrown Victorian manor with too many windows, the Other House' };
+var NAMES = { commons: 'the Hearth, a great round dark-stone domed hall with tall glowing amber arched windows and a violet crystal spire', gallery: 'a small cream classical gallery pavilion with columns and a framed painting on its front', threshold: 'a small purple stone hut with a heavy sealed door glowing at its seams', peevy: "Peevy's cozy brick townhouse with warm windows and plants", 'peevy-h': "a tall brick building with a lime-green neon blob sign on its roof", 'peevy-2': "a brick recording studio with a red ON AIR lamp and soundproofed windows", moro: 'a small gothic chapel with steps down into a crypt', 'moro-h': 'the long gothic abbey hall with spires and amber arched windows', 'moro-2': 'a narrow gothic library wing with tall windows full of books', 'lucifer-h': 'a black gatehouse tower with gold spikes and a red door', lucifer: 'the big black main keep with gold spikes and glowing red windows', 'lucifer-2': 'a squat black treasure vault with gold spikes and lava glowing around its base', omm: 'a slender purple stone tower topped with violet crystals and a glowing orb', 'omm-h': 'an enclosed glass bridge high between the two towers, with a stair up at its base', 'omm-2': 'a slender purple stone tower topped with violet crystals and a glowing orb', 'jove-2': 'a navy stone observatory tower with an open railed roof deck and a big brass telescope', jove: 'a taller navy observatory tower with a blue dome and gold bands', 'jove-h': 'a little brass gate where the light tether lands', 'aevron-h': 'a small dark slate house with pink-lit windows', 'aevron-2': 'a round purple domed rotunda with one big round star window on its front', aevron: 'a tall black tower whose front is a glowing pink screen' };
 Object.keys(MAPS).forEach(function (id) {
   var M = MAPS[id]; M.id = id;
   M.B.forEach(function (b) {
-    b.h = b.k === 'portal' ? 300 : b.k === 'tower' ? 380 : b.k === 'theater' ? 230 : b.k === 'lot' ? 120 : Math.round(b.w * (b.w > 340 ? .68 : .72));
+    b.h = b.k === 'portal' ? 300 : b.k === 'spire' ? 560 : b.k === 'gatehouse' ? 420 : b.k === 'glassbridge' ? 300 : b.k === 'keep' ? 400 : b.k === 'tower' ? 380 : b.k === 'theater' ? 230 : b.k === 'lot' ? 120 : Math.round(b.w * (b.w > 340 ? .68 : .72));
     if (b.id.slice(0, 2) === 'ct') b.h = 190;
     b.y = b.b - b.h; b.dx = b.x + b.w / 2; b.dy = b.b + 6; b.map = id;
   });
@@ -151,17 +146,17 @@ function drawGuide(g, id) {
     fog: function (x, y) { for (var i = 0; i < 8; i++) circ('rgba(200,195,230,.35)', x + (r() - .5) * 200, y + (r() - .5) * 220, 120, 80); block(x - 200, y - 260, 400, 520); }
   };
   /* roads */
-  M.R.forEach(function (s) { if (s[3] !== 'b') return; var A = P[s[0]], Bp = P[s[1]]; line('#2a2034', A, Bp, s[2] + 26); line('#6a5a48', A, Bp, s[2] + 14); line('#8a7458', A, Bp, s[2]);
+  M.R.forEach(function (s) { if (s[3] === 'beam') { line('#1a1030', P[s[0]], P[s[1]], s[2] + 40); line(s[4], P[s[0]], P[s[1]], s[2]); line('#ffffff', P[s[0]], P[s[1]], s[2] * .35); return; } if (s[3] !== 'rope') return; var A = P[s[0]], Bp = P[s[1]]; line('#2a2034', A, Bp, s[2] + 26); line('#6a5a48', A, Bp, s[2] + 14); line('#8a7458', A, Bp, s[2]);
     var L = Math.hypot(Bp[0] - A[0], Bp[1] - A[1]), ux = (Bp[0] - A[0]) / L, uy = (Bp[1] - A[1]) / L; for (var q = 0; q < L; q += 22) line('#5e4a38', [A[0] + ux * q - uy * s[2] / 2, A[1] + uy * q + ux * s[2] / 2], [A[0] + ux * q + uy * s[2] / 2, A[1] + uy * q - ux * s[2] / 2], 4); });
-  M.R.forEach(function (s) { if (s[3] === 'b') return; line('#3a3248', P[s[0]], P[s[1]], s[2] + 8); });
-  M.R.forEach(function (s) { if (s[3] !== 'b') line(s[3] === 'd' ? C.dirt : C.road, P[s[0]], P[s[1]], s[2]); block(Math.min(P[s[0]][0], P[s[1]][0]) - s[2] / 2 - 30, Math.min(P[s[0]][1], P[s[1]][1]) - s[2] / 2 - 30, Math.abs(P[s[0]][0] - P[s[1]][0]) + s[2] + 60, Math.abs(P[s[0]][1] - P[s[1]][1]) + s[2] + 60); });
+  M.R.forEach(function (s) { if (s[3] === 'rope' || s[3] === 'beam') return; line('#3a3248', P[s[0]], P[s[1]], s[2] + 8); });
+  M.R.forEach(function (s) { if (s[3] !== 'rope' && s[3] !== 'beam') line(s[3] === 'd' ? C.dirt : C.road, P[s[0]], P[s[1]], s[2]); block(Math.min(P[s[0]][0], P[s[1]][0]) - s[2] / 2 - 30, Math.min(P[s[0]][1], P[s[1]][1]) - s[2] / 2 - 30, Math.abs(P[s[0]][0] - P[s[1]][0]) + s[2] + 60, Math.abs(P[s[0]][1] - P[s[1]][1]) + s[2] + 60); });
   if (M.PLAZA) { var PL = M.PLAZA; circ('#3a3248', PL[0], PL[1], PL[2] + 6); circ(C.plaza, PL[0], PL[1], PL[2]); for (var i = 0; i < 3; i++) circ(i % 2 ? C.plaza : '#7e7692', PL[0], PL[1], PL[2] - 50 - i * 50); circ('#5a5470', PL[0], PL[1], 86); circ('#7a90d8', PL[0], PL[1], 64); circ('#b8c8ff', PL[0], PL[1], 22); block(PL[0] - PL[2] - 50, PL[1] - PL[2] - 50, PL[2] * 2 + 100, PL[2] * 2 + 100); }
   M.extra(D);
   M.B.forEach(function (b) { building(g, b); block(b.x - 40, b.y - (b.tower ? 210 : 50), b.w + 80, b.h + (b.tower ? 270 : 110)); });
   M.B.forEach(function (b) { if (b.spur) line(C.road, b.spur[0], b.spur[1], 34); if (b.k !== 'lot' && b.k !== 'portal') rect('#9a92aa', b.dx - 24, b.b, 48, 8); });
   /* lamps along roads and by doors; flower beds, barrels, bushes by each building */
   function lamp(x, y) { rect('#1c1a26', x - 2, y - 32, 5, 32); circ(C.lamp, x, y - 38, 9); }
-  M.R.forEach(function (s) { if (s[3] === 'd' || s[3] === 'b') return; var A = P[s[0]], Bp = P[s[1]], L = Math.hypot(Bp[0] - A[0], Bp[1] - A[1]), n = Math.floor(L / 260); for (var i = 1; i < n; i++) { var t = i / n, x = A[0] + (Bp[0] - A[0]) * t, y = A[1] + (Bp[1] - A[1]) * t; if (Math.abs(A[1] - Bp[1]) < 2) lamp(x, y - s[2] / 2 - 8); else lamp(x + s[2] / 2 + 12, y); } });
+  M.R.forEach(function (s) { if (s[3] === 'd' || s[3] === 'rope' || s[3] === 'beam') return; var A = P[s[0]], Bp = P[s[1]], L = Math.hypot(Bp[0] - A[0], Bp[1] - A[1]), n = Math.floor(L / 260); for (var i = 1; i < n; i++) { var t = i / n, x = A[0] + (Bp[0] - A[0]) * t, y = A[1] + (Bp[1] - A[1]) * t; if (Math.abs(A[1] - Bp[1]) < 2) lamp(x, y - s[2] / 2 - 8); else lamp(x + s[2] / 2 + 12, y); } });
   if (M.PLAZA) for (i = 0; i < 8; i++) { var aa = i / 8 * 6.283 + .39; lamp(M.PLAZA[0] + (M.PLAZA[2] - 26) * Math.cos(aa), M.PLAZA[1] + (M.PLAZA[2] - 26) * Math.sin(aa) + 10); }
   M.B.forEach(function (b) {
     if (b.k === 'tower' || b.k === 'lot' || b.k === 'portal') return;
@@ -174,7 +169,7 @@ function drawGuide(g, id) {
   function barrel(x, y) { circ('#6e4630', x, y, 11); circ('#8a5a3c', x, y, 7); }
   function crate(x, y) { rect('#a07a4a', x - 11, y - 11, 22, 22); rect('#7a5a36', x - 11, y - 1, 22, 2); }
   /* hedges along the main roads, broken at crossings and doors */
-  M.R.forEach(function (s) { var A = P[s[0]], Bp = P[s[1]]; if (s[3] === 'd' || s[3] === 'b' || Math.abs(A[1] - Bp[1]) > 2) return; var y0 = A[1] + s[2] / 2 + 22, x0 = Math.min(A[0], Bp[0]) + 60, x1 = Math.max(A[0], Bp[0]) - 60; for (var x = x0; x < x1; x += 150) { var xe = Math.min(x + 120, x1); if (M.B.some(function (b) { return b.dx > x - 50 && b.dx < xe + 50; }) || M.R.some(function (q) { var a = P[q[0]], c = P[q[1]]; return Math.abs(a[0] - c[0]) < 2 && a[0] > x - 60 && a[0] < xe + 60; })) continue; g.fillStyle = C.hedge; roundRect(g, x, y0 - 10, xe - x, 20, 10); } });
+  M.R.forEach(function (s) { var A = P[s[0]], Bp = P[s[1]]; if (s[3] === 'd' || s[3] === 'rope' || s[3] === 'beam' || Math.abs(A[1] - Bp[1]) > 2) return; var y0 = A[1] + s[2] / 2 + 22, x0 = Math.min(A[0], Bp[0]) + 60, x1 = Math.max(A[0], Bp[0]) - 60; for (var x = x0; x < x1; x += 150) { var xe = Math.min(x + 120, x1); if (M.B.some(function (b) { return b.dx > x - 50 && b.dx < xe + 50; }) || M.R.some(function (q) { var a = P[q[0]], c = P[q[1]]; return Math.abs(a[0] - c[0]) < 2 && a[0] > x - 60 && a[0] < xe + 60; })) continue; g.fillStyle = C.hedge; roundRect(g, x, y0 - 10, xe - x, 20, 10); } });
   /* trees: dense at the edges (they frame each map), scattered in open ground */
   var trees = [];
   function free(x, y, rad) { return !blocks.some(function (q) { return x + rad * .6 > q[0] && x - rad * .6 < q[0] + q[2] && y + 10 > q[1] && y - rad * 1.6 < q[1] + q[3]; }); }
@@ -188,7 +183,7 @@ function drawGuide(g, id) {
 }
 function roundRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.fill(); }
 function building(g, b) {
-  var KR = { hearth: [90, 50, 150], neon: [70, 120, 40], spire: [120, 200, 220], crypt: [60, 50, 80], keep: [40, 30, 36], archive: [30, 28, 40], otherhouse: [70, 60, 66] };
+  var KR = { dome: [40, 60, 120], keep: [26, 20, 26], brick: [140, 70, 50], chapel: [60, 50, 80], cathedral: [50, 44, 70], gothic: [60, 50, 80], gatehouse: [30, 24, 30], vault: [40, 24, 24], spire: [120, 80, 200], glassbridge: [150, 220, 240], tethergate: [200, 160, 80], house: [50, 50, 70], rotunda: [110, 60, 160], sealed: [110, 70, 170], gallery: [230, 220, 190], hearth: [90, 50, 150], neon: [70, 120, 40], spire: [120, 200, 220], crypt: [60, 50, 80], keep: [40, 30, 36], archive: [30, 28, 40], otherhouse: [70, 60, 66] };
   if (b.k === 'hearth') b.k2 = 'dome';
   var x = b.x, y = b.y, w = b.w, h = b.h, rc = b.roof || KR[b.k] || C.roof, R0 = 'rgb(' + rc.join(',') + ')', R1 = 'rgb(' + rc.map(function (v) { return Math.round(v * .8); }).join(',') + ')';
   function rect(c, a, bq, cw, ch) { g.fillStyle = c; g.fillRect(a, bq, cw, ch); }
@@ -200,6 +195,13 @@ function building(g, b) {
     for (var q = 0; q < 6; q++) rect('#9af0d0', cx - 92 + q * 34, b.b - 128 - (q % 2) * 8, 10, 6); return; }
   if (b.k === 'lot') { rect('#3a4a36', x, y, w, h); g.strokeStyle = C.fence; g.lineWidth = 4; g.setLineDash([10, 8]); g.strokeRect(x, y, w, h); g.setLineDash([]); rect('#5a3a24', x + w / 2 - 3, y + h - 50, 6, 40); rect('#8a5a34', x + w / 2 - 30, y + h - 60, 60, 22); return; }
   rect('rgba(0,0,0,.35)', x + 10, b.b - 6, w, 14);
+  if (b.k === 'glassbridge') { var gy = b.b - 120; rect('#2a3a4a', x, gy - 10, w, 90); rect('#9ad8f0', x + 6, gy, w - 12, 60); for (var gx2 = x + 30; gx2 < x + w; gx2 += 50) rect('#5a8aa0', gx2, gy, 4, 60); rect('#6a5a88', x + w / 2 - 40, gy + 80, 80, 120); rect('#2a1e2e', x + w / 2 - 20, gy + 150, 40, 50); return; }
+  if (b.k === 'spire' || b.k === 'gatehouse' || (b.k === 'keep' && false)) { var th = b.k === 'spire' ? 560 : 420, top = b.b - th, cc = b.k === 'spire' ? '#7a5ab8' : '#24202a';
+    rect(cc, x + 30, top + 80, w - 60, th - 80); rect(b.k === 'spire' ? '#c8a050' : '#e0b040', x + 22, top + 70, w - 44, 16);
+    g.fillStyle = b.k === 'spire' ? '#b48cff' : '#e0b040'; for (var q = 0; q < 3; q++) { g.beginPath(); var cx2 = x + w / 2 + (q - 1) * (w / 4); g.moveTo(cx2 - 22, top + 74); g.lineTo(cx2, top - (q === 1 ? 70 : 20)); g.lineTo(cx2 + 22, top + 74); g.fill(); }
+    if (b.k === 'spire') { g.fillStyle = '#e0c8ff'; g.beginPath(); g.arc(x + w / 2, top - 110, 26, 0, 7); g.fill(); }
+    for (var wy2 = top + 140; wy2 < b.b - 120; wy2 += 110) rect(b.k === 'spire' ? '#ffe090' : '#ff3a3a', x + w / 2 - 18, wy2, 36, 56);
+    rect('#2a1e2e', x + w / 2 - 34, b.b - 96, 68, 90); return; }
   if (b.k === 'tower') {
     rect('#4a4658', x + 40, y + 80, w - 80, h - 80); g.fillStyle = '#5a2030'; g.beginPath(); g.moveTo(x + 20, y + 86); g.lineTo(x + w - 20, y + 86); g.lineTo(x + w / 2, y - 50); g.fill();
     rect('#ff4a3a', x + w / 2 - 16, y + 140, 32, 44); rect(C.door, x + w / 2 - 22, b.b - 64, 44, 64); rect('#c02a3a', x + w - 56, y + 96, 30, 80); rect('#c02a3a', x + 26, y + 96, 30, 80); return;
@@ -222,7 +224,7 @@ function prompt(id) {
   var M = MAPS[id], parts = [];
   function where(x, y) { return (y < M.H / 3 ? 'top' : y < M.H * 2 / 3 ? 'middle' : 'bottom') + '-' + (x < M.W / 3 ? 'left' : x < M.W * 2 / 3 ? 'center' : 'right'); }
   M.B.forEach(function (b) { parts.push('at the ' + where(b.x + b.w / 2, b.y + b.h / 2) + ': ' + NAMES[b.id]); });
-  return 'The first image is a flat-color LAYOUT SKETCH of one top-down RPG game map. Repaint it as ONE finished, richly detailed pixel-art game map of ' + M.desc + '. Keep the exact composition: the island outline, every path, bridge, building footprint, door, garden, lamp, bench, crystal and tree stays in the same place at the same size, and the bridges run off the edges of the image exactly where they do in the sketch. Buildings: ' + parts.join('; ') + '. Legend: the near-black area with dots is the starry violet void the island floats in (keep it as deep space with stars and faint violet nebula), the dark rock rim under the island is its crumbling floating underside, wide brown plank bands are wooden-and-stone bridges with railings spanning the void, lavender-grey bands are flagstone paths, dark green circles are trees, yellow dots on black sticks are lamps, short brown bars are benches, small violet and aqua spikes are glowing crystals. Do not add any buildings, bridges or paths that are not in the sketch. Do not draw any text, letters, labels, signs with writing, UI or grid lines. Match the style of the second image (the cozy cReapZ pixel-art game look) with soft magical lighting, night-time, glowing windows. Top-down three-quarter RPG view, crisp pixel art, no blur.';
+  return 'The first image is a flat-color LAYOUT SKETCH of one top-down RPG game map. Repaint it as ONE finished, richly detailed pixel-art game map of ' + M.desc + '. Keep the exact composition: the island outline, every path, bridge, building footprint, door, garden, lamp, bench, crystal and tree stays in the same place at the same size, and the bridges and light beams run off the edges of the image exactly where they do in the sketch. Buildings, left to right as in the sketch: ' + parts.join('; ') + '. The SECOND image is the official overview of this House: these are the very same buildings, so copy their architecture, shapes, colors, roofs, spires and details from it as closely as you can, just seen from this closer top-down three-quarter angle. Legend for the sketch: the near-black area with dots is the starry violet void (keep it deep space with stars and faint violet nebula), the dark rock under the island rim is its crumbling floating underside, the brown plank band is a rope-and-plank bridge over the void, a glowing colored band is a beam of light over the void (keep its color), lavender-grey bands are flagstone paths, dark green circles are trees, yellow dots on sticks are lamps, short brown bars are benches, violet and aqua spikes are glowing crystals. Do not add any buildings, bridges, paths or beams that are not in the sketch. No people or creatures. Do not draw any text, letters, labels, signs with writing, UI or grid lines. Match the art style of the THIRD image (the cozy cReapZ pixel-art game look) with soft magical night lighting and glowing windows. Top-down three-quarter RPG view, crisp pixel art, no blur.';
 }
 window.WORLD = { MAPS: MAPS, graph: graph, drawGuide: drawGuide, prompt: prompt };
 })();
