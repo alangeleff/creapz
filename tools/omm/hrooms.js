@@ -22,12 +22,12 @@ var ROOMS = {
 
   /* ---------- Peevy, the Neon wing ---------- */
   'peevy-h': { name: 'The Neon Hall', floor: 'neon', desc: 'a hallway lit by buzzing lime-green neon tubes and taped-up flyers, with a little support desk with a computer and a bell, doors on the left and right walls',
-    items: [['neon', 312, 40, 400, 60], ['poster', 120, 60, 120, 140], ['poster', 784, 60, 120, 140], ['helpdesk', 382, 300, 260, 90], ['chair', 494, 250], ['doorL', 0, 420, 40, 150], ['doorR', 984, 420, 40, 150], ['plant', 80, 260], ['plant', 900, 260], ['benchrow', 120, 740, 220, 50], ['benchrow', 684, 740, 220, 50], ['mat', 452, 960, 120, 40]],
-    A: { desk: [512, 280], left: [180, 500], right: [844, 500], mid: [512, 560] },
+    items: [['backdoor', 110, 30, 180, 180], ['backdoor', 734, 30, 180, 180], ['neon', 342, 40, 340, 60], ['poster', 362, 110, 120, 90], ['poster', 542, 110, 120, 90], ['helpdesk', 382, 400, 260, 90], ['chair', 494, 350], ['plant', 60, 260], ['plant', 910, 260], ['benchrow', 90, 720, 220, 50], ['benchrow', 714, 720, 220, 50], ['rug', 452, 520, 120, 420], ['mat', 452, 960, 120, 40]],
+    A: { desk: [512, 380], left: [200, 300], right: [824, 300], mid: [512, 600] },
     doors: { bottom: null, left: 'peevy', right: 'peevy-2' } },
   peevy: { name: "Peevy's Studio Flat", floor: 'wood', desc: "Peevy's cozy, cluttered little bedroom: an unmade bed with a lime blanket, a desk with a laptop and sticky notes, a beanbag in front of a TV with a game console, a workbench of half-finished crafts, a shelf of toys and lime fairy lights",
     items: [['window', 420, 50, 184, 140], ['bed', 70, 240, 180, 240], ['desk', 760, 240, 200, 90], ['chair', 840, 340], ['shelf', 300, 50, 100, 150], ['tv', 620, 60, 140, 120], ['beanbag', 640, 330, 80], ['bench', 70, 700, 260, 90], ['rug', 362, 470, 300, 220], ['plant', 900, 880], ['lamp', 280, 260, 40], ['mat', 452, 960, 120, 40]],
-    A: { bed: [160, 360], notebook: [858, 380], workbench: [200, 680], game: [680, 360], window: [512, 250], shelf: [350, 250], special: [512, 580] },
+    A: { bed: [184, 358], notebook: [858, 380], workbench: [200, 680], game: [880, 566], window: [512, 250], shelf: [350, 250], special: [512, 580] },
     doors: { bottom: 'peevy-h' } },
   'peevy-2': { name: 'The Studio', floor: 'neon', desc: 'a recording studio: a podcast desk with two microphones on arms, a ring light, a lumpy couch, an equalizer screen and band posters everywhere, foam panels on the walls',
     items: [['foam', 60, 50, 904, 150], ['micdesk', 342, 330, 340, 110], ['chair', 420, 460], ['chair', 570, 460], ['ringlight', 760, 300, 70], ['couch', 70, 560, 90, 240], ['screen', 400, 60, 224, 120], ['poster', 120, 70, 120, 120], ['poster', 784, 70, 120, 120], ['amp', 860, 640, 90, 90], ['rug', 362, 640, 300, 200], ['mat', 452, 960, 120, 40]],
@@ -36,12 +36,12 @@ var ROOMS = {
 
   /* ---------- Omm, the Prism wing ---------- */
   'omm-h': { name: 'The Glass Bridge', floor: 'glass', desc: "a see-through glass-floored corridor into Omm's wing with the starry void drifting by underneath, prism crystals catching rainbows along the walls, doors on the left and right walls",
-    items: [['void', 300, 50, 424, 150], ['crystals', 80, 300, 80, 120], ['crystals', 864, 300, 80, 120], ['crystals', 80, 700, 80, 120], ['crystals', 864, 700, 80, 120], ['doorL', 0, 470, 40, 150], ['doorR', 984, 470, 40, 150], ['rug', 452, 260, 120, 680], ['mat', 452, 960, 120, 40]],
-    A: { left: [200, 540], mid: [512, 520], right: [824, 540], view: [512, 300] },
+    items: [['backdoor', 110, 30, 180, 180], ['backdoor', 734, 30, 180, 180], ['void', 330, 40, 364, 150], ['crystals', 60, 300, 80, 120], ['crystals', 884, 300, 80, 120], ['crystals', 60, 700, 80, 120], ['crystals', 884, 700, 80, 120], ['rug', 452, 260, 120, 680], ['mat', 452, 960, 120, 40]],
+    A: { left: [200, 300], mid: [512, 560], right: [824, 300], view: [512, 300] },
     doors: { bottom: null, left: 'omm', right: 'omm-2' } },
   omm: { name: "Omm's Observatory", floor: 'stone', desc: "Omm's bedroom, a round glass observatory full of stars: a big round bed under a star-map dome, a little brass telescope at the window, a writing desk with a journal, a crafting table of prisms and lenses, a cushion seat with a game screen, shelves of crystals and star charts",
     items: [['starwin', 362, 30, 300, 170], ['bed', 400, 300, 224, 200], ['telescope', 760, 230, 100, 130], ['desk', 70, 250, 200, 90], ['chair', 150, 350], ['bench', 70, 700, 240, 90], ['shelf', 864, 420, 90, 240], ['cushion', 700, 680, 90], ['tv', 820, 820, 120, 90], ['crystals', 300, 60, 60, 110], ['rug', 362, 560, 300, 200], ['mat', 452, 960, 120, 40]],
-    A: { bed: [512, 400], notebook: [168, 390], workbench: [190, 670], game: [745, 720], window: [810, 390], shelf: [830, 540], special: [512, 650] },
+    A: { bed: [512, 480], notebook: [160, 440], workbench: [200, 750], game: [805, 770], window: [700, 400], shelf: [830, 540], special: [512, 800] },
     doors: { bottom: 'omm-h' } },
   'omm-2': { name: 'The Prism Garden', floor: 'glass', desc: 'a garden of slow-growing light crystals and floating petals under a glass dome: crystal flower beds, a little reflecting pool, stepping stones and a bench',
     items: [['dome', 60, 40, 904, 160], ['crystalbed', 90, 280, 260, 120], ['crystalbed', 674, 280, 260, 120], ['crystalbed', 90, 600, 220, 110], ['crystalbed', 714, 600, 220, 110], ['pond', 422, 420, 180, 130], ['benchrow', 412, 780, 200, 50], ['petals', 400, 260, 220, 100], ['mat', 452, 960, 120, 40]],
@@ -50,8 +50,8 @@ var ROOMS = {
 
   /* ---------- Jove, the Sky wing ---------- */
   'jove-h': { name: 'The Sky Tether', floor: 'glass', desc: "a walkway of glowing blue light running up to Jove's floating tower, open sky and stars on every side, a light-rope rail along both edges, doors on the left and right",
-    items: [['void', 60, 40, 904, 160], ['lightrail', 300, 230, 30, 720], ['lightrail', 694, 230, 30, 720], ['doorL', 0, 470, 40, 150], ['doorR', 984, 470, 40, 150], ['rug', 360, 230, 304, 720], ['mat', 452, 960, 120, 40]],
-    A: { left: [180, 540], mid: [512, 520], right: [844, 540], view: [512, 300] },
+    items: [['backdoor', 110, 30, 180, 180], ['backdoor', 734, 30, 180, 180], ['void', 330, 40, 364, 150], ['lightrail', 50, 230, 24, 740], ['lightrail', 950, 230, 24, 740], ['rug', 412, 230, 200, 720], ['mat', 452, 960, 120, 40]],
+    A: { left: [200, 300], mid: [512, 560], right: [824, 300], view: [512, 300] },
     doors: { bottom: null, left: 'jove', right: 'jove-2' } },
   jove: { name: "Jove's Planetarium", floor: 'stone', desc: "Jove's bedroom, a small round planetarium: a star projector in the middle casting constellations, a big cozy bed with a sky-blue quilt, a desk with star charts and a notebook, a workbench of brass orrery parts, a beanbag by a game screen, shelves of globes",
     items: [['chart', 60, 50, 280, 150], ['chart', 684, 50, 280, 150], ['window', 420, 50, 184, 140], ['bed', 760, 260, 190, 240], ['projector', 452, 440, 120, 120], ['desk', 70, 250, 200, 90], ['chair', 150, 350], ['bench', 70, 700, 240, 90], ['beanbag', 760, 700, 80], ['tv', 860, 820, 100, 90], ['shelf', 864, 560, 90, 110], ['globe', 360, 280, 60], ['rug', 362, 380, 300, 240], ['mat', 452, 960, 120, 40]],
@@ -64,26 +64,26 @@ var ROOMS = {
 
   /* ---------- Moro, the Crypt wing ---------- */
   'moro-h': { name: 'The Bat Gallery', floor: 'stone', desc: "a long stone gallery of old gilded portraits where bats roost in the rafters, candle sconces, a red runner rug, doors on the left and right walls",
-    items: [['portraits', 60, 50, 904, 150], ['candles', 160, 260, 40], ['candles', 824, 260, 40], ['doorL', 0, 470, 40, 150], ['doorR', 984, 470, 40, 150], ['rug', 452, 230, 120, 720], ['benchrow', 120, 760, 220, 50], ['benchrow', 684, 760, 220, 50], ['mat', 452, 960, 120, 40]],
-    A: { left: [180, 540], mid: [512, 520], right: [844, 540], portraits: [512, 280] },
+    items: [['backdoor', 110, 30, 180, 180], ['backdoor', 734, 30, 180, 180], ['portraits', 330, 40, 364, 160], ['candles', 340, 260, 40], ['candles', 644, 260, 40], ['portraits', 40, 300, 30, 500], ['portraits', 954, 300, 30, 500], ['rug', 452, 230, 120, 720], ['benchrow', 120, 760, 220, 50], ['benchrow', 684, 760, 220, 50], ['mat', 452, 960, 120, 40]],
+    A: { left: [200, 300], mid: [512, 560], right: [824, 300], portraits: [512, 290] },
     doors: { bottom: null, left: 'moro', right: 'moro-2' } },
   moro: { name: "Moro's Crypt", floor: 'dark', desc: "Moro's bedroom, a candlelit gothic crypt: a carved black coffin bed with violet velvet lining, a writing desk with a quill and skull, a workbench of bones and trinkets, a gothic armchair by a little game screen, shelves of candles and curios, a stained-glass window",
     items: [['stainedglass', 412, 40, 200, 160], ['coffin', 400, 300, 224, 110], ['desk', 70, 250, 200, 90], ['chair', 150, 350], ['bench', 70, 700, 240, 90], ['armchair', 760, 680], ['tv', 860, 820, 100, 90], ['shelf', 864, 300, 90, 280], ['candles', 300, 300, 40], ['candles', 680, 300, 40], ['rug', 362, 500, 300, 240], ['mat', 452, 960, 120, 40]],
-    A: { bed: [512, 350], notebook: [168, 390], workbench: [190, 670], game: [795, 720], window: [512, 250], shelf: [830, 440], special: [512, 620] },
+    A: { bed: [512, 345], notebook: [168, 390], workbench: [190, 670], game: [790, 715], window: [370, 270], shelf: [830, 440], special: [512, 620] },
     doors: { bottom: 'moro-h' } },
   'moro-2': { name: 'The Library', floor: 'wood', desc: 'a tall gothic library: towering bookshelves on every wall, a rolling ladder, a deep red reading chair with a lamp, candles, a big reading table and a black cReaper banner',
     items: [['shelf', 60, 50, 380, 160], ['shelf', 584, 50, 380, 160], ['banner', 472, 40, 80, 150], ['bookrow', 60, 260, 60, 500], ['bookrow', 904, 260, 60, 500], ['rtable', 400, 420, 224, 120], ['chair', 420, 380], ['chair', 560, 380], ['armchair', 200, 700], ['ladder', 300, 220, 40, 150], ['candles', 750, 700, 40], ['rug', 362, 620, 300, 200], ['mat', 452, 960, 120, 40]],
-    A: { chair: [235, 740], shelves: [512, 260], candles: [770, 760], center: [512, 600], notebook: [366, 480], special: [235, 740] },
+    A: { chair: [205, 795], shelves: [512, 260], candles: [860, 800], center: [512, 770], notebook: [370, 650], special: [205, 795] },
     doors: { bottom: 'moro-h' } },
 
   /* ---------- Lucifer, the Blood Moon wing ---------- */
   'lucifer-h': { name: 'The Hall of Chains', floor: 'dark', desc: 'a red-lit stone hall hung with heavy chains and crimson banners, braziers of red fire, doors on the left and right walls',
-    items: [['banner', 150, 40, 80, 150], ['banner', 794, 40, 80, 150], ['chains', 300, 40, 424, 150], ['brazier', 130, 300, 70], ['brazier', 824, 300, 70], ['doorL', 0, 470, 40, 150], ['doorR', 984, 470, 40, 150], ['rug', 452, 230, 120, 720], ['brazier', 130, 760, 70], ['brazier', 824, 760, 70], ['mat', 452, 960, 120, 40]],
-    A: { left: [190, 540], mid: [512, 520], right: [834, 540], chains: [512, 280] },
+    items: [['backdoor', 110, 30, 180, 180], ['backdoor', 734, 30, 180, 180], ['chains', 330, 40, 364, 150], ['banner', 340, 40, 60, 150], ['banner', 624, 40, 60, 150], ['brazier', 340, 260, 70], ['brazier', 614, 260, 70], ['rug', 452, 230, 120, 720], ['brazier', 130, 760, 70], ['brazier', 824, 760, 70], ['mat', 452, 960, 120, 40]],
+    A: { left: [200, 300], mid: [512, 560], right: [824, 300], chains: [512, 320] },
     doors: { bottom: null, left: 'lucifer', right: 'lucifer-2' } },
   lucifer: { name: "Lucifer's Throne Room", floor: 'dark', desc: "Lucifer's bedroom, the throne room of Blood Moon Castle: a black throne on a dais under a blood-moon window, a huge canopy bed with red curtains, a war desk with maps, a forge-like workbench, a dark armchair by a game screen, shelves of trophies",
     items: [['moonwin', 412, 30, 200, 170], ['dais', 362, 220, 300, 110], ['throne', 467, 200, 90, 110], ['bed', 760, 240, 190, 250], ['desk', 70, 250, 200, 90], ['chair', 150, 350], ['bench', 70, 700, 240, 90], ['armchair', 760, 680], ['tv', 860, 820, 100, 90], ['shelf', 864, 520, 90, 140], ['brazier', 320, 400, 60], ['brazier', 640, 400, 60], ['rug', 452, 330, 120, 620], ['mat', 452, 960, 120, 40]],
-    A: { bed: [855, 365], notebook: [168, 390], workbench: [190, 670], game: [795, 720], window: [512, 360], shelf: [830, 590], special: [512, 300] },
+    A: { bed: [868, 372], notebook: [168, 390], workbench: [190, 670], game: [775, 705], window: [390, 440], shelf: [830, 590], special: [512, 300] },
     doors: { bottom: 'lucifer-h' } },
   'lucifer-2': { name: 'The Ember Vault', floor: 'lava', desc: 'a treasure vault on cracked black obsidian with lava glowing through the cracks: heaps of gold and war spoils, weapon racks, braziers, an iron chest on a pedestal',
     items: [['treasure', 80, 240, 260, 160], ['treasure', 684, 240, 260, 160], ['weapons', 60, 50, 904, 150], ['chest', 452, 420, 120, 90], ['brazier', 140, 620, 70], ['brazier', 814, 620, 70], ['treasure', 380, 700, 120, 100], ['rug', 452, 520, 120, 420], ['mat', 452, 960, 120, 40]],
@@ -92,16 +92,16 @@ var ROOMS = {
 
   /* ---------- Aevron, the Archive wing ---------- */
   'aevron-h': { name: 'The Index', floor: 'stone', desc: 'a long hallway lined with card-catalog drawers and little glowing magenta intercom panels, doors on the left and right walls',
-    items: [['catalog', 60, 50, 904, 150], ['catalog', 60, 260, 60, 160], ['catalog', 904, 260, 60, 160], ['intercom', 230, 240, 50], ['intercom', 744, 240, 50], ['doorL', 0, 470, 40, 150], ['doorR', 984, 470, 40, 150], ['rug', 452, 230, 120, 720], ['plant', 80, 880], ['plant', 900, 880], ['mat', 452, 960, 120, 40]],
-    A: { rack: [200, 540], book: [512, 300], door: [824, 540], mid: [512, 560] },
+    items: [['backdoor', 110, 30, 180, 180], ['backdoor', 734, 30, 180, 180], ['catalog', 330, 40, 364, 150], ['intercom', 340, 230, 50], ['intercom', 634, 230, 50], ['catalog', 60, 400, 120, 70], ['catalog', 844, 400, 120, 70], ['rug', 452, 230, 120, 720], ['plant', 80, 880], ['plant', 900, 880], ['mat', 452, 960, 120, 40]],
+    A: { rack: [200, 300], book: [512, 300], door: [824, 300], mid: [512, 600] },
     doors: { bottom: null, left: 'aevron-2', right: 'aevron' } },
   'aevron-2': { name: 'The Hall of Records', floor: 'wood', desc: "a domed reading room where the House keeps its records: a great round window full of stars, a notice board, framed certificates on the walls and a giant ledger open on a lectern",
-    items: [['starwin', 362, 30, 300, 170], ['noticeboard', 90, 60, 220, 130], ['certs', 714, 60, 220, 130], ['lectern', 452, 420, 120, 90], ['shelf', 60, 300, 90, 360], ['shelf', 874, 300, 90, 360], ['rtable', 240, 680, 200, 100], ['rtable', 584, 680, 200, 100], ['rug', 362, 520, 300, 140], ['mat', 452, 960, 120, 40]],
-    A: { ledger: [512, 560], board: [200, 260], window: [512, 260], left: [340, 640], right: [684, 640] },
+    items: [['starwin', 362, 30, 300, 170], ['noticeboard', 90, 60, 220, 130], ['certs', 714, 60, 220, 130], ['rug', 362, 580, 300, 160], ['orbplinth', 432, 360, 160, 160], ['lectern', 452, 610, 120, 80], ['shelf', 60, 300, 90, 360], ['shelf', 874, 300, 90, 360], ['rtable', 200, 780, 200, 90], ['rtable', 624, 780, 200, 90], ['mat', 452, 960, 120, 40]],
+    A: { ledger: [512, 740], orb: [512, 560], board: [200, 260], window: [512, 260], left: [330, 560], right: [694, 560] },
     doors: { bottom: 'aevron-h' } },
   aevron: { name: 'The Core', floor: 'tech', desc: "Aevron's own room, the Core of the House: a huge wall screen where a pink-violet nebula glows, curved consoles of blinking lights, cables across the floor and a soft hum",
-    items: [['screen', 160, 40, 704, 170], ['consoles', 160, 260, 704, 80], ['cables', 200, 420, 620, 60], ['server', 60, 300, 80, 400], ['server', 884, 300, 80, 400], ['pad', 452, 560, 120, 120], ['rug', 362, 720, 300, 160], ['mat', 452, 960, 120, 40]],
-    A: { screen: [512, 390], pad: [512, 620], left: [220, 620], right: [804, 620] },
+    items: [['blankscreen', 160, 30, 704, 180], ['consoles', 160, 280, 704, 70], ['server', 60, 300, 80, 400], ['server', 884, 300, 80, 400], ['pad', 452, 560, 120, 120], ['cables', 180, 420, 120, 300], ['cables', 724, 420, 120, 300], ['rug', 362, 740, 300, 160], ['mat', 452, 960, 120, 40]],
+    A: { screen: [512, 400], pad: [512, 620], left: [220, 760], right: [804, 760] },
     doors: { bottom: 'aevron-h' } },
 
   /* ---------- the Other House ---------- */
@@ -130,8 +130,8 @@ var ROOMS = {
     A: { left: [240, 640], mid: [512, 680], right: [784, 640] },
     doors: { bottom: 'other-4' } },
 };
-var WALKABLE = { rug: 1, mat: 1, platform: 1, pad: 1, cables: 1, veins: 1, inscription: 1, petals: 1, drifting: 1, doorL: 1, doorR: 1 };
-var WALLITEM = { window: 1, void: 1, banner: 1, chart: 1, frames: 1, neon: 1, poster: 1, foam: 1, screen: 1, starwin: 1, stainedglass: 1, moonwin: 1, portraits: 1, chains: 1, weapons: 1, catalog: 1, noticeboard: 1, certs: 1, olddoor: 1, masks: 1, clocks: 1, portrait: 1, dome: 1, cobweb: 1, fogwall: 0 };
+var WALKABLE = { orbplinth: 0, rug: 1, mat: 1, platform: 1, pad: 1, cables: 1, veins: 1, inscription: 1, petals: 1, drifting: 1, doorL: 1, doorR: 1 };
+var WALLITEM = { backdoor: 1, blankscreen: 1, window: 1, void: 1, banner: 1, chart: 1, frames: 1, neon: 1, poster: 1, foam: 1, screen: 1, starwin: 1, stainedglass: 1, moonwin: 1, portraits: 1, chains: 1, weapons: 1, catalog: 1, noticeboard: 1, certs: 1, olddoor: 1, masks: 1, clocks: 1, portrait: 1, dome: 1, cobweb: 1, fogwall: 0 };
 var FLOORS = { wood: '#7a5236', stone: '#5e5a6e', dark: '#2e2232', neon: '#2a2440', glass: '#1a2240', lava: '#241818', tech: '#1c1a2c', water: '#14202a' };
 var COL = { counter: '#5a3420', shelf: '#4a2c1c', window: '#8ab0e0', rug: '#8a2c3a', table: '#9a6a40', rtable: '#9a6a40', plant: '#3c8a4a', mat: '#a08a5a', bed: '#c8b8a0', bookrow: '#4a2c1c', globe: '#4a7ab0', armchair: '#7a3a5a', chair: '#8a5a34',
   lectern: '#6a4028', pad: '#ff4aa0', banner: '#7a2c4a', dais: '#8a84a0', throne: '#c8a050', benchrow: '#7a5232', platform: '#7a7490', telescope: '#c8a050', desk: '#6a4028', chart: '#3a4a7a', bench: '#6a4a30', crate: '#a07a4a', candles: '#ffd890',
@@ -141,7 +141,7 @@ var COL = { counter: '#5a3420', shelf: '#4a2c1c', window: '#8ab0e0', rug: '#8a2c
   lightrail: '#9ad8ff', projector: '#c8a050', railing: '#6a4a30', lantern: '#ffc85a', portraits: '#c8a050', stainedglass: '#8a5ac8', coffin: '#1e1a22', moonwin: '#c02a3a', brazier: '#ff5a2a', chains: '#8a8494',
   treasure: '#e0b040', weapons: '#7a7a8a', chest: '#5a3a24', catalog: '#7a5a3a', intercom: '#ff5ab4', noticeboard: '#a07a4a', certs: '#e8dcb8', consoles: '#3a2a5a', cables: '#2a2a3a', server: '#24202e',
   fogwall: '#9a96aa', olddoor: '#4a3428', guestbook: '#6a4028', portrait: '#8a6a3a', umbrella: '#3a3a4a', cobweb: '#d8d8e0', masks: '#d8c8a8', clocks: '#c8a050', inscription: '#5a5468', pendulum: '#e0c060', drifting: '#a89a7a', heart: '#ff7ab0', veins: '#c84a8a',
-  doorL: '#3a2418', doorR: '#3a2418' };
+  doorL: '#3a2418', doorR: '#3a2418', backdoor: '#120e16', orbplinth: '#6a6478', blankscreen: '#06060c' };
 var LEGEND = { shelf: 'tall shelves full of books and curios', window: 'a tall window', rug: 'a patterned rug', table: 'a small round table', rtable: 'a rectangular wooden table', plant: 'a potted plant', mat: 'the entrance doormat at the bottom wall opening',
   bed: 'a cozy bed with pillows and a quilt', bookrow: 'a low bookcase', globe: 'a globe on a stand', armchair: 'a plush armchair', chair: 'a wooden chair', lectern: 'a lectern holding a giant open ledger', pad: 'a glowing pink circular projector pad on the floor',
   banner: 'a hanging banner', dais: 'a raised stone dais', throne: 'a black spiked throne', benchrow: 'a cushioned bench', platform: 'a round raised platform', telescope: 'a big brass telescope', desk: 'a writing desk with a journal, papers and a lamp',
@@ -157,8 +157,8 @@ var LEGEND = { shelf: 'tall shelves full of books and curios', window: 'a tall w
   noticeboard: 'a cork notice board with pinned notes', certs: 'framed certificates', consoles: 'a curved console of blinking lights and dials', cables: 'thick cables snaking across the floor', server: 'a tall humming machine cabinet with pink lights',
   fogwall: 'thick grey fog with nothing below', olddoor: 'an old carved wooden door in the back wall', guestbook: 'a guest book on a stand', portrait: 'an old portrait in a heavy frame', umbrella: 'an umbrella stand', cobweb: 'cobwebs in the corner',
   masks: 'carved masks hanging on the wall', clocks: 'many old clocks of every size', inscription: 'a strange circular inscription carved into the floor', pendulum: 'a long brass pendulum swinging from the ceiling',
-  drifting: 'books drifting on still black water', heart: 'a great glowing heart of soft pink light on a stone plinth', veins: 'veins of soft pink light running across the floor', doorL: 'a doorway in the left wall', doorR: 'a doorway in the right wall' };
-var ROUND = { table: 1, globe: 1, plant: 1, candles: 1, pedestal: 1, spot: 1, crystals: 0, beanbag: 1, cushion: 1, projector: 1, ringlight: 1, brazier: 1, lantern: 1, lamp: 1, intercom: 1, endtable: 1, umbrella: 1, heart: 1, coatrack: 1 };
+  drifting: 'books drifting on still black water', heart: 'a great glowing heart of soft pink light on a stone plinth', veins: 'veins of soft pink light running across the floor', doorL: 'a doorway in the left wall', doorR: 'a doorway in the right wall', backdoor: 'an open arched doorway set into the back wall, leading into the next room (dark inside, clearly a passage)', orbplinth: 'an EMPTY round stone plinth with a glowing rune ring on top and NOTHING standing on it (a floating sphere will be added later)', blankscreen: 'a huge switched-off glass wall screen, plain black and empty' };
+var ROUND = { orbplinth: 1, table: 1, globe: 1, plant: 1, candles: 1, pedestal: 1, spot: 1, crystals: 0, beanbag: 1, cushion: 1, projector: 1, ringlight: 1, brazier: 1, lantern: 1, lamp: 1, intercom: 1, endtable: 1, umbrella: 1, heart: 1, coatrack: 1 };
 function drawRoom(g, id) {
   var R = ROOMS[id];
   g.fillStyle = '#1a1420'; g.fillRect(0, 0, S, S);
@@ -177,7 +177,7 @@ function drawRoom(g, id) {
   R.items.forEach(function (it) {
     var t = it[0], x = it[1], y = it[2], w = it[3] || 50, h = it[4] || w, c = COL[t] || '#888';
     g.fillStyle = c;
-    if (ROUND[t]) { if (t === 'plant') w = h = 56; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, 7); g.fill(); if (t === 'table') { g.fillStyle = COL.chair; for (var i = 0; i < 4; i++) { var a = i / 4 * 6.283 + .4; g.fillRect(x + w / 2 + Math.cos(a) * (w / 2 + 18) - 12, y + h / 2 + Math.sin(a) * (h / 2 + 18) - 12, 24, 24); } } return; }
+    if (ROUND[t]) { if (t === 'plant') w = h = 56; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, 7); g.fill(); if (t === 'orbplinth') { g.strokeStyle = '#c8a0ff'; g.lineWidth = 8; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2 - 22, h / 2 - 22, 0, 0, 7); g.stroke(); } if (t === 'table') { g.fillStyle = COL.chair; for (var i = 0; i < 4; i++) { var a = i / 4 * 6.283 + .4; g.fillRect(x + w / 2 + Math.cos(a) * (w / 2 + 18) - 12, y + h / 2 + Math.sin(a) * (h / 2 + 18) - 12, 24, 24); } } return; }
     if (t === 'chair' || t === 'armchair') { var s = t === 'armchair' ? 70 : 36; g.fillRect(x, y, s, s); return; }
     if (t === 'crate') { g.fillRect(x, y, w, w); return; }
     if (t === 'veins') { g.strokeStyle = c; g.lineWidth = 6; for (var v = 0; v < 12; v++) { var va = v / 12 * 6.283; g.beginPath(); g.moveTo(512, 420); g.lineTo(512 + Math.cos(va) * 260, 420 + Math.sin(va) * 220); g.lineTo(512 + Math.cos(va + .3) * 420, 420 + Math.sin(va + .3) * 380); g.stroke(); } return; }
@@ -190,7 +190,8 @@ function drawRoom(g, id) {
     if (t === 'rug') { g.strokeStyle = '#c8a050'; g.lineWidth = 6; g.strokeRect(x + 12, y + 12, w - 24, h - 24); }
     if (t === 'frames') { for (var fx = x + 40; fx < x + w - 140; fx += 170) { g.fillStyle = '#c8a050'; g.fillRect(fx, y + 20, 120, 100); g.fillStyle = '#e8e0d0'; g.fillRect(fx + 10, y + 30, 100, 80); } }
     if (t === 'crystalbed') { g.fillStyle = '#c8a0ff'; for (var px = x + 20; px < x + w - 20; px += 40) { g.beginPath(); g.arc(px, y + h / 2, 14, 0, 7); g.fill(); } }
-    if (t === 'doorL' || t === 'doorR') { g.fillStyle = FLOORS[R.floor]; g.fillRect(x, y + 10, w, h - 20); }
+    if (t === 'backdoor') { g.fillStyle = '#5a4a3a'; g.fillRect(x - 10, y - 10, w + 20, h + 10); g.fillStyle = '#120e16'; g.fillRect(x, y, w, h); g.fillStyle = FLOORS[R.floor]; g.fillRect(x + 20, y + h - 30, w - 40, 30); }
+    if (t === 'orbplinth') { g.fillStyle = '#c8a0ff'; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2 - 20, h / 2 - 20, 0, 0, 7); g.fill(); g.fillStyle = c; g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2 - 34, h / 2 - 34, 0, 0, 7); g.fill(); }
   });
 }
 /* the walkable floor: a 32px grid; 1 = free */
@@ -207,8 +208,8 @@ function grid(id) {
   });
   for (var di = 14; di <= 17; di++) for (var dj = 28; dj < 32; dj++) G[dj][di] = 1;   /* the doorway */
   var D = R.doors || {};
-  if (D.left) for (var a = 13; a <= 18; a++) for (var b = 0; b < 3; b++) G[a][b] = 1;
-  if (D.right) for (a = 13; a <= 18; a++) for (b = 29; b < 32; b++) G[a][b] = 1;
+  if (D.left) for (var a = 5; a <= 7; a++) for (var b = 5; b <= 7; b++) G[a][b] = 1;
+  if (D.right) for (a = 5; a <= 7; a++) for (b = 24; b <= 26; b++) G[a][b] = 1;
   if (D.top) for (a = 5; a < 8; a++) for (b = 14; b <= 17; b++) G[a][b] = 1;
   /* every anchor and seat stays reachable: clear its own cell */
   var pts = []; for (var k in R.A) pts.push(R.A[k]); (R.seats || []).forEach(function (p) { pts.push(p); });
@@ -220,7 +221,7 @@ function prompt(id) {
   function where(x, y) { return (y < 330 ? 'upper' : y < 660 ? 'middle' : 'lower') + ' ' + (x < 340 ? 'left' : x < 680 ? 'center' : 'right'); }
   R.items.forEach(function (it) { var t = it[0], w = it[3] || 50, h = it[4] || w; if (!by[t]) { by[t] = []; order.push(t); } by[t].push(where(it[1] + w / 2, it[2] + h / 2)); });
   order.forEach(function (t) { parts.push(LEGEND[t] + ' (' + by[t].filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ') + ')'); });
-  return 'This is a flat-color LAYOUT SKETCH of a top-down RPG interior room. Repaint it as a finished, richly detailed pixel-art interior map of ' + R.desc + ', seen from above in a cozy three-quarter top-down RPG view with the back wall visible at the top. Keep the exact layout: every piece of furniture stays in the same place at the same size, the walls and the doorway gap in the bottom wall stay where they are' + (R.doors && (R.doors.left || R.doors.right || R.doors.top) ? ', and the doorways in the ' + ['left', 'right', 'top'].filter(function (s) { return R.doors[s]; }).map(function (s) { return s === 'top' ? 'back' : s; }).join(' and ') + ' wall stay open' : '') + '. Contents: ' + parts.join('; ') + '. Leave the open floor clear so characters can walk and the room can be decorated later. No people, no creatures, no characters. Do not draw any text, letters, labels or UI. Match the style of the second image (the cozy cReapZ pixel-art game look): crisp pixel art, rich magical lighting, warm glow, no blur.';
+  return 'This is a flat-color LAYOUT SKETCH of a top-down RPG interior room. Repaint it as a finished, richly detailed pixel-art interior map of ' + R.desc + ', seen from above in a cozy three-quarter top-down RPG view with the back wall visible at the top. Keep the exact layout: every piece of furniture stays in the same place at the same size, the walls and the doorway gap in the bottom wall stay where they are' + (R.doors && (R.doors.left || R.doors.right) ? ', and the TWO open doorways in the back wall (one upper left, one upper right) stay clearly open passages into the next rooms; there are no other doors, no doors in the side walls, and no inner walls or partitions anywhere in the room' : R.doors && R.doors.top ? ', and the doorway in the middle of the back wall stays open' : '') + '. Contents: ' + parts.join('; ') + '. Leave the open floor clear so characters can walk and the room can be decorated later. No people, no creatures, no characters. Do not draw any text, letters, labels or UI. Match the style of the second image (the cozy cReapZ pixel-art game look): crisp pixel art, rich magical lighting, warm glow, no blur.';
 }
 window.HROOMS = { S: S, R: ROOMS, drawRoom: drawRoom, grid: grid, prompt: prompt };
 })();
