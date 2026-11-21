@@ -20,7 +20,7 @@ var MAPS = {
     P: { s: [1200, 1350], n: [1200, 0], a: [1200, 820], w0: [150, 820], e: [2400, 820] },
     R: [['n', 'a', 64], ['a', 's', 84], ['w0', 'a', 64], ['a', 'e', 64]],
     B: [{ id: 'obs', x: 150, w: 300, b: 760, k: 'dome' }, { id: 'lib', x: 520, w: 400, b: 760 }, { id: 'green', x: 1330, w: 300, b: 760, k: 'glass' }, { id: 'ws', x: 1780, w: 320, b: 760 }],
-    exits: { s: ['hub', 'n'], e: ['cliff', 'w'], n: ['home', null] },
+    exits: { s: ['hub', 'n'], e: ['cliff', 'w'], n: ['forest', 's'] },
     extra: function (d) { d.arch(1200, 120); d.garden(260, 960, 300, 150); d.garden(1700, 980, 320, 150); d.pond(900, 1080, 140, 70); d.benches([[700, 920], [1500, 920], [1000, 1220], [1400, 1220]]); d.well(2150, 1150); },
     desc: 'a quiet scholarly street of a cozy town: a round stone observatory with a brass telescope, a grand library, a glass greenhouse and a tinkerer workshop, with gardens and a pond in front and a stone archway where the road leaves north into the forest' },
   cliff: { name: 'Cliffside', sub: "Lucifer's corner", W: 1600, H: 1600, aspect: '1:1',
@@ -58,6 +58,13 @@ var MAPS = {
     exits: { n: ['market', 's'] },
     extra: function (d) { d.statues([[500, 1080], [800, 1120], [1300, 1100], [1600, 1080]]); d.garden(1700, 1250, 240, 150); d.pond(1000, 1250, 160, 80); d.benches([[650, 1000], [1450, 1000], [400, 1300]]); },
     desc: 'an artsy lane of a cozy town: an art gallery with big glass windows showing framed paintings, a museum hall of legends with stone columns and a bat-wing crest, a sculpture garden with statues on plinths, flowers and a pond' },
+  forest: { name: 'The Veilwood', sub: 'Where the old portal sleeps', W: 2400, H: 1350, aspect: '16:9',
+    P: { portal: [1200, 470], f1: [1040, 640], f2: [1290, 820], f3: [1120, 1020], s: [1200, 1350] },
+    R: [['portal', 'f1', 46, 'd'], ['f1', 'f2', 46, 'd'], ['f2', 'f3', 46, 'd'], ['f3', 's', 50, 'd']],
+    B: [{ id: 'portal', x: 990, w: 420, b: 450, k: 'portal' }],
+    exits: { s: ['scholars', 'n'] },
+    extra: function (d) { d.rocks([[700, 560], [1700, 600], [620, 900], [1820, 960], [880, 1180], [1560, 1200]]); d.shrooms([[860, 700], [1500, 700], [980, 900], [1420, 1060], [760, 1080], [1620, 860], [1350, 560], [1060, 520]]); d.stones([[900, 480], [1500, 480], [820, 620], [1580, 640]]); },
+    desc: 'a hidden, ancient enchanted forest at the edge of the world, haunting and magical: towering twisted trees with roots like hands, thick mist, glowing blue mushrooms, mossy carved standing stones and will-o-wisp lights; in the clearing at the top stand the crumbling ruins of an ancient abandoned stone tower, and at its foot a magnificent carved stone portal arch covered in glowing runes, filled with a swirling vortex of violet void-fire; a winding dirt path leads down from the portal through the trees to the bottom edge' },
   lake: { name: 'Lakeside', sub: 'Slow evenings by the water', W: 2400, H: 1350, aspect: '16:9', LAKE: 760,
     P: { n: [1200, 0], a: [1200, 640], w0: [160, 640], e0: [2260, 640], pier: [1200, 760], dock: [1200, 1080] },
     R: [['n', 'a', 84], ['w0', 'a', 50, 'd'], ['a', 'e0', 50, 'd'], ['a', 'pier', 50]],
@@ -69,12 +76,12 @@ var MAPS = {
 var NAMES = { hall: 'the grand council hall with a clock tower', post: 'a post office with a round clock and a red mailbox', cafe: 'a small cafe with a striped awning and outdoor tables', obs: 'a round stone observatory with a domed roof and a brass telescope',
   lib: 'a grand two-story library with tall arched windows', green: 'a glass greenhouse full of glowing plants', ws: 'a tinkerer workshop with a big gear sign and barn doors', tower: 'a tall dark stone wizard tower with a red glowing window',
   welcome: 'a welcome hall with two flags and a lantern-lit entrance', inn: 'a two-story tavern inn with a hanging lantern sign', ct1: 'a small cozy guest cottage', ct2: 'a small cozy guest cottage with a teal roof', ct3: 'a small cozy guest cottage with a round door',
-  lot: 'an empty grassy lot with a small wooden sign (no building)', trade: 'a trading post shop with barrels, crates and a scales sign', arcade: 'a retro arcade with glowing neon trim', gallery: 'an art gallery with big glass windows showing paintings',
+  lot: 'an empty grassy lot with a small wooden sign (no building)', portal: 'the crumbling ruins of an ancient abandoned stone tower, with a magnificent carved rune-covered stone portal arch at its base filled with swirling violet void-fire', trade: 'a trading post shop with barrels, crates and a scales sign', arcade: 'a retro arcade with glowing neon trim', gallery: 'an art gallery with big glass windows showing paintings',
   legends: 'a museum hall of legends with stone columns and a bat-wing crest', boat: 'a wooden boathouse with paper lanterns', theater: 'an open-air amphitheater with curved stone seats and a stage with red curtains' };
 Object.keys(MAPS).forEach(function (id) {
   var M = MAPS[id]; M.id = id;
   M.B.forEach(function (b) {
-    b.h = b.k === 'tower' ? 380 : b.k === 'theater' ? 230 : b.k === 'lot' ? 120 : Math.round(b.w * (b.w > 340 ? .68 : .72));
+    b.h = b.k === 'portal' ? 300 : b.k === 'tower' ? 380 : b.k === 'theater' ? 230 : b.k === 'lot' ? 120 : Math.round(b.w * (b.w > 340 ? .68 : .72));
     if (b.id.slice(0, 2) === 'ct') b.h = 190;
     b.y = b.b - b.h; b.dx = b.x + b.w / 2; b.dy = b.b + 6; b.map = id;
   });
@@ -97,6 +104,7 @@ function graph(id) {
   }
   M.B.forEach(function (b) {
     if (b.k === 'lot') return;
+    if (b.k === 'portal') { N.door_portal = P.portal.slice(); return; }
     var dn = 'door_' + b.id; N[dn] = [b.dx, b.dy + 4];
     if (b.door) { E.push([dn, b.door]); b.spur = null; return; }
     var bestS = null, bestP = null, bestD = 1e9;
@@ -140,6 +148,8 @@ function drawGuide(g, id) {
     rocks: function (list) { list.forEach(function (p) { circ(C.rock, p[0], p[1], 34, 24); circ('#6a6878', p[0] - 8, p[1] - 6, 16, 10); block(p[0] - 50, p[1] - 40, 100, 80); }); },
     dock: function (x, y0, y1) { rect('#5e3a2e', x - 40, y0, 80, y1 - y0); for (var y = y0 + 4; y < y1; y += 12) rect('#7a4c38', x - 38, y, 76, 9); rect('#5e3a2e', x - 110, y1 - 30, 220, 80); for (y = y1 - 26; y < y1 + 46; y += 12) rect('#7a4c38', x - 108, y, 216, 9); },
     reeds: function (list) { list.forEach(function (p) { for (var i = 0; i < 9; i++) rect('#3c6a3a', p[0] + (r() - .5) * 60, p[1] - 30 + r() * 20, 4, 30); }); },
+    shrooms: function (list) { list.forEach(function (p) { for (var i = 0; i < 5; i++) { var x = p[0] + (r() - .5) * 50, y = p[1] + (r() - .5) * 30; rect('#e8e0f0', x - 2, y, 4, 8); circ('#4ac8ff', x, y, 8, 5); } block(p[0] - 50, p[1] - 40, 100, 80); }); },
+    stones: function (list) { list.forEach(function (p) { rect('#6a7a6a', p[0] - 16, p[1] - 60, 32, 64); rect('#7ad0b0', p[0] - 6, p[1] - 44, 12, 4); rect('#7ad0b0', p[0] - 4, p[1] - 30, 8, 4); block(p[0] - 50, p[1] - 90, 100, 120); }); },
     fog: function (x, y) { for (var i = 0; i < 8; i++) circ('rgba(200,195,230,.35)', x + (r() - .5) * 200, y + (r() - .5) * 220, 120, 80); block(x - 200, y - 260, 400, 520); }
   };
   /* roads */
@@ -148,13 +158,13 @@ function drawGuide(g, id) {
   if (M.PLAZA) { var PL = M.PLAZA; circ('#3a3248', PL[0], PL[1], PL[2] + 6); circ(C.plaza, PL[0], PL[1], PL[2]); for (var i = 0; i < 3; i++) circ(i % 2 ? C.plaza : '#7e7692', PL[0], PL[1], PL[2] - 50 - i * 50); circ('#5a5470', PL[0], PL[1], 86); circ('#7a90d8', PL[0], PL[1], 64); circ('#b8c8ff', PL[0], PL[1], 22); block(PL[0] - PL[2] - 50, PL[1] - PL[2] - 50, PL[2] * 2 + 100, PL[2] * 2 + 100); }
   M.extra(D);
   M.B.forEach(function (b) { building(g, b); block(b.x - 40, b.y - (b.tower ? 210 : 50), b.w + 80, b.h + (b.tower ? 270 : 110)); });
-  M.B.forEach(function (b) { if (b.spur) line(C.road, b.spur[0], b.spur[1], 34); if (b.k !== 'lot') rect('#9a92aa', b.dx - 24, b.b, 48, 8); });
+  M.B.forEach(function (b) { if (b.spur) line(C.road, b.spur[0], b.spur[1], 34); if (b.k !== 'lot' && b.k !== 'portal') rect('#9a92aa', b.dx - 24, b.b, 48, 8); });
   /* lamps along roads and by doors; flower beds, barrels, bushes by each building */
   function lamp(x, y) { rect('#1c1a26', x - 2, y - 32, 5, 32); circ(C.lamp, x, y - 38, 9); }
   M.R.forEach(function (s) { if (s[3] === 'd') return; var A = P[s[0]], Bp = P[s[1]], L = Math.hypot(Bp[0] - A[0], Bp[1] - A[1]), n = Math.floor(L / 260); for (var i = 1; i < n; i++) { var t = i / n, x = A[0] + (Bp[0] - A[0]) * t, y = A[1] + (Bp[1] - A[1]) * t; if (Math.abs(A[1] - Bp[1]) < 2) lamp(x, y - s[2] / 2 - 8); else lamp(x + s[2] / 2 + 12, y); } });
   if (M.PLAZA) for (i = 0; i < 8; i++) { var aa = i / 8 * 6.283 + .39; lamp(M.PLAZA[0] + (M.PLAZA[2] - 26) * Math.cos(aa), M.PLAZA[1] + (M.PLAZA[2] - 26) * Math.sin(aa) + 10); }
   M.B.forEach(function (b) {
-    if (b.k === 'tower' || b.k === 'lot') return;
+    if (b.k === 'tower' || b.k === 'lot' || b.k === 'portal') return;
     if (b.k !== 'theater') lamp(b.dx + 40, b.b + 6);
     flowers(b.dx - 52, b.b + 20); flowers(b.dx + 76, b.b + 24);
     if (b.k !== 'theater') { barrel(b.x + 16, b.b + 14); barrel(b.x + 38, b.b + 22); crate(b.x + b.w - 34, b.b + 8); }
@@ -170,16 +180,22 @@ function drawGuide(g, id) {
   function free(x, y, rad) { return !blocks.some(function (q) { return x + rad * .6 > q[0] && x - rad * .6 < q[0] + q[2] && y + 10 > q[1] && y - rad * 1.6 < q[1] + q[3]; }); }
   for (i = 0; i < 9000; i++) {
     var tx = Math.floor(r() * W), ty = Math.floor(r() * (M.LAKE ? M.LAKE - 40 : H)), edge = Math.min(tx, W - tx, ty, H - ty), rad = 34 + r() * 24;
-    if (r() > (edge < 200 ? .95 : .045)) continue; if (!free(tx, ty, rad)) continue;
+    if (r() > (edge < 200 ? .95 : id === 'forest' ? .3 : .045)) continue; if (!free(tx, ty, rad)) continue;
     if (trees.some(function (t) { return Math.hypot(t[0] - tx, t[1] - ty) < (t[2] + rad) * .85; })) continue; trees.push([tx, ty, rad]);
   }
-  var dead = id === 'cliff';
-  trees.sort(function (p, q) { return p[1] - q[1]; }).forEach(function (t) { if (dead) { rect('#3a2c2a', t[0] - 4, t[1] - t[2], 8, t[2]); line('#3a2c2a', [t[0], t[1] - t[2] * .7], [t[0] - t[2] * .5, t[1] - t[2] * 1.2], 5); line('#3a2c2a', [t[0], t[1] - t[2] * .5], [t[0] + t[2] * .5, t[1] - t[2]], 5); return; } circ('#162a1c', t[0] + 6, t[1] + 8, t[2], t[2] * .9); circ(C.tree, t[0], t[1], t[2]); circ(C.treeHi, t[0] - t[2] * .25, t[1] - t[2] * .3, t[2] * .55); });
+  var dead = id === 'cliff', haunted = id === 'forest';
+  trees.sort(function (p, q) { return p[1] - q[1]; }).forEach(function (t) { if (dead) { rect('#3a2c2a', t[0] - 4, t[1] - t[2], 8, t[2]); line('#3a2c2a', [t[0], t[1] - t[2] * .7], [t[0] - t[2] * .5, t[1] - t[2] * 1.2], 5); line('#3a2c2a', [t[0], t[1] - t[2] * .5], [t[0] + t[2] * .5, t[1] - t[2]], 5); return; } circ('#162a1c', t[0] + 6, t[1] + 8, t[2], t[2] * .9); circ(haunted ? '#1a2e2c' : C.tree, t[0], t[1], t[2]); circ(C.treeHi, t[0] - t[2] * .25, t[1] - t[2] * .3, t[2] * .55); });
 }
 function roundRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.fill(); }
 function building(g, b) {
   var x = b.x, y = b.y, w = b.w, h = b.h, rc = b.roof || C.roof, R0 = 'rgb(' + rc.join(',') + ')', R1 = 'rgb(' + rc.map(function (v) { return Math.round(v * .8); }).join(',') + ')';
   function rect(c, a, bq, cw, ch) { g.fillStyle = c; g.fillRect(a, bq, cw, ch); }
+  if (b.k === 'portal') {
+    var cx = x + w / 2; rect('#3e3a4a', cx - 120, y - 60, 240, h + 60); rect('#2e2a38', cx - 150, y + h - 60, 300, 60);   /* ruined tower walls */
+    rect('#4a4658', cx - 120, y - 60, 60, 40); rect('#4a4658', cx + 40, y - 90, 80, 50);   /* broken top */
+    g.fillStyle = '#6a6478'; g.beginPath(); g.ellipse(cx, b.b - 110, 100, 120, 0, Math.PI, 0); g.fill(); rect('#6a6478', cx - 100, b.b - 110, 200, 110);
+    g.fillStyle = '#7a3cff'; g.beginPath(); g.ellipse(cx, b.b - 100, 70, 90, 0, Math.PI, 0); g.fill(); rect('#7a3cff', cx - 70, b.b - 100, 140, 96); g.fillStyle = '#c8a0ff'; g.beginPath(); g.ellipse(cx, b.b - 70, 30, 50, 0, 0, 7); g.fill();
+    for (var q = 0; q < 6; q++) rect('#9af0d0', cx - 92 + q * 34, b.b - 128 - (q % 2) * 8, 10, 6); return; }
   if (b.k === 'lot') { rect('#3a4a36', x, y, w, h); g.strokeStyle = C.fence; g.lineWidth = 4; g.setLineDash([10, 8]); g.strokeRect(x, y, w, h); g.setLineDash([]); rect('#5a3a24', x + w / 2 - 3, y + h - 50, 6, 40); rect('#8a5a34', x + w / 2 - 30, y + h - 60, 60, 22); return; }
   rect('rgba(0,0,0,.35)', x + 10, b.b - 6, w, 14);
   if (b.k === 'tower') {
