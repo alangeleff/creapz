@@ -27,13 +27,13 @@ var MAPS = {
     exits: { w: ['hearth', 'e'], n: ['sky', 's'] },
     extra: function (d) { d.graves([[460, 1120], [560, 1180], [1180, 1120], [1300, 1180], [760, 1200]]); d.crystals([[1700, 900]]); },
     desc: "the east end of a big floating island in a starry violet void: a dark gothic stone abbey with pointed spires, pointed arched windows glowing warm amber and candles by the doors; a small chapel with steps leading down into a crypt on the left, the long main hall in the middle, and a narrow gothic library wing on the right; old gravestones, dead trees, a stone path; a glowing pale-blue beam of light rises from the top right of the island up and away over the void; the island ends in a rocky rim at the right, with starry void beyond" },
-  bloodmoon: { name: "Lucifer's Keep", sub: 'The Blood Moon wing', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 380, 1560, 1020],
-    P: { n: [300, 0], a: [300, 820], e: [1760, 820] },
-    R: [['n', 'a', 64], ['a', 'e', 64]],
-    B: [{ id: 'lucifer-h', x: 440, w: 300, b: 740, k: 'gatehouse' }, { id: 'lucifer', x: 820, w: 460, b: 740, k: 'keep' }, { id: 'lucifer-2', x: 1360, w: 340, b: 740, k: 'vault' }],
+  bloodmoon: { name: "Lucifer's Castle", sub: 'The Blood Moon wing', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 380, 1560, 1020],
+    P: { n: [300, 0], a: [300, 1230], gate: [1024, 1230] },
+    R: [['n', 'a', 64], ['a', 'gate', 70]],
+    B: [{ id: 'lucifer', x: 770, w: 508, b: 760, k: 'keep', door: 'gate', inside: true }, { id: 'lucifer-2', x: 1290, w: 270, b: 1010, k: 'vault', door: 'gate', inside: true }, { id: 'lucifer-h', x: 850, w: 348, b: 1130, k: 'gatehouse', door: 'gate' }],
     exits: { n: ['hearth', 's'] },
-    extra: function (d) { d.embers([[620, 960], [1100, 960], [1560, 960]]); d.chains([[780, 600], [1310, 600]]); },
-    desc: "the south end of a big floating island in a starry violet void: a black stone fortress of three blocky towers joined by a low black wall, each tower crowned with tall gold spikes and lit by glowing red windows and red doors: a small gatehouse on the left, the big main keep in the middle, and a squat treasure vault on the right with lava glowing in cracks around its base; braziers of red fire, a dark red path; NO throne outside; the island ends in a crumbling rocky rim at the bottom, with starry void beyond" },
+    extra: function (d) { d.curtain(520, 300, 1050, 830); d.towers([[560, 1010], [1490, 1010], [560, 420], [1490, 420]]); d.embers([[760, 1300], [1290, 1300]]); },
+    desc: "the south end of a big floating island in a starry violet void, under a huge blood-red moon: ONE big black stone castle. A thick black curtain wall with crenellations and gold-spiked corner towers encloses a dark courtyard. At the front of the wall, a fortified gatehouse with a red-lit arched gate and a raised iron portcullis is the only way in (the Hall of Chains). Rising behind it in the middle of the courtyard is the great keep, the tallest structure, crowned with tall gold spikes and a blood-red window near the top (Lucifer's throne room). On the right side of the courtyard, joined to the wall, a squat round vault tower with lava glowing through cracks around its base (the Ember Vault). Red banners hang from the walls, braziers of red fire flank the gate, a dark red path leads from the top-left edge down and along to the gate. NO throne outside. The island ends in a crumbling rocky rim at the bottom, with starry void beyond" },
   /* ---- the floating islands ---- */
   prism: { name: "Omm's Spires", sub: 'The Prism wing', W: 2048, H: 1536, aspect: '4:3', ISLE: [1024, 820, 780, 560],
     P: { s: [1024, 1536], rs: [1024, 1340], j: [1024, 1060], wl: [670, 1060], wr: [1378, 1060] },
@@ -61,7 +61,7 @@ var NAMES = { commons: 'the Hearth, a great round dark-stone domed hall with tal
 Object.keys(MAPS).forEach(function (id) {
   var M = MAPS[id]; M.id = id;
   M.B.forEach(function (b) {
-    b.h = b.k === 'portal' ? 300 : b.k === 'spire' ? 560 : b.k === 'gatehouse' ? 420 : b.k === 'glassbridge' ? 300 : b.k === 'keep' ? 400 : b.k === 'tower' ? 380 : b.k === 'theater' ? 230 : b.k === 'lot' ? 120 : Math.round(b.w * (b.w > 340 ? .68 : .72));
+    b.h = b.k === 'portal' ? 300 : b.k === 'spire' ? 560 : b.k === 'gatehouse' ? 340 : b.k === 'glassbridge' ? 300 : b.k === 'keep' ? 620 : b.k === 'vault' ? 300 : b.k === 'tower' ? 380 : b.k === 'theater' ? 230 : b.k === 'lot' ? 120 : Math.round(b.w * (b.w > 340 ? .68 : .72));
     if (b.id.slice(0, 2) === 'ct') b.h = 190;
     b.y = b.b - b.h; b.dx = b.x + b.w / 2; b.dy = b.b + 6; b.map = id;
   });
@@ -85,7 +85,7 @@ function graph(id) {
   M.B.forEach(function (b) {
     if (b.k === 'lot') return;
     if (b.k === 'portal') { N.door_portal = P.portal.slice(); return; }
-    var dn = 'door_' + b.id; N[dn] = [b.dx, b.dy + 4];
+    var dn = 'door_' + b.id; N[dn] = b.inside && P[b.door] ? P[b.door].slice() : [b.dx, b.dy + 4];   /* inside: reached through another building's door */
     if (b.door) { E.push([dn, b.door]); b.spur = null; return; }
     var bestS = null, bestP = null, bestD = 1e9;
     segs.forEach(function (s) {
@@ -142,6 +142,8 @@ function drawGuide(g, id) {
     embers: function (list) { list.forEach(function (p) { rect('#4a3a3a', p[0] - 20, p[1] - 10, 40, 22); circ('#ff5a2a', p[0], p[1] - 18, 18, 14); circ('#ffc040', p[0], p[1] - 22, 8); block(p[0] - 46, p[1] - 50, 92, 70); }); },
     chains: function (list) { list.forEach(function (p) { rect('#3a3440', p[0] - 8, p[1] - 90, 16, 100); for (var y = p[1] - 80; y < p[1]; y += 16) circ('#8a8494', p[0] + 22, y, 6, 8); block(p[0] - 40, p[1] - 110, 90, 130); }); },
     pillars: function (list) { list.forEach(function (p) { rect('#24202e', p[0] - 18, p[1] - 70, 36, 74); rect('#ff5ab4', p[0] - 10, p[1] - 56, 20, 6); rect('#ff5ab4', p[0] - 10, p[1] - 36, 20, 6); block(p[0] - 44, p[1] - 90, 88, 110); }); },
+    curtain: function (x, y, w, h) { g.strokeStyle = '#24202a'; g.lineWidth = 46; g.strokeRect(x, y, w, h); g.strokeStyle = '#3a3440'; g.lineWidth = 10; g.strokeRect(x - 18, y - 18, w + 36, h + 36); rect('#2a2230', x + 24, y + 24, w - 48, h - 48); block(x - 40, y - 40, w + 80, h + 80); },
+    towers: function (list) { list.forEach(function (p) { rect('#24202a', p[0] - 56, p[1] - 200, 112, 200); g.fillStyle = '#e0b040'; for (var q = -1; q <= 1; q++) { g.beginPath(); g.moveTo(p[0] + q * 34 - 12, p[1] - 196); g.lineTo(p[0] + q * 34, p[1] - 260); g.lineTo(p[0] + q * 34 + 12, p[1] - 196); g.fill(); } rect('#ff3a3a', p[0] - 10, p[1] - 150, 20, 34); }); },
     fogs: function (list) { list.forEach(function (p) { D.fog(p[0], p[1]); }); },
     fog: function (x, y) { for (var i = 0; i < 8; i++) circ('rgba(200,195,230,.35)', x + (r() - .5) * 200, y + (r() - .5) * 220, 120, 80); block(x - 200, y - 260, 400, 520); }
   };
@@ -195,8 +197,11 @@ function building(g, b) {
     for (var q = 0; q < 6; q++) rect('#9af0d0', cx - 92 + q * 34, b.b - 128 - (q % 2) * 8, 10, 6); return; }
   if (b.k === 'lot') { rect('#3a4a36', x, y, w, h); g.strokeStyle = C.fence; g.lineWidth = 4; g.setLineDash([10, 8]); g.strokeRect(x, y, w, h); g.setLineDash([]); rect('#5a3a24', x + w / 2 - 3, y + h - 50, 6, 40); rect('#8a5a34', x + w / 2 - 30, y + h - 60, 60, 22); return; }
   rect('rgba(0,0,0,.35)', x + 10, b.b - 6, w, 14);
+  if (b.k === 'vault') { var vt = b.b - b.h; g.fillStyle = '#ff5a1a'; g.beginPath(); g.ellipse(x + w / 2, b.b, w / 2 + 30, 40, 0, 0, 7); g.fill(); rect('#1e1a22', x + 20, vt + 60, w - 40, b.h - 60); g.fillStyle = '#1e1a22'; g.beginPath(); g.ellipse(x + w / 2, vt + 60, w / 2 - 20, 40, 0, 0, 7); g.fill();
+    g.fillStyle = '#e0b040'; for (var q2 = -1; q2 <= 1; q2++) { g.beginPath(); g.moveTo(x + w / 2 + q2 * 60 - 12, vt + 50); g.lineTo(x + w / 2 + q2 * 60, vt - 20); g.lineTo(x + w / 2 + q2 * 60 + 12, vt + 50); g.fill(); }
+    rect('#ff3a3a', x + w / 2 - 14, vt + 110, 28, 40); rect('#6a1a1a', x + w / 2 - 34, b.b - 90, 68, 84); return; }
   if (b.k === 'glassbridge') { var gy = b.b - 120; rect('#2a3a4a', x, gy - 10, w, 90); rect('#9ad8f0', x + 6, gy, w - 12, 60); for (var gx2 = x + 30; gx2 < x + w; gx2 += 50) rect('#5a8aa0', gx2, gy, 4, 60); rect('#6a5a88', x + w / 2 - 40, gy + 80, 80, 120); rect('#2a1e2e', x + w / 2 - 20, gy + 150, 40, 50); return; }
-  if (b.k === 'spire' || b.k === 'gatehouse' || (b.k === 'keep' && false)) { var th = b.k === 'spire' ? 560 : 420, top = b.b - th, cc = b.k === 'spire' ? '#7a5ab8' : '#24202a';
+  if (b.k === 'spire' || b.k === 'gatehouse' || b.k === 'keep') { var th = b.h, top = b.b - th, cc = b.k === 'spire' ? '#7a5ab8' : '#24202a';
     rect(cc, x + 30, top + 80, w - 60, th - 80); rect(b.k === 'spire' ? '#c8a050' : '#e0b040', x + 22, top + 70, w - 44, 16);
     g.fillStyle = b.k === 'spire' ? '#b48cff' : '#e0b040'; for (var q = 0; q < 3; q++) { g.beginPath(); var cx2 = x + w / 2 + (q - 1) * (w / 4); g.moveTo(cx2 - 22, top + 74); g.lineTo(cx2, top - (q === 1 ? 70 : 20)); g.lineTo(cx2 + 22, top + 74); g.fill(); }
     if (b.k === 'spire') { g.fillStyle = '#e0c8ff'; g.beginPath(); g.arc(x + w / 2, top - 110, 26, 0, 7); g.fill(); }
